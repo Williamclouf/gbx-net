@@ -4,6 +4,12 @@ namespace GBX.NET.Engines.Game;
 
 public partial class CGameCtnChallenge
 {
+    public sealed class TMUnlimiter
+    {
+        public Vec3 DecorationOffset { get; set; }
+        public bool SkyDecorationVisibility { get; set; }
+    }
+
     public partial class Chunk03043055
     {
         public Chunk3F001001? TMUnlimiterChunk;
@@ -18,6 +24,8 @@ public partial class CGameCtnChallenge
                 return;
             }
 
+            n.TMUnlimiterData = new TMUnlimiter();
+
             TMUnlimiterChunk.Version = r.ReadByte() switch
             {
                 1 => 4,
@@ -25,8 +33,8 @@ public partial class CGameCtnChallenge
                 _ => throw new NotSupportedException("Unlimiter chunk version not supported.")
             };
 
-            TMUnlimiterChunk.DecorationOffset = r.ReadInt3();
-            TMUnlimiterChunk.SkyDecorationVisibility = r.ReadBoolean(asByte: true);
+            n.TMUnlimiterData.DecorationOffset = r.ReadInt3();
+            n.TMUnlimiterData.SkyDecorationVisibility = r.ReadBoolean(asByte: true);
 
             var blockCount = r.ReadInt32();
             var blocks = new (CGameCtnBlock, Byte3, bool, Int3, Byte3)[blockCount];
@@ -213,13 +221,8 @@ public partial class CGameCtnChallenge
             set => Flags = (ushort)((Flags & ~3) | (ushort)value);
         }
 
-        private Vec3 decorationOffset;
-        public Vec3 DecorationOffset { get => decorationOffset; set => decorationOffset = value; }
-
         private Vec3 decorationScale = new(1, 1, 1);
         public Vec3 DecorationScale { get => decorationScale; set => decorationScale = value; }
-
-        public bool SkyDecorationVisibility { get; set; }
 
         private List<LegacyScript> legacyScripts = [];
         public List<LegacyScript> LegacyScripts { get => legacyScripts; set => legacyScripts = value; }

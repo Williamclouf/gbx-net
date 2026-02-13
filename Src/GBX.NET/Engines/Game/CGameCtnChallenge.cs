@@ -392,6 +392,8 @@ public partial class CGameCtnChallenge :
     /// </summary>
     public ImmutableList<Ident>? ExpectedEmbeddedItemModels { get; private set; }
 
+    public TMUnlimiter? TMUnlimiterData { get; set; }
+
     // poss to generate
     string IGameCtnChallenge.MapUid
     {
