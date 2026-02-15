@@ -3,14 +3,10 @@ using System.Security.Cryptography;
 
 namespace GBX.NET.Crypto;
 
-public static class RSAExtra
+public static class RSAExtensions
 {
-    public static byte[] PublicDecrypt(byte[] encryptedData, string publicKeyData)
+    public static byte[] PublicDecrypt(this RSA rsa, byte[] encryptedData)
     {
-        using var rsa = RSA.Create();
-
-        rsa.ImportFromPem(publicKeyData);
-
         // Get the RSA parameters
         var parameters = rsa.ExportParameters(false);
 
@@ -53,12 +49,8 @@ public static class RSAExtra
         return resultBytes;
     }
 
-    public static byte[] PrivateEncrypt(byte[] dataToEncrypt, byte[] privateKeyData)
+    public static byte[] PrivateEncrypt(this RSA rsa, byte[] dataToEncrypt)
     {
-        using var rsa = RSA.Create();
-
-        rsa.ImportPkcs8PrivateKey(privateKeyData, out _);
-
         // Get the RSA parameters (true to include the private exponent 'D')
         var parameters = rsa.ExportParameters(true);
         var modulusSize = parameters.Modulus!.Length;
