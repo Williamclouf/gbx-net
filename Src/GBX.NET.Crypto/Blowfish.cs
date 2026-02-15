@@ -1,4 +1,7 @@
 ﻿using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace GBX.NET.Crypto;
 
@@ -6,13 +9,15 @@ public class Blowfish
 {
     private readonly int N = 16;
 
-    public Blowfish(byte[] key, bool applyPak18Tricks)
+    public Blowfish(byte[] key, BlowfishTrick trick)
     {
+        this.trick = trick;
+
         uint i;
         uint j = 0;
 
         // Trick #1: reduce N from 16 to 8
-        if (applyPak18Tricks)
+        if (trick == BlowfishTrick.LittleEndianPak18)
         {
             N = 8;
         }
@@ -24,8 +29,14 @@ public class Blowfish
 
             for (k = 0; k < 4; ++k)
             {
-                // data = (data << 8) | key[j]; big-endian positioning
-                data |= (uint)(key[j] << k * 8); // little-endian positioning
+                if (trick == BlowfishTrick.BigEndian)
+                {
+                    data = (data << 8) | key[j];
+                }
+                else // little-endian positioning
+                {
+                    data |= (uint)(key[j] << k * 8);
+                }
 
                 j++;
 
@@ -60,7 +71,7 @@ public class Blowfish
         }
 
         // Trick #2: reverse the order of first 10 elements in the P array
-        if (applyPak18Tricks)
+        if (trick == BlowfishTrick.LittleEndianPak18)
         {
             var temp = (uint[])_p.Clone();
 
@@ -107,6 +118,16 @@ public class Blowfish
         r ^= _p[1];
     }
 
+    private uint F(uint x)
+    {
+        var a = (byte)(x >> 24);
+        var b = (byte)(x >> 16);
+        var c = (byte)(x >> 8);
+        var d = (byte)x;
+
+        return ((_s[0, a] + _s[1, b]) ^ _s[2, c]) + _s[3, d];
+    }
+
     public void Decrypt(byte[] data)
     {
         if (data.Length % 8 != 0)
@@ -114,17 +135,7 @@ public class Blowfish
             throw new Exception("Length must be a multiple of 8");
         }
 
-        for (var i = 0; i < data.Length; i += 8)
-        {
-            // Decrypt data in 8-byte blocks
-            var l = BitConverter.ToUInt32(data, i);
-            var r = BitConverter.ToUInt32(data, i + 4);
-            Decrypt(ref l, ref r);
-
-            // Write decrypted data back
-            Array.Copy(BitConverter.GetBytes(l), 0, data, i, 4);
-            Array.Copy(BitConverter.GetBytes(r), 0, data, i + 4, 4);
-        }
+        Decrypt(data.AsSpan());
     }
 
     public void Decrypt(Span<byte> span)
@@ -134,17 +145,59 @@ public class Blowfish
             throw new Exception("Length must be a multiple of 8");
         }
 
-        for (var i = 0; i < span.Length; i += 8)
+        if (trick == BlowfishTrick.BigEndian)
         {
-            // Decrypt data in 8-byte blocks
-            var l = BinaryPrimitives.ReadUInt32LittleEndian(span.Slice(i, 4));
-            var r = BinaryPrimitives.ReadUInt32LittleEndian(span.Slice(i + 4, 4));
-            Decrypt(ref l, ref r);
+            for (var i = 0; i < span.Length; i += 8)
+            {
+                // Decrypt data in 8-byte blocks
+                var l = BinaryPrimitives.ReadUInt32BigEndian(span.Slice(i, 4));
+                var r = BinaryPrimitives.ReadUInt32BigEndian(span.Slice(i + 4, 4));
+                Decrypt(ref l, ref r);
 
-            // Write decrypted data back
-            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(i, 4), l);
-            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(i + 4, 4), r);
+                // Write decrypted data back
+                BinaryPrimitives.WriteUInt32BigEndian(span.Slice(i, 4), l);
+                BinaryPrimitives.WriteUInt32BigEndian(span.Slice(i + 4, 4), r);
+            }
         }
+        else
+        {
+            for (var i = 0; i < span.Length; i += 8)
+            {
+                // Decrypt data in 8-byte blocks
+                var l = BinaryPrimitives.ReadUInt32LittleEndian(span.Slice(i, 4));
+                var r = BinaryPrimitives.ReadUInt32LittleEndian(span.Slice(i + 4, 4));
+                Decrypt(ref l, ref r);
+
+                // Write decrypted data back
+                BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(i, 4), l);
+                BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(i + 4, 4), r);
+            }
+        }
+    }
+
+    public bool Decrypt(Span<byte> data, ulong iv)
+    {
+        if (data.IsEmpty || data.Length % 8 != 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < data.Length; i += 8)
+        {
+            var block = data.Slice(i, 8);
+
+            var nextIv = BinaryPrimitives.ReadUInt64LittleEndian(block);
+
+            Decrypt(block);
+
+            var decryptedPart = BinaryPrimitives.ReadUInt64LittleEndian(block);
+
+            BinaryPrimitives.WriteUInt64LittleEndian(block, decryptedPart ^ iv);
+
+            iv = nextIv;
+        }
+
+        return true;
     }
 
     public void Encrypt(byte[] data)
@@ -154,17 +207,7 @@ public class Blowfish
             throw new Exception("Invalid Length");
         }
 
-        for (int i = 0; i < data.Length; i += 8)
-        {
-            // Encrypt data in 8-byte blocks
-            var l = BitConverter.ToUInt32(data, i);
-            var r = BitConverter.ToUInt32(data, i + 4);
-            Encrypt(ref l, ref r);
-
-            // Write encrypted data back
-            Array.Copy(BitConverter.GetBytes(l), 0, data, i, 4);
-            Array.Copy(BitConverter.GetBytes(r), 0, data, i + 4, 4);
-        }
+        Encrypt(data.AsSpan());
     }
 
     public void Encrypt(Span<byte> span)
@@ -174,28 +217,174 @@ public class Blowfish
             throw new Exception("Invalid Length");
         }
 
-        for (int i = 0; i < span.Length; i += 8)
+        if (trick == BlowfishTrick.BigEndian)
         {
-            // Encrypt data in 8-byte blocks
-            var l = BinaryPrimitives.ReadUInt32LittleEndian(span.Slice(i, 4));
-            var r = BinaryPrimitives.ReadUInt32LittleEndian(span.Slice(i + 4, 4));
-            Encrypt(ref l, ref r);
+            for (var i = 0; i < span.Length; i += 8)
+            {
+                // Encrypt data in 8-byte blocks
+                var l = BinaryPrimitives.ReadUInt32BigEndian(span.Slice(i, 4));
+                var r = BinaryPrimitives.ReadUInt32BigEndian(span.Slice(i + 4, 4));
+                Encrypt(ref l, ref r);
 
-            // Write encrypted data back
-            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(i, 4), l);
-            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(i + 4, 4), r);
+                // Write encrypted data back
+                BinaryPrimitives.WriteUInt32BigEndian(span.Slice(i, 4), l);
+                BinaryPrimitives.WriteUInt32BigEndian(span.Slice(i + 4, 4), r);
+            }
+        }
+        else
+        {
+            for (var i = 0; i < span.Length; i += 8)
+            {
+                // Encrypt data in 8-byte blocks
+                var l = BinaryPrimitives.ReadUInt32LittleEndian(span.Slice(i, 4));
+                var r = BinaryPrimitives.ReadUInt32LittleEndian(span.Slice(i + 4, 4));
+                Encrypt(ref l, ref r);
+
+                // Write encrypted data back
+                BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(i, 4), l);
+                BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(i + 4, 4), r);
+            }
         }
     }
 
-    private uint F(uint x)
+    public bool Encrypt(Span<byte> data, ulong iv)
     {
-        var a = (byte)(x >> 24);
-        var b = (byte)(x >> 16);
-        var c = (byte)(x >> 8);
-        var d = (byte)x;
-        
-        return ((_s[0, a] + _s[1, b]) ^ _s[2, c]) + _s[3, d];
+        if (data.IsEmpty || data.Length % 8 != 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < data.Length; i += 8)
+        {
+            var block = data.Slice(i, 8);
+
+            var blockValue = BinaryPrimitives.ReadUInt64LittleEndian(block);
+            BinaryPrimitives.WriteUInt64LittleEndian(block, blockValue ^ iv);
+
+            Encrypt(block);
+
+            iv = BinaryPrimitives.ReadUInt64LittleEndian(block);
+        }
+
+        return true;
     }
+
+    public static string DecryptHexa(string hex, byte[] key)
+    {
+#if NET5_0_OR_GREATER
+        var raw = Convert.FromHexString(hex);
+#else
+        var raw = FromHexString(hex);
+#endif
+
+        var iv = BinaryPrimitives.ReadUInt64LittleEndian(raw.AsSpan(0, 8));
+        var ciphertext = raw.AsSpan().Slice(8);
+
+        var blowfish = new Blowfish(key, BlowfishTrick.BigEndian);
+        blowfish.Decrypt(ciphertext, iv);
+
+        var length = ciphertext.Length;
+
+        // Find the last non-null byte
+        while (length > 0 && ciphertext[length - 1] == 0)
+        {
+            length--;
+        }
+
+        var trimmedCiphertext = ciphertext.Slice(0, length);
+
+#if NET5_0_OR_GREATER
+        return Encoding.UTF8.GetString(trimmedCiphertext);
+#else
+        return Encoding.UTF8.GetString(trimmedCiphertext.ToArray());
+#endif
+    }
+
+    public static string EncryptHexa(string plainText, byte[] key, bool lowercase = false)
+    {
+        var plainBytes = Encoding.UTF8.GetBytes(plainText);
+
+        var paddedLength = (plainBytes.Length + 7) / 8 * 8;
+        var buffer = new byte[paddedLength];
+        plainBytes.CopyTo(buffer, 0);
+
+#if NET5_0_OR_GREATER
+        var ivBytes = RandomNumberGenerator.GetBytes(8);
+#else
+        var ivBytes = new byte[8];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(ivBytes);
+        }
+#endif
+        var iv = BinaryPrimitives.ReadUInt64LittleEndian(ivBytes);
+
+        var blowfish = new Blowfish(key, BlowfishTrick.BigEndian);
+
+        blowfish.Encrypt(buffer.AsSpan(), iv);
+
+        // Prepend IV
+        var result = new byte[8 + buffer.Length];
+        ivBytes.CopyTo(result, 0);
+        buffer.CopyTo(result, 8);
+
+#if NET5_0_OR_GREATER
+        if (lowercase)
+        {
+#if NET9_0_OR_GREATER
+            return Convert.ToHexStringLower(result);
+#else
+            return Convert.ToHexString(result).ToLowerInvariant();
+#endif
+        }
+        else
+        {
+            return Convert.ToHexString(result);
+        }
+#else
+        var sb = new StringBuilder(result.Length * 2);
+        foreach (var b in result)
+        {
+            sb.AppendFormat(lowercase ? "{0:x2}" : "{0:X2}", b);
+        }
+        return sb.ToString();
+#endif
+    }
+
+#if NETSTANDARD2_0
+    private static byte[] FromHexString(string hex)
+    {
+        if (hex is null)
+        {
+            throw new ArgumentNullException(nameof(hex));
+        }
+
+        if (hex.Length % 2 != 0)
+        {
+            throw new FormatException("Hex string must have an even length.");
+        }
+
+        var length = hex.Length / 2;
+        var result = new byte[length];
+
+        for (var i = 0; i < length; i++)
+        {
+            var high = GetHexValue(hex[2 * i]) << 4;
+            var low = GetHexValue(hex[2 * i + 1]);
+            result[i] = (byte)(high + low);
+        }
+
+        return result;
+    }
+
+    private static int GetHexValue(char c)
+    {
+        if (c >= '0' && c <= '9') return c - '0';
+        if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+        if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+        throw new FormatException($"Invalid hex character: {c}");
+    }
+#endif
 
     private readonly uint[] _p = [
         0x243F6A88, 0x85A308D3, 0x13198A2E, 0x03707344, 0xA4093822, 0x299F31D0, 0x082EFA98, 0xEC4E6C89, 0x452821E6,
@@ -341,4 +530,5 @@ public class Blowfish
                 0x90D4F869, 0xA65CDEA0, 0x3F09252D, 0xC208E69F, 0xB74E6132, 0xCE77E25B, 0x578FDFE3, 0x3AC372E6
             }
         };
+    private readonly BlowfishTrick trick;
 }
