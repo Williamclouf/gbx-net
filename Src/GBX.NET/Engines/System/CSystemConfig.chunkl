@@ -246,8 +246,8 @@ CSystemConfig 0x0B005000
 0x05E (skippable) [MP3, MP4]
  version
  bool NetworkUseProxy
- string
- string
+ string NetworkProxyLogin
+ string NetworkProxyPassword
  int NetworkServerPort
  int NetworkP2PServerPort
  int NetworkClientPort
