@@ -300,7 +300,7 @@ public class Blowfish
 #endif
     }
 
-    public static string EncryptHexa(string plainText, byte[] key)
+    public static string EncryptHexa(string plainText, byte[] key, bool lowercase = false)
     {
         var plainBytes = Encoding.UTF8.GetBytes(plainText);
 
@@ -329,12 +329,23 @@ public class Blowfish
         buffer.CopyTo(result, 8);
 
 #if NET5_0_OR_GREATER
-        return Convert.ToHexString(result);
+        if (lowercase)
+        {
+#if NET9_0_OR_GREATER
+            return Convert.ToHexStringLower(result);
+#else
+            return Convert.ToHexString(result).ToLowerInvariant();
+#endif
+        }
+        else
+        {
+            return Convert.ToHexString(result);
+        }
 #else
         var sb = new StringBuilder(result.Length * 2);
         foreach (var b in result)
         {
-            sb.AppendFormat("{0:x2}", b);
+            sb.AppendFormat(lowercase ? "{0:x2}" : "{0:X2}", b);
         }
         return sb.ToString();
 #endif
