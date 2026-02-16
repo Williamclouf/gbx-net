@@ -198,10 +198,7 @@ internal sealed partial class GbxBodyReader(GbxReaderWriter readerWriter, GbxCom
         }
 
         Span<byte> compressedData = stackalloc byte[compressedSize];
-        if (reader.Read(compressedData) != compressedSize)
-        {
-            throw new Exception("Failed to read compressed data");
-        }
+        reader.BaseStream.ReadExactly(compressedData);
 #else
         var compressedData = reader.ReadBytes(compressedSize);
 #endif
