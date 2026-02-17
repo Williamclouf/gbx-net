@@ -148,7 +148,7 @@ public partial class CGamePlayerProfile
                     var chunkId = r.ReadUInt32();
                     var u01 = r.ReadString();
                     var u02 = r.ReadString();
-                    var u03 = r.ReadString();
+                    var checksum = r.ReadString();
                     var u04 = r.ReadInt32();
                     var archiveVersion = r.ReadInt32();
 

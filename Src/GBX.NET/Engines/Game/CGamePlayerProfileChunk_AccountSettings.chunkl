@@ -168,7 +168,7 @@ archive
 archive SPlayerTagsConfig
  int
  PlayerTagConfig[] PlayerTags
- ulong[]
+ int[]
 
 archive PlayerTagConfig
  string TagId
