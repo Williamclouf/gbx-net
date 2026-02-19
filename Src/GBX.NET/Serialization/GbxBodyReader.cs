@@ -184,14 +184,15 @@ internal sealed partial class GbxBodyReader(GbxReaderWriter readerWriter, GbxCom
 #if NET5_0_OR_GREATER
         if (compressedSize > 1_000_000)
         {
-            var compressedDataOver1MB = reader.ReadBytes(compressedSize);
-            var decompressedDataOver1MB = new byte[uncompressedSize];
+            var compressedDataOver1MB = new byte[compressedSize];
+            reader.BaseStream.ReadExactly(compressedDataOver1MB);
 
             if (Gbx.LZO is null)
             {
                 throw new LzoNotDefinedException();
             }
 
+            var decompressedDataOver1MB = new byte[uncompressedSize];
             Gbx.LZO.Decompress(compressedDataOver1MB, decompressedDataOver1MB);
 
             return decompressedDataOver1MB;
