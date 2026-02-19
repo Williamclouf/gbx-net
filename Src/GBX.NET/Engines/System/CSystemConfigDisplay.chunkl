@@ -1,6 +1,6 @@
 CSystemConfigDisplay 0x0B013000
 
-0x001 (skippable) [TMSX, TMNESWC, TMU, TMF]
+0x001 (skippable) [TMO, TMSX, TMNESWC, TMU, TMF]
  int2 ScreenSizeFS
  int
  int
@@ -9,7 +9,7 @@ CSystemConfigDisplay 0x0B013000
  bool // DisplaySync and DisplayMode
  bool
 
-0x003 (skippable) [TMSX, TMNESWC, TMU, TMF]
+0x003 (skippable) [TMO, TMSX, TMNESWC, TMU, TMF]
  bool
  int // something with GpuSync0
  bool EmulateCursorGDI
@@ -17,32 +17,32 @@ CSystemConfigDisplay 0x0B013000
  bool OptimPartDynaGeom
  bool
 
-0x004 (skippable) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
+0x004 (skippable) [TMO, TMSX, TMNESWC, TMU, TMF, MP3, MP4]
  bool // sometimes weird number?
 
-0x005 (skippable) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
+0x005 (skippable) [TMO, TMSX, TMNESWC, TMU, TMF, MP3, MP4]
  bool EnableFullscreenGDI
 
-0x008 (skippable) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
+0x008 (skippable) [TMO, TMSX, TMNESWC, TMU, TMF, MP3, MP4]
  int
  int
  int ZClipNbBlock
 
-0x009 (skippable) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
+0x009 (skippable) [TMO, TMSX, TMNESWC, TMU, TMF, MP3, MP4]
  int
  int
  bool PostFx
  bool
 
-0x00A (skippable) [TMSX, TMNESWC, TMU, TMF]
+0x00A (skippable) [TMO, TMSX, TMNESWC, TMU, TMF]
  bool
  bool
 
-0x00B (skippable) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
+0x00B (skippable) [TMO, TMSX, TMNESWC, TMU, TMF, MP3, MP4]
  bool DisableZBufferRange
  float AgpUseFactor
 
-0x00D (skippable) [TMSX, TMNESWC, TMU]
+0x00D (skippable) [TMO, TMSX, TMNESWC, TMU]
  int
  bool Customize
  int
@@ -52,10 +52,10 @@ CSystemConfigDisplay 0x0B013000
  int
  int
 
-0x00E (skippable) [TMSX, TMNESWC]
+0x00E (skippable) [TMO, TMSX, TMNESWC]
  bool
 
-0x00F (skippable) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
+0x00F (skippable) [TMO, TMSX, TMNESWC, TMU, TMF, MP3, MP4]
  bool
 
 0x010 (skippable) [TMNESWC, TMU, TMF]

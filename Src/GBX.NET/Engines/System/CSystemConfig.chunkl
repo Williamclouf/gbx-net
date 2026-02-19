@@ -1,14 +1,35 @@
 CSystemConfig 0x0B005000
 
+0x002 (skippable) [TM10, TMPU]
+ string
+
+0x004 (skippable) [TM10, TMPU]
+ bool AudioEnabled
+ float AudioSoundVolume
+ float AudioMusicVolume
+ int
+ int
+ bool AudioAllowEFX
+ int
+ int
+ int
+
 0x005 (skippable)
  int
  int
  int
 
-0x008 (skippable) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
+0x007 (skippable) [TM10, TMPU]
+ string
+ string
+ string
+ bool
+ filetime
+
+0x008 (skippable) [TM10, TMPU, TMO, TMSX, TMNESWC, TMU, TMF, MP3, MP4]
  string DesiredLanguageId
 
-0x009 (skippable) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
+0x009 (skippable) [TM10, TMPU, TMO, TMSX, TMNESWC, TMU, TMF, MP3, MP4]
  string U01
  string U01
  string U01
@@ -16,35 +37,74 @@ CSystemConfig 0x0B005000
  string U01
  string U01
 
-0x00B (skippable, base: 0x005) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
+0x00A (skippable) [TM10, TMPU]
+ int2
+ int
+ int
+ int
+ int
+ int
+ bool
+ bool
+ int
+ int
+ int
+ bool
+
+0x00B (skippable, base: 0x005) [TM10, TMPU, TMO, TMSX, TMNESWC, TMU, TMF, MP3, MP4]
  base
  int U04
 
-0x012 (skippable) [TMSX, TMNESWC]
+0x00C (skippable) [TM10, TMPU]
+ bool IsIgnorePlayerSkins
+
+0x00D (skippable) [TM10, TMPU]
+ string
+ string
+ bool NetworkUseProxy
+ string
+ string
+ string
+ int NetworkServerPort
+ int NetworkClientPort
+ bool NetworkForceUseLocalAddress
+ string NetworkForceServerAddress
+ int
+
+0x00E (skippable) [TM10, TMPU]
+ int TmCarQuality
+ int
+ int TmOpponents
+
+0x00F (skippable) [TM10, TMPU]
+ float
+ float
+
+0x012 (skippable) [TMO, TMSX, TMNESWC]
  string
  string
  string
  bool
  int
 
-0x01D (skippable) [TMSX, TMNESWC, TMU]
+0x01D (skippable) [TMO, TMSX, TMNESWC, TMU]
  bool IsIgnorePlayerSkins
  bool IsSkipRollingDemo
 
-0x020 (skippable) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
+0x020 (skippable) [TMO, TMSX, TMNESWC, TMU, TMF, MP3, MP4]
  bool IsSafeMode
  CSystemConfigDisplay Display (direct)
 
-0x022 (skippable) [TMSX, TMNESWC, TMU]
+0x022 (skippable) [TMO, TMSX, TMNESWC, TMU]
  float
  float
  bool InputsAlternateMethod
  bool InputsFreezeUnusedAxes
 
-0x027 (skippable) [TMSX]
+0x027 (skippable) [TMO, TMSX]
  bool
 
-0x028 (skippable) [TMSX, TMNESWC, TMU]
+0x028 (skippable) [TMO, TMSX, TMNESWC, TMU]
  bool AudioEnabled
  float AudioSoundVolume
  float AudioMusicVolume
@@ -55,12 +115,12 @@ CSystemConfig 0x0B005000
  bool AudioDisableDoppler
  int AudioGlobalQuality
 
-0x02B (skippable) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
+0x02B (skippable) [TMO, TMSX, TMNESWC, TMU, TMF, MP3, MP4]
  int
  bool Advertising_DisabledByUser
  float Advertising_TunningCoef
 
-0x02C (skippable) [TMSX]
+0x02C (skippable) [TMO, TMSX]
  int TmCarQuality
  int
  int
@@ -68,7 +128,7 @@ CSystemConfig 0x0B005000
  int TmMaxOpponents
  bool
 
-0x030 (skippable) [TMSX, TMNESWC, TMU, TMF]
+0x030 (skippable) [TMO, TMSX, TMNESWC, TMU, TMF]
  bool FileTransferEnableDownload
  bool FileTransferEnableUpload
  int
@@ -80,7 +140,7 @@ CSystemConfig 0x0B005000
  string BlackListUrl
  bool EnableCrashLogUpload
 
-0x031 (skippable) [TMSX]
+0x031 (skippable) [TMO, TMSX]
  bool NetworkUseProxy
  string
  string
