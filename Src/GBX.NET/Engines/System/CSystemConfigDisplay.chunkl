@@ -18,7 +18,7 @@ CSystemConfigDisplay 0x0B013000
  bool
 
 0x004 (skippable) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
- bool // sometimes weird number?
+ int // sometimes weird number?
 
 0x005 (skippable) [TMSX, TMNESWC, TMU, TMF, MP3, MP4]
  bool EnableFullscreenGDI
