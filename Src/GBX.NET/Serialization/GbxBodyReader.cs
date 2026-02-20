@@ -201,7 +201,7 @@ internal sealed partial class GbxBodyReader(GbxReaderWriter readerWriter, GbxCom
         Span<byte> compressedData = stackalloc byte[compressedSize];
         reader.BaseStream.ReadExactly(compressedData);
 #else
-        var compressedData = reader.ReadBytes(compressedSize);
+        var compressedData = reader.ReadBytes(compressedSize); // this can still break on network streams 
 #endif
         var decompressedData = new byte[uncompressedSize];
 
