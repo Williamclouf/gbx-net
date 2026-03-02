@@ -1,9 +1,4 @@
 <Solution>
-  <Configurations>
-    <BuildType Name="Debug" />
-    <BuildType Name="Design" />
-    <BuildType Name="Release" />
-  </Configurations>
   <Folder Name="/Benchmarks/">
     <Project Path="Benchmarks/GBX.NET.Benchmarks/GBX.NET.Benchmarks.csproj">
       <BuildType Solution="Design|*" Project="Debug" />

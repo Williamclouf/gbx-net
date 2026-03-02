@@ -19,7 +19,6 @@
         <LangVersion>14</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Configurations>Debug;Release;Design</Configurations>
 
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <IncludeSymbols>true</IncludeSymbols>
@@ -30,11 +29,6 @@
 
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
-    </PropertyGroup>
-
-    <!-- .NET 8 for debug builds to avoid source generator issues (uses netstandard2.0) -->
-    <PropertyGroup Condition="'$(Configuration)' == 'Design'">
-        <TargetFrameworks>net8.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
