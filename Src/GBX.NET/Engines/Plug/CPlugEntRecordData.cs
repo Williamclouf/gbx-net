@@ -140,7 +140,13 @@ public partial class CPlugEntRecordData : IReadableWritable
 
         if (rw.Writer is not null)
         {
-            throw new NotSupportedException("Write is not supported");
+            WriteEntList(rw.Writer, v);
+
+            if (v >= 3)
+            {
+                WriteBulkNoticeList(rw.Writer);
+                WriteCustomModulesDeltaLists(rw.Writer, v);
+            }
         }
     }
 
@@ -187,8 +193,26 @@ public partial class CPlugEntRecordData : IReadableWritable
 
             if (rw.Writer is GbxWriter w)
             {
-                w.Write(n.CompressedData.UncompressedSize);
-                w.WriteData(n.CompressedData.Data);
+                if (Gbx.ZLib is null)
+                {
+                    w.Write(n.CompressedData.UncompressedSize);
+                    w.WriteData(n.CompressedData.Data);
+                }
+                else
+                {
+                    using var uncompressedMs = new MemoryStream();
+                    using var wBuffer = new GbxWriter(uncompressedMs);
+                    using var rwBuffer = new GbxReaderWriter(wBuffer);
+                    ((IReadableWritable)n).ReadWrite(rwBuffer, Version);
+                    wBuffer.Flush();
+
+                    uncompressedMs.Position = 0;
+                    using var compressedMs = new MemoryStream();
+                    Gbx.ZLib.Compress(uncompressedMs, compressedMs);
+                    w.Write((int)uncompressedMs.Length);
+                    w.Write((int)compressedMs.Length);
+                    compressedMs.WriteTo(w.BaseStream);
+                }
             }
         }
     }
@@ -341,6 +365,7 @@ public partial class CPlugEntRecordData : IReadableWritable
 
         return delta;
     }
+
     private static IEnumerable<CustomModulesDeltaList> ReadCustomModulesDeltaLists(GbxReader r, int version)
     {
         var deltaListCount = version >= 8 ? r.ReadInt32() : 1;
@@ -384,6 +409,156 @@ public partial class CPlugEntRecordData : IReadableWritable
             Deltas = deltas,
             Period = period
         };
+    }
+
+    private void WriteEntList(GbxWriter w, int version)
+    {
+        w.Write(entList.Count > 0, asByte: true);
+
+        for (var i = 0; i < entList.Count; i++)
+        {
+            var elem = entList[i];
+
+            w.Write(elem.Type);
+            w.Write(elem.U01);
+            w.Write(elem.U02);
+            w.Write(elem.U03);
+
+            if (version >= 6)
+            {
+                w.Write(elem.U04);
+            }
+
+            var desc = entRecordDescs[elem.Type];
+            if (version < 11)
+            {
+                WriteEntRecordDeltas(w, elem.Samples);
+            }
+            else
+            {
+                WriteEncodedDeltas(w, elem.Samples);
+            }
+
+            var hasNext = i < entList.Count - 1;
+            w.Write(hasNext, asByte: true);
+
+            if (version >= 2)
+            {
+                WriteEntRecordDeltas2(w, elem.Samples2);
+            }
+        }
+    }
+
+    private static void WriteEncodedDeltas(GbxWriter w, List<EntRecordDelta> samples)
+    {
+        w.Write(samples.Count);
+
+        if (samples.Count == 0)
+        {
+            return;
+        }
+
+        var sampleSize = samples.Count > 0 ? samples[0].Data.Length : 0;
+        w.Write(sampleSize);
+
+        var prevTime = TimeInt32.Zero;
+        foreach (var sample in samples)
+        {
+            w.Write(sample.Time - prevTime);
+            prevTime = sample.Time;
+        }
+
+        for (var i = 0; i < sampleSize; i++)
+        {
+            byte accumulator = 0;
+            for (var b = 0; b < samples.Count; b++)
+            {
+                var value = samples[b].Data[i];
+                var delta = (byte)(value - accumulator);
+                w.Write(delta);
+                accumulator = value;
+            }
+        }
+    }
+
+    private static void WriteEntRecordDeltas2(GbxWriter w, List<EntRecordDelta2> samples)
+    {
+        foreach (var sample in samples)
+        {
+            w.Write(true, asByte: true);
+            w.Write(sample.Type);
+            w.Write(sample.Time);
+            w.WriteData(sample.Data);
+        }
+        w.Write(false, asByte: true);
+    }
+
+    private static void WriteEntRecordDeltas(GbxWriter w, List<EntRecordDelta> samples)
+    {
+        foreach (var sample in samples)
+        {
+            w.Write(true, asByte: true);
+            w.Write(sample.Time);
+            w.WriteData(sample.Data);
+        }
+        w.Write(false, asByte: true);
+    }
+
+    private void WriteBulkNoticeList(GbxWriter w)
+    {
+        foreach (var elem in bulkNoticeList)
+        {
+            w.Write(true, asByte: true);
+            w.Write(elem.U01);
+            w.Write(elem.U02);
+            w.WriteData(elem.Data);
+        }
+        w.Write(false, asByte: true);
+    }
+
+    private void WriteCustomModulesDeltaLists(GbxWriter w, int version)
+    {
+        var deltaListCount = version >= 8 ? customModulesDeltaLists.Count : (customModulesDeltaLists.Count > 0 ? 1 : 0);
+
+        if (version >= 8)
+        {
+            w.Write(deltaListCount);
+        }
+
+        if (deltaListCount == 0)
+        {
+            return;
+        }
+
+        if (version >= 7)
+        {
+            var count = version >= 8 ? deltaListCount : 1;
+            for (var i = 0; i < count; i++)
+            {
+                WriteCustomModulesDeltaList(w, customModulesDeltaLists[i], version);
+            }
+        }
+    }
+
+    private static void WriteCustomModulesDeltaList(GbxWriter w, CustomModulesDeltaList deltaList, int version)
+    {
+        foreach (var delta in deltaList.Deltas)
+        {
+            w.Write(true, asByte: true);
+            w.Write(delta.U01);
+            w.WriteData(delta.Data);
+
+            if (version >= 9)
+            {
+                w.WriteData(delta.U02);
+            }
+        }
+        w.Write(false, asByte: true);
+
+        if (version >= 10)
+        {
+            w.Write(deltaList.Period ?? 0);
+        }
     }
 
     private static IEnumerable<NoticeRecordListElem> ReadBulkNoticeList(GbxReader r)
