@@ -14,6 +14,11 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
     </PropertyGroup>
 
+    <!-- .NET 8 for debug builds to avoid source generator issues -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+        <TargetFrameworks>net8.0</TargetFrameworks>
+    </PropertyGroup>
+
     <PropertyGroup>
         <TargetFrameworks>net10.0;net9.0;net8.0;netstandard2.0</TargetFrameworks>
         <LangVersion>14</LangVersion>
