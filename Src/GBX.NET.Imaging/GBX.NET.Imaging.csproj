@@ -21,6 +21,7 @@
         <Nullable>enable</Nullable>
         <IsTrimmable Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">true</IsTrimmable>
         <IsAotCompatible Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net7.0'))">true</IsAotCompatible>
+        <Configurations>Debug;Release;Design</Configurations>
 
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <IncludeSymbols>true</IncludeSymbols>
@@ -34,7 +35,7 @@
     </PropertyGroup>
 
     <!-- .NET 8 for debug builds to avoid source generator issues (uses netstandard2.0) -->
-    <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <PropertyGroup Condition="'$(Configuration)' == 'Design'">
         <TargetFrameworks>net8.0-windows</TargetFrameworks>
     </PropertyGroup>
 

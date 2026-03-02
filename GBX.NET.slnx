@@ -1,12 +1,25 @@
 <Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Design" />
+    <BuildType Name="Release" />
+  </Configurations>
   <Folder Name="/Benchmarks/">
-    <Project Path="Benchmarks/GBX.NET.Benchmarks/GBX.NET.Benchmarks.csproj" />
+    <Project Path="Benchmarks/GBX.NET.Benchmarks/GBX.NET.Benchmarks.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/Generators/">
     <File Path="Generators/LICENSE" />
-    <Project Path="Generators/GBX.NET.Generators/GBX.NET.Generators.csproj" />
-    <Project Path="Generators/GBX.NET.Lua.Generators/GBX.NET.Lua.Generators.csproj" />
-    <Project Path="Generators/GBX.NET.Tests.Generators/GBX.NET.Tests.Generators.csproj" />
+    <Project Path="Generators/GBX.NET.Generators/GBX.NET.Generators.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Generators/GBX.NET.Lua.Generators/GBX.NET.Lua.Generators.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Generators/GBX.NET.Tests.Generators/GBX.NET.Tests.Generators.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/Položky řešení/">
     <File Path=".dockerignore" />
@@ -40,89 +53,213 @@
     <File Path="Samples/LICENSE" />
   </Folder>
   <Folder Name="/Samples/Advanced/">
-    <Project Path="Samples/Advanced/Blik/Blik.csproj" />
-    <Project Path="Samples/Advanced/ItemPacker/ItemPacker.csproj" />
+    <Project Path="Samples/Advanced/Blik/Blik.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Samples/Advanced/ItemPacker/ItemPacker.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/Samples/Beginner/">
-    <Project Path="Samples/Beginner/EnvimixForTM2020/EnvimixForTM2020.csproj" />
-    <Project Path="Samples/Beginner/FixDesertUpdatePillarsAfterConversion/FixDesertUpdatePillarsAfterConversion.csproj" />
-    <Project Path="Samples/Beginner/FullMapInfo/FullMapInfo.csproj" />
-    <Project Path="Samples/Beginner/Legomania/Legomania.csproj" />
-    <Project Path="Samples/Beginner/SolidExtract/SolidExtract.csproj" />
+    <Project Path="Samples/Beginner/EnvimixForTM2020/EnvimixForTM2020.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Samples/Beginner/FixDesertUpdatePillarsAfterConversion/FixDesertUpdatePillarsAfterConversion.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Samples/Beginner/FullMapInfo/FullMapInfo.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Samples/Beginner/Legomania/Legomania.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Samples/Beginner/SolidExtract/SolidExtract.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/Samples/NativeAOT/" />
   <Folder Name="/Samples/Tool/">
-    <Project Path="Samples/Tool/GhostExtract/GhostExtract.csproj" />
-    <Project Path="Samples/Tool/GhostExtractCLI/GhostExtractCLI.csproj" />
-    <Project Path="Samples/Tool/InputExtract/InputExtract.csproj" />
-    <Project Path="Samples/Tool/InputExtractCLI/InputExtractCLI.csproj" />
+    <Project Path="Samples/Tool/GhostExtract/GhostExtract.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Samples/Tool/GhostExtractCLI/GhostExtractCLI.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Samples/Tool/InputExtract/InputExtract.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Samples/Tool/InputExtractCLI/InputExtractCLI.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/Samples/Trimming/">
-    <Project Path="Samples/Trimming/SimpleMapInfo_Trimmed/SimpleMapInfo_Trimmed.csproj" />
-    <Project Path="Samples/Trimming/SimpleMapInfo_TrimmedGeneric/SimpleMapInfo_TrimmedGeneric.csproj" />
-    <Project Path="Samples/Trimming/SimpleMapInfo_Untrimmed/SimpleMapInfo_Untrimmed.csproj" />
-    <Project Path="Samples/Trimming/SimpleMapInfo_UntrimmedGeneric/SimpleMapInfo_UntrimmedGeneric.csproj" />
+    <Project Path="Samples/Trimming/SimpleMapInfo_Trimmed/SimpleMapInfo_Trimmed.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Samples/Trimming/SimpleMapInfo_TrimmedGeneric/SimpleMapInfo_TrimmedGeneric.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Samples/Trimming/SimpleMapInfo_Untrimmed/SimpleMapInfo_Untrimmed.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Samples/Trimming/SimpleMapInfo_UntrimmedGeneric/SimpleMapInfo_UntrimmedGeneric.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/Src/">
-    <Project Path="Src/GBX.NET.BlockInfo/GBX.NET.BlockInfo.csproj" />
-    <Project Path="Src/GBX.NET.Crypto/GBX.NET.Crypto.csproj" />
-    <Project Path="Src/GBX.NET.Extensions.Hosting/GBX.NET.Extensions.Hosting.csproj" />
-    <Project Path="Src/GBX.NET.Hashing/GBX.NET.Hashing.csproj" />
-    <Project Path="Src/GBX.NET.Imaging.ImageSharp/GBX.NET.Imaging.ImageSharp.csproj" />
-    <Project Path="Src/GBX.NET.Imaging.SkiaSharp/GBX.NET.Imaging.SkiaSharp.csproj" />
-    <Project Path="Src/GBX.NET.Imaging/GBX.NET.Imaging.csproj" />
-    <Project Path="Src/GBX.NET.Json/GBX.NET.Json.csproj" />
-    <Project Path="Src/GBX.NET.Lua/GBX.NET.Lua.csproj" />
-    <Project Path="Src/GBX.NET.LZO/GBX.NET.LZO.csproj" />
-    <Project Path="Src/GBX.NET.NewtonsoftJson/GBX.NET.NewtonsoftJson.csproj" />
-    <Project Path="Src/GBX.NET.PAK/GBX.NET.PAK.csproj" />
-    <Project Path="Src/GBX.NET.Tool.CLI/GBX.NET.Tool.CLI.csproj" />
-    <Project Path="Src/GBX.NET.Tool.Razor/GBX.NET.Tool.Razor.csproj" />
-    <Project Path="Src/GBX.NET.Tool.StandardIO/GBX.NET.Tool.StandardIO.csproj" />
-    <Project Path="Src/GBX.NET.Tool/GBX.NET.Tool.csproj" />
-    <Project Path="Src/GBX.NET.ZLib/GBX.NET.ZLib.csproj" />
+    <Project Path="Src/GBX.NET.BlockInfo/GBX.NET.BlockInfo.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.Crypto/GBX.NET.Crypto.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.Extensions.Hosting/GBX.NET.Extensions.Hosting.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.Hashing/GBX.NET.Hashing.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.Imaging.ImageSharp/GBX.NET.Imaging.ImageSharp.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.Imaging.SkiaSharp/GBX.NET.Imaging.SkiaSharp.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.Imaging/GBX.NET.Imaging.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.Json/GBX.NET.Json.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.Lua/GBX.NET.Lua.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.LZO/GBX.NET.LZO.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.NewtonsoftJson/GBX.NET.NewtonsoftJson.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.PAK/GBX.NET.PAK.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.Tool.CLI/GBX.NET.Tool.CLI.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.Tool.Razor/GBX.NET.Tool.Razor.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.Tool.StandardIO/GBX.NET.Tool.StandardIO.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.Tool/GBX.NET.Tool.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Src/GBX.NET.ZLib/GBX.NET.ZLib.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
     <Project Path="Src/GBX.NET/GBX.NET.csproj" />
   </Folder>
   <Folder Name="/Templates/">
-    <Project Path="Templates/GBX.NET.Templates.csproj" />
-    <Project Path="Templates/MyGbxBlazorWasmApp/MyGbxBlazorWasmApp.csproj" />
-    <Project Path="Templates/MyGbxConsoleApp/MyGbxConsoleApp.csproj" />
+    <Project Path="Templates/GBX.NET.Templates.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Templates/MyGbxBlazorWasmApp/MyGbxBlazorWasmApp.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Templates/MyGbxConsoleApp/MyGbxConsoleApp.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/Templates/MyGbxBlazorWebApp/" />
   <Folder Name="/Templates/MyGbxToolApp/">
-    <Project Path="Templates/MyGbxToolApp/MyGbxToolApp/MyGbxToolApp.csproj" />
-    <Project Path="Templates/MyGbxToolApp/MyGbxToolAppCLI/MyGbxToolAppCLI.csproj" />
+    <Project Path="Templates/MyGbxToolApp/MyGbxToolApp/MyGbxToolApp.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Templates/MyGbxToolApp/MyGbxToolAppCLI/MyGbxToolAppCLI.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/Tests/">
-    <Project Path="Tests/GBX.NET.Tests/GBX.NET.Tests.csproj" />
+    <Project Path="Tests/GBX.NET.Tests/GBX.NET.Tests.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/Tools/">
     <File Path="Tools/LICENSE" />
-    <Project Path="Tools/BulkParseTest/BulkParseTest.csproj" />
-    <Project Path="Tools/ClassIdFormatter/ClassIdFormatter.csproj" />
-    <Project Path="Tools/ClassIdTxtFromGbxClassInfo/ClassIdTxtFromGbxClassInfo.csproj" />
-    <Project Path="Tools/ClassInfoFromId/ClassInfoFromId.csproj" />
-    <Project Path="Tools/CryCryptSwitch/CryCryptSwitch.csproj" />
-    <Project Path="Tools/ExtractPakFileHashes/ExtractPakFileHashes.csproj" />
-    <Project Path="Tools/GbxDecompress/GbxDecompress.csproj" />
-    <Project Path="Tools/GbxDiff/GbxDiff.csproj" />
-    <Project Path="Tools/GbxDiscordBot/GbxDiscordBot.csproj" />
-    <Project Path="Tools/GbxExplorer/Client/GbxExplorer.Client.csproj" />
-    <Project Path="Tools/GbxExplorer/Component/GbxExplorer.Component.csproj" />
-    <Project Path="Tools/GbxExplorer/Photino/GbxExplorer.Photino.csproj" />
-    <Project Path="Tools/GbxExplorer/Server/GbxExplorer.Server.csproj" />
-    <Project Path="Tools/GbxExplorer/Shared/GbxExplorer.Shared.csproj" />
-    <Project Path="Tools/GbxLuaInterpreter/GbxLuaInterpreter.csproj" />
-    <Project Path="Tools/GbxLuaProcess/GbxLuaProcess.csproj" />
-    <Project Path="Tools/GbxToJson/GbxToJson.csproj" />
-    <Project Path="Tools/MuxCryptSwitch/MuxCryptSwitch.csproj" />
-    <Project Path="Tools/ObjExporter/ObjExporter.csproj" />
-    <Project Path="Tools/PakToFolder/PakToFolder.csproj" />
-    <Project Path="Tools/PakToZip/PakToZip.csproj" />
-    <Project Path="Tools/ParseRepeater/ParseRepeater.csproj" />
+    <Project Path="Tools/BulkParseTest/BulkParseTest.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/ClassIdFormatter/ClassIdFormatter.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/ClassIdTxtFromGbxClassInfo/ClassIdTxtFromGbxClassInfo.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/ClassInfoFromId/ClassInfoFromId.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/CryCryptSwitch/CryCryptSwitch.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/ExtractPakFileHashes/ExtractPakFileHashes.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/GbxDecompress/GbxDecompress.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/GbxDiff/GbxDiff.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/GbxDiscordBot/GbxDiscordBot.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/GbxExplorer/Client/GbxExplorer.Client.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/GbxExplorer/Component/GbxExplorer.Component.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/GbxExplorer/Photino/GbxExplorer.Photino.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/GbxExplorer/Server/GbxExplorer.Server.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/GbxExplorer/Shared/GbxExplorer.Shared.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/GbxLuaInterpreter/GbxLuaInterpreter.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/GbxLuaProcess/GbxLuaProcess.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/GbxToJson/GbxToJson.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/MuxCryptSwitch/MuxCryptSwitch.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/ObjExporter/ObjExporter.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/PakToFolder/PakToFolder.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/PakToZip/PakToZip.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/ParseRepeater/ParseRepeater.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/Tools/Old Gbx Explorer/">
-    <Project Path="Tools/GbxExplorerOld/Client/GbxExplorerOld.Client.csproj" />
-    <Project Path="Tools/GbxExplorerOld/Server/GbxExplorerOld.Server.csproj" />
+    <Project Path="Tools/GbxExplorerOld/Client/GbxExplorerOld.Client.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
+    <Project Path="Tools/GbxExplorerOld/Server/GbxExplorerOld.Server.csproj">
+      <BuildType Solution="Design|*" Project="Debug" />
+    </Project>
   </Folder>
 </Solution>
