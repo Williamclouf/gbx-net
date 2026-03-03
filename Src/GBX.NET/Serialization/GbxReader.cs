@@ -96,7 +96,7 @@ public partial interface IGbxReader : IDisposable
     void ReadMarker(string value);
     [IgnoreForCodeGeneration] ZlibData ReadZlibData();
     ZlibData ReadZlibData(IReadableWritable readableWritable, int version = 0);
-    ZlibData ReadZlibData<T>(out T? node) where T : IClass, new();
+    [IgnoreForCodeGeneration] ZlibData ReadZlibData(Action<GbxReader> action);
     int ReadOptimizedInt(int determineFrom);
     short ReadVarNat15();
     T ReadReadable<T>(int version = 0) where T : IReadable, new();
@@ -1401,7 +1401,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
         try
         {
-            using var rBuffer = ZlibData.OpenDecompressedReader(data, referenceReader: this);
+            using var rBuffer = ZlibData.OpenDecompressedReader(uncompressedSize, data, referenceReader: this);
             using var rwBuffer = new GbxReaderWriter(rBuffer);
             readableWritable.ReadWrite(rwBuffer, version);
 
@@ -1413,21 +1413,21 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         }
     }
 
-    public ZlibData ReadZlibData<T>(out T? node) where T : IClass, new()
+    public ZlibData ReadZlibData(Action<GbxReader> action)
     {
         var uncompressedSize = ReadInt32();
         var data = ReadData();
 
         try
         {
-            using var rBuffer = ZlibData.OpenDecompressedReader(data, referenceReader: this);
-            node = rBuffer.ReadNode<T>();
+            using var rBuffer = ZlibData.OpenDecompressedReader(uncompressedSize, data, referenceReader: this);
+
+            action(rBuffer);
 
             return new ZlibData(uncompressedSize, data, exception: null) { Parsed = true };
         }
         catch (Exception ex)
         {
-            node = default;
             return new ZlibData(uncompressedSize, data, ex) { Parsed = true };
         }
     }

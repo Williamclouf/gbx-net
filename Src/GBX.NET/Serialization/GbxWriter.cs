@@ -91,7 +91,7 @@ public partial interface IGbxWriter : IDisposable
     void WriteMarker(string value);
     void WriteZlibData(ZlibData? value, IReadableWritable readableWritable, int version = 0);
     void WriteZlibData(ZlibData? value, IWritable writable, int version = 0);
-    void WriteZlibData<T>(ZlibData? value, in T? node) where T : IClass, new();
+    void WriteZlibData(ZlibData? value, Action<GbxWriter> action);
     void WriteOptimizedInt(int value, int determineFrom);
     void WriteVarNat15(short value);
     void WriteWritable<T>(T? value, int version = 0) where T : IWritable, new();
@@ -1031,7 +1031,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         compressedStream.WriteTo(BaseStream);
     }
 
-    public void WriteZlibData<T>(ZlibData? value, in T? node) where T : IClass, new()
+    public void WriteZlibData(ZlibData? value, Action<GbxWriter> action)
     {
         if (value?.Exception is not null)
         {
@@ -1043,8 +1043,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         using var uncompressedStream = new MemoryStream();
         using var writer = new GbxWriter(uncompressedStream);
         writer.LoadFrom(this);
-
-        writer.WriteNode(node);
+        action(writer);
         writer.Flush();
 
         uncompressedStream.Position = 0;

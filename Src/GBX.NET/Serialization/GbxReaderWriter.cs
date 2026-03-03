@@ -534,4 +534,24 @@ public sealed partial class GbxReaderWriter : IGbxReaderWriter
             (chunk ?? new TChunk()).ReadWrite(node, this);
         }
     }
+
+    [return: NotNullIfNotNull(nameof(value))]
+    public ZlibData? ZlibData(ZlibData? value, Action<GbxReaderWriter> action)
+    {
+        if (Reader is not null) value = Reader.ReadZlibData(reader =>
+        {
+            using var rw = new GbxReaderWriter(reader);
+            action(rw);
+        });
+        Writer?.WriteZlibData(value, reader =>
+        {
+            using var rw = new GbxReaderWriter(reader);
+            action(rw);
+        });
+        return value;
+    }
+
+    public void ZlibData([NotNullIfNotNull(nameof(value))] ref ZlibData? value, Action<GbxReaderWriter> action)
+        => value = ZlibData(value, action);
+
 }

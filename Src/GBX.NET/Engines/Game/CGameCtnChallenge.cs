@@ -1332,13 +1332,13 @@ public partial class CGameCtnChallenge :
                 }
             }
 
-            n.LightmapCacheData = rw.ZlibData(n.LightmapCacheData, ref n.lightmapCache);
-
-            ReadWriteTheRestOfCompressedData(n, rw);
+            n.LightmapCacheData = rw.ZlibData(n.LightmapCacheData, rw => ReadWriteCompressedData(n, rw));
         }
 
-        private void ReadWriteTheRestOfCompressedData(CGameCtnChallenge n, GbxReaderWriter rw)
+        private void ReadWriteCompressedData(CGameCtnChallenge n, GbxReaderWriter rw)
         {
+            rw.Node<CHmsLightMapCache>(ref n.lightmapCache);
+
             rw.Int32(ref U01);
 
             if (n.LightmapVersion >= 3)

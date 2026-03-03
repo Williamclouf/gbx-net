@@ -8,14 +8,14 @@ public sealed class ZlibData(int uncompressedSize, byte[] data, Exception? excep
 
     public bool Parsed { get; set; }
 
-    internal static GbxReader OpenDecompressedReader(byte[] data, GbxReader? referenceReader = null)
+    internal static GbxReader OpenDecompressedReader(int uncompressedSize, byte[] data, GbxReader? referenceReader = null)
     {
         using var compressedStream = new MemoryStream(data);
-        var uncompressedStream = new MemoryStream();
+        var uncompressedStream = new MemoryStream(uncompressedSize);
 
         Gbx.ZLib.Decompress(compressedStream, uncompressedStream);
 
-        using var rBuffer = new GbxReader(uncompressedStream);
+        var rBuffer = new GbxReader(uncompressedStream);
 
         if (referenceReader is not null)
         {
@@ -28,6 +28,6 @@ public sealed class ZlibData(int uncompressedSize, byte[] data, Exception? excep
 
     public GbxReader OpenDecompressedReader()
     {
-        return OpenDecompressedReader(Data);
+        return OpenDecompressedReader(UncompressedSize, Data);
     }
 }
