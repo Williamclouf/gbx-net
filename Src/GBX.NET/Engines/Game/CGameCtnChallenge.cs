@@ -288,7 +288,7 @@ public partial class CGameCtnChallenge :
 
     [AppliedWithChunk<Chunk0304303D>]
     [AppliedWithChunk<Chunk0304305B>]
-    public CompressedData? LightmapCacheData { get; set; }
+    public ZlibData? LightmapCacheData { get; set; }
 
     private CHmsLightMapCache? lightmapCache;
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
@@ -1294,108 +1294,47 @@ public partial class CGameCtnChallenge :
 
         internal void ReadWriteLightMapCacheSmall(CGameCtnChallenge n, GbxReaderWriter rw)
         {
+            n.LightmapVersion = rw.Int32(n.LightmapVersion.GetValueOrDefault(8));
+
+            if (n.LightmapVersion < 2)
+            {
+                n.LightmapCache = rw.NodeRef<CHmsLightMapCache>(n.LightmapCache);
+                throw new NotSupportedException("Lightmap version <2 is not supported.");
+            }
+
             if (rw.Reader is not null)
             {
-                ReadLightMapCacheSmall(n, rw.Reader);
+                var frameCount = n.LightmapVersion >= 5 ? rw.Reader.ReadInt32() : 1;
+
+                n.LightmapFrames = rw.Reader.ReadArrayReadable<LightmapFrame>(frameCount, n.LightmapVersion.GetValueOrDefault(8));
+
+                if (!n.LightmapFrames.Any(x => x.Data?.Length > 0 || x.Data2?.Length > 0 || x.Data3?.Length > 0))
+                {
+                    return;
+                }
             }
 
             if (rw.Writer is not null)
             {
-                WriteLightMapCacheSmall(n, rw.Writer);
-            }
-        }
-
-        private void ReadLightMapCacheSmall(CGameCtnChallenge n, GbxReader r)
-        {
-            n.LightmapVersion = r.ReadInt32();
-
-            if (n.LightmapVersion < 2)
-            {
-                n.LightmapCache = r.ReadNodeRef<CHmsLightMapCache>();
-                throw new NotSupportedException("Lightmap version <2 is not supported.");
-            }
-
-            var frameCount = n.LightmapVersion >= 5 ? r.ReadInt32() : 1;
-
-            n.LightmapFrames = r.ReadArrayReadable<LightmapFrame>(frameCount, n.LightmapVersion.GetValueOrDefault(8));
-
-            if (!n.LightmapFrames.Any(x => x.Data?.Length > 0 || x.Data2?.Length > 0 || x.Data3?.Length > 0))
-            {
-                return;
-            }
-
-            n.LightmapCacheData = new CompressedData(r.ReadInt32(), r.ReadData());
-
-            if (Gbx.ZLib is null)
-            {
-                return;
-            }
-
-            using var ms = n.LightmapCacheData.OpenDecompressedMemoryStream();
-            var rBuffer = new GbxReader(ms);
-            rBuffer.LoadFrom(r);
-
-            n.LightmapCache = rBuffer.ReadNode<CHmsLightMapCache>();
-
-            var rw = new GbxReaderWriter(rBuffer);
-            ReadWriteTheRestOfCompressedData(n, rw);
-        }
-
-        private void WriteLightMapCacheSmall(CGameCtnChallenge n, GbxWriter w)
-        {
-            var lightmapVersion = n.LightmapVersion.GetValueOrDefault(8);
-
-            w.Write(lightmapVersion);
-
-            if (n.LightmapVersion < 2)
-            {
-                w.WriteNodeRef(n.LightmapCache);
-                return;
-            }
-
-            if (n.LightmapVersion >= 5)
-            {
-                w.Write(n.LightmapFrames?.Length ?? 0);
-            }
-
-            if (n.LightmapFrames is null || n.LightmapFrames.Length == 0)
-            {
-                return;
-            }
-
-            foreach (var frame in n.LightmapFrames)
-            {
-                w.WriteWritable(frame, version: lightmapVersion);
-            }
-
-            if (Gbx.ZLib is null)
-            {
-                if (n.LightmapCacheData is null)
+                if (n.LightmapVersion >= 5)
                 {
-                    throw new ZLibNotDefinedException();
+                    rw.Writer.Write(n.LightmapFrames?.Length ?? 0);
                 }
 
-                w.Write(n.LightmapCacheData.UncompressedSize);
-                w.WriteData(n.LightmapCacheData.Data);
-                return;
+                if (n.LightmapFrames is null or { Length: 0 })
+                {
+                    return;
+                }
+
+                foreach (var frame in n.LightmapFrames)
+                {
+                    rw.Writer.WriteWritable(frame, version: n.LightmapVersion.Value);
+                }
             }
 
-            using var ms = new MemoryStream();
-            using var wBuffer = new GbxWriter(ms);
-            wBuffer.LoadFrom(w);
+            n.LightmapCacheData = rw.ZlibData(n.LightmapCacheData, ref n.lightmapCache);
 
-            wBuffer.WriteNode(n.LightmapCache);
-
-            var rw = new GbxReaderWriter(wBuffer);
             ReadWriteTheRestOfCompressedData(n, rw);
-
-            ms.Position = 0;
-            using var compressedMs = new MemoryStream();
-            Gbx.ZLib.Compress(ms, compressedMs);
-
-            w.Write((int)ms.Length);
-            w.Write((int)compressedMs.Length);
-            compressedMs.WriteTo(w.BaseStream);
         }
 
         private void ReadWriteTheRestOfCompressedData(CGameCtnChallenge n, GbxReaderWriter rw)

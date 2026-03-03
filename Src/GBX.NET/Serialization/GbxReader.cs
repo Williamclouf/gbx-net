@@ -94,6 +94,9 @@ public partial interface IGbxReader : IDisposable
     int ReadSmallLen();
     string ReadSmallString();
     void ReadMarker(string value);
+    [IgnoreForCodeGeneration] ZlibData ReadZlibData();
+    ZlibData ReadZlibData(IReadableWritable readableWritable, int version = 0);
+    ZlibData ReadZlibData<T>(out T? node) where T : IClass, new();
     int ReadOptimizedInt(int determineFrom);
     short ReadVarNat15();
     T ReadReadable<T>(int version = 0) where T : IReadable, new();
@@ -1382,6 +1385,51 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         }
 
 #endif
+    }
+
+    public ZlibData ReadZlibData()
+    {
+        var uncompressedSize = ReadInt32();
+        var data = ReadData();
+        return new ZlibData(uncompressedSize, data, exception: null);
+    }
+
+    public ZlibData ReadZlibData(IReadableWritable readableWritable, int version = 0)
+    {
+        var uncompressedSize = ReadInt32();
+        var data = ReadData();
+
+        try
+        {
+            using var rBuffer = ZlibData.OpenDecompressedReader(data, referenceReader: this);
+            using var rwBuffer = new GbxReaderWriter(rBuffer);
+            readableWritable.ReadWrite(rwBuffer, version);
+
+            return new ZlibData(uncompressedSize, data, exception: null) { Parsed = true };
+        }
+        catch (Exception ex)
+        {
+            return new ZlibData(uncompressedSize, data, ex) { Parsed = true };
+        }
+    }
+
+    public ZlibData ReadZlibData<T>(out T? node) where T : IClass, new()
+    {
+        var uncompressedSize = ReadInt32();
+        var data = ReadData();
+
+        try
+        {
+            using var rBuffer = ZlibData.OpenDecompressedReader(data, referenceReader: this);
+            node = rBuffer.ReadNode<T>();
+
+            return new ZlibData(uncompressedSize, data, exception: null) { Parsed = true };
+        }
+        catch (Exception ex)
+        {
+            node = default;
+            return new ZlibData(uncompressedSize, data, ex) { Parsed = true };
+        }
     }
 
     public int ReadOptimizedInt(int determineFrom) => (uint)determineFrom switch

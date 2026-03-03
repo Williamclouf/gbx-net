@@ -89,6 +89,9 @@ public partial interface IGbxWriter : IDisposable
     void WriteSmallLen(int value);
     void WriteSmallString(string? value);
     void WriteMarker(string value);
+    void WriteZlibData(ZlibData? value, IReadableWritable readableWritable, int version = 0);
+    void WriteZlibData(ZlibData? value, IWritable writable, int version = 0);
+    void WriteZlibData<T>(ZlibData? value, in T? node) where T : IClass, new();
     void WriteOptimizedInt(int value, int determineFrom);
     void WriteVarNat15(short value);
     void WriteWritable<T>(T? value, int version = 0) where T : IWritable, new();
@@ -977,6 +980,79 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
     public void WriteMarker(string value)
     {
         Write(value, StringLengthPrefix.None);
+    }
+
+    public void WriteZlibData(ZlibData? value, IReadableWritable readableWritable, int version = 0)
+    {
+        if (value?.Exception is not null)
+        {
+            Write(value.UncompressedSize);
+            WriteData(value.Data);
+            return;
+        }
+
+        using var uncompressedStream = new MemoryStream();
+        using var writer = new GbxWriter(uncompressedStream);
+        writer.LoadFrom(this);
+
+        using var rwBuffer = new GbxReaderWriter(writer);
+        readableWritable.ReadWrite(rwBuffer, version);
+        writer.Flush();
+
+        uncompressedStream.Position = 0;
+        using var compressedStream = new MemoryStream();
+        Gbx.ZLib.Compress(uncompressedStream, compressedStream);
+        Write((int)uncompressedStream.Length);
+        Write((int)compressedStream.Length);
+        compressedStream.WriteTo(BaseStream);
+    }
+
+    public void WriteZlibData(ZlibData? value, IWritable writable, int version = 0)
+    {
+        if (value?.Exception is not null)
+        {
+            Write(value.UncompressedSize);
+            WriteData(value.Data);
+            return;
+        }
+
+        using var uncompressedStream = new MemoryStream();
+        using var writer = new GbxWriter(uncompressedStream);
+        writer.LoadFrom(this);
+
+        writable.Write(writer, version);
+        writer.Flush();
+
+        uncompressedStream.Position = 0;
+        using var compressedStream = new MemoryStream();
+        Gbx.ZLib.Compress(uncompressedStream, compressedStream);
+        Write((int)uncompressedStream.Length);
+        Write((int)compressedStream.Length);
+        compressedStream.WriteTo(BaseStream);
+    }
+
+    public void WriteZlibData<T>(ZlibData? value, in T? node) where T : IClass, new()
+    {
+        if (value?.Exception is not null)
+        {
+            Write(value.UncompressedSize);
+            WriteData(value.Data);
+            return;
+        }
+
+        using var uncompressedStream = new MemoryStream();
+        using var writer = new GbxWriter(uncompressedStream);
+        writer.LoadFrom(this);
+
+        writer.WriteNode(node);
+        writer.Flush();
+
+        uncompressedStream.Position = 0;
+        using var compressedStream = new MemoryStream();
+        Gbx.ZLib.Compress(uncompressedStream, compressedStream);
+        Write((int)uncompressedStream.Length);
+        Write((int)compressedStream.Length);
+        compressedStream.WriteTo(BaseStream);
     }
 
     public void WriteOptimizedInt(int value, int determineFrom)

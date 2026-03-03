@@ -144,7 +144,13 @@ public partial class Gbx : IGbx
 
     public static ILzo? LZO { get; set; }
     public static ICrc32? CRC32 { get; set; } = new CRC32();
-    public static IZLib? ZLib { get; set; }
+
+    private static IZLib? zLib;
+    public static IZLib ZLib
+    {
+        get => zLib ?? throw new ZLibNotDefinedException();
+        set => zLib = value;
+    }
 
     internal Gbx(GbxHeader header, GbxBody body)
     {
