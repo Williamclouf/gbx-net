@@ -11,6 +11,11 @@ public class Blowfish
 
     public Blowfish(byte[] key, BlowfishTrick trick)
     {
+        if (key is null)
+        {
+            throw new ArgumentNullException(nameof(key));
+        }
+
         this.trick = trick;
 
         uint i;
@@ -130,6 +135,11 @@ public class Blowfish
 
     public void Decrypt(byte[] data)
     {
+        if (data is null)
+        {
+            throw new ArgumentNullException(nameof(data));
+        }
+
         if (data.Length % 8 != 0)
         {
             throw new Exception("Length must be a multiple of 8");
@@ -202,6 +212,11 @@ public class Blowfish
 
     public void Encrypt(byte[] data)
     {
+        if (data is null)
+        {
+            throw new ArgumentNullException(nameof(data));
+        }
+
         if (data.Length % 8 != 0)
         {
             throw new Exception("Invalid Length");
@@ -271,6 +286,16 @@ public class Blowfish
 
     public static string DecryptHexa(string hex, byte[] key)
     {
+        if (hex is null)
+        {
+            throw new ArgumentNullException(nameof(hex));
+        }
+
+        if (key is null)
+        {
+            throw new ArgumentNullException(nameof(key));
+        }
+
 #if NET5_0_OR_GREATER
         var raw = Convert.FromHexString(hex);
 #else
@@ -302,6 +327,16 @@ public class Blowfish
 
     public static string EncryptHexa(string plainText, byte[] key, bool lowercase = false)
     {
+        if (plainText is null)
+        {
+            throw new ArgumentNullException(nameof(plainText));
+        }
+
+        if (key is null)
+        {
+            throw new ArgumentNullException(nameof(key));
+        }
+
         var plainBytes = Encoding.UTF8.GetBytes(plainText);
 
         var paddedLength = (plainBytes.Length + 7) / 8 * 8;

@@ -1,6 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Text;
 
 namespace GBX.NET.Generators;
@@ -8,12 +7,8 @@ namespace GBX.NET.Generators;
 [Generator]
 public class GbxReaderAndWriterArrayGenerator : IIncrementalGenerator
 {
-    private const bool Debug = false;
-
     public virtual void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        if (Debug && !Debugger.IsAttached) Debugger.Launch();
-
         var readerRefTypeMethods = context.CompilationProvider
             .Select(static (compilation, token) =>
             {

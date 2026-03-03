@@ -1,5 +1,4 @@
 ﻿using Microsoft.CodeAnalysis;
-using System.Diagnostics;
 using System.Text;
 
 namespace GBX.NET.Generators;
@@ -7,15 +6,8 @@ namespace GBX.NET.Generators;
 [Generator(LanguageNames.CSharp)]
 public class InputWithTimeGenerator : IIncrementalGenerator
 {
-    private const bool Debug = false;
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        if (Debug && !Debugger.IsAttached)
-        {
-            Debugger.Launch();
-        }
-
         var namesAndContents = context.CompilationProvider.Select(GetTypeSymbols);
 
         context.RegisterSourceOutput(namesAndContents, GenerateSource);

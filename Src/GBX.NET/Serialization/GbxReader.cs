@@ -1939,9 +1939,9 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         {
             var buffer = new byte[BaseStream.Length - BaseStream.Position];
 #if NET6_0_OR_GREATER
-            _ = await BaseStream.ReadAsync(buffer, cancellationToken);
+            await BaseStream.ReadExactlyAsync(buffer, cancellationToken);
 #else
-            _ = await BaseStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+            _ = await BaseStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken); // this can still break on network streams 
 #endif
             return buffer;
         }
