@@ -71,10 +71,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? bronzeTime : ChallengeParameters.BronzeTime;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.BronzeTime = value;
-            }
+            ChallengeParameters?.BronzeTime = value;
 
             bronzeTime = value;
         }
@@ -89,10 +86,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? silverTime : ChallengeParameters.SilverTime;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.SilverTime = value;
-            }
+            ChallengeParameters?.SilverTime = value;
 
             silverTime = value;
         }
@@ -107,10 +101,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? goldTime : ChallengeParameters.GoldTime;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.GoldTime = value;
-            }
+            ChallengeParameters?.GoldTime = value;
 
             goldTime = value;
         }
@@ -125,10 +116,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? authorTime : ChallengeParameters.AuthorTime;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.AuthorTime = value;
-            }
+            ChallengeParameters?.AuthorTime = value;
 
             authorTime = value;
         }
@@ -143,10 +131,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? authorScore : ChallengeParameters.AuthorScore;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.AuthorScore = value;
-            }
+            ChallengeParameters?.AuthorScore = value;
 
             authorScore = value;
         }
@@ -161,10 +146,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? mapType : ChallengeParameters.MapType;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.MapType = value;
-            }
+            ChallengeParameters?.MapType = value;
 
             mapType = value;
         }
@@ -179,10 +161,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? mapStyle : ChallengeParameters.MapStyle;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.MapStyle = value;
-            }
+            ChallengeParameters?.MapStyle = value;
 
             mapStyle = value;
         }

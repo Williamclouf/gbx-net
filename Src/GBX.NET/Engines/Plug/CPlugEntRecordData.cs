@@ -12,70 +12,184 @@ public partial class CPlugEntRecordData : IReadableWritable
     private List<NoticeRecordListElem> bulkNoticeList = [];
     private List<CustomModulesDeltaList> customModulesDeltaLists = [];
 
-    private ZlibData? compressedData;
-    public ZlibData? CompressedData { get => compressedData; set => compressedData = value; }
+    public ZlibData? CompressedData { get; set; }
+
+#if NET9_0_OR_GREATER
+    private readonly Lock CompressedDataLock = new();
+#else
+    private readonly object CompressedDataLock = new();
+#endif
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
     public TimeInt32 Start
     {
-        get => compressedData?.Exception is not null
-            ? throw compressedData.Exception
-            : start ?? TimeInt32.Zero;
-        set => start = value;
+        get
+        {
+            // Record data is not compressed in version 4 and below
+            if (start.HasValue || GetVersion() < 5) return start.GetValueOrDefault();
+            if (CompressedData is null || CompressedData.Parsed) return start.GetValueOrDefault();
+
+            lock (CompressedDataLock)
+            {
+                if (start.HasValue) return start.Value;
+                ParseRecordData(); // sets start and CompressedData.Parsed to true
+                return start.GetValueOrDefault();
+            }
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                start = value;
+            }
+        }
     }
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
     public TimeInt32 End
     {
-        get => compressedData?.Exception is not null
-            ? throw compressedData.Exception
-            : end ?? TimeInt32.Zero;
-        set => end = value;
+        get
+        {
+            // Record data is not compressed in version 4 and below
+            if (end.HasValue || GetVersion() < 5) return end.GetValueOrDefault();
+            if (CompressedData is null || CompressedData.Parsed) return end.GetValueOrDefault();
+
+            lock (CompressedDataLock)
+            {
+                if (end.HasValue) return end.Value;
+                ParseRecordData(); // sets end and CompressedData.Parsed to true
+                return end.GetValueOrDefault();
+            }
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                end = value;
+            }
+        }
     }
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
     public EntRecordDesc[] EntRecordDescs
     {
-        get => compressedData?.Exception is not null
-            ? throw compressedData.Exception
-            : entRecordDescs ?? [];
-        set => entRecordDescs = value;
+        get
+        {
+            // Record data is not compressed in version 4 and below
+            if (entRecordDescs.Length > 0 || GetVersion() < 5) return entRecordDescs;
+            if (CompressedData is null || CompressedData.Parsed) return entRecordDescs;
+
+            lock (CompressedDataLock)
+            {
+                if (entRecordDescs.Length > 0) return entRecordDescs;
+                ParseRecordData(); // sets entRecordDescs and CompressedData.Parsed to true
+                return entRecordDescs;
+            }
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                entRecordDescs = value;
+            }
+        }
     }
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
     public NoticeRecordDesc[] NoticeRecordDescs
     {
-        get => compressedData?.Exception is not null
-            ? throw compressedData.Exception
-            : noticeRecordDescs ?? [];
-        set => noticeRecordDescs = value;
+        get
+        {
+            // Record data is not compressed in version 4 and below
+            if (noticeRecordDescs.Length > 0 || GetVersion() < 5) return noticeRecordDescs;
+            if (CompressedData is null || CompressedData.Parsed) return noticeRecordDescs;
+
+            lock (CompressedDataLock)
+            {
+                if (noticeRecordDescs.Length > 0) return noticeRecordDescs;
+                ParseRecordData(); // sets noticeRecordDescs and CompressedData.Parsed to true
+                return noticeRecordDescs;
+            }
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                noticeRecordDescs = value;
+            }
+        }
     }
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
     public List<EntRecordListElem> EntList
     {
-        get => compressedData?.Exception is not null
-            ? throw compressedData.Exception
-            : entList ?? [];
-        set => entList = value;
+        get
+        {
+            if (entList.Count > 0 || GetVersion() < 5) return entList;
+            if (CompressedData is null || CompressedData.Parsed) return entList;
+
+            lock (CompressedDataLock)
+            {
+                if (entList.Count > 0) return entList;
+                ParseRecordData(); // sets entList and CompressedData.Parsed to true
+                return entList;
+            }
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                entList = value;
+            }
+        }
     }
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
     public List<NoticeRecordListElem> BulkNoticeList
     {
-        get => compressedData?.Exception is not null
-            ? throw compressedData.Exception
-            : bulkNoticeList ?? [];
-        set => bulkNoticeList = value;
+        get
+        {
+            if (bulkNoticeList.Count > 0 || GetVersion() < 5) return bulkNoticeList;
+            if (CompressedData is null || CompressedData.Parsed) return bulkNoticeList;
+
+            lock (CompressedDataLock)
+            {
+                if (bulkNoticeList.Count > 0) return bulkNoticeList;
+                ParseRecordData(); // sets bulkNoticeList and CompressedData.Parsed to true
+                return bulkNoticeList;
+            }
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                bulkNoticeList = value;
+            }
+        }
     }
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
     public List<CustomModulesDeltaList> CustomModulesDeltaLists
     {
-        get => compressedData?.Exception is not null
-            ? throw compressedData.Exception
-            : customModulesDeltaLists ?? [];
-        set => customModulesDeltaLists = value;
+        get
+        {
+            if (customModulesDeltaLists.Count > 0 || GetVersion() < 7) return customModulesDeltaLists;
+            if (CompressedData is null || CompressedData.Parsed) return customModulesDeltaLists;
+
+            lock (CompressedDataLock)
+            {
+                if (customModulesDeltaLists.Count > 0) return customModulesDeltaLists;
+                ParseRecordData(); // sets customModulesDeltaLists and CompressedData.Parsed to true
+                return customModulesDeltaLists;
+            }
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                customModulesDeltaLists = value;
+            }
+        }
     }
 
     public void ReadWrite(GbxReaderWriter rw, int v = 0)
@@ -118,6 +232,25 @@ public partial class CPlugEntRecordData : IReadableWritable
         }
     }
 
+    private void ParseRecordData()
+    {
+        if (CompressedData is null) throw new InvalidOperationException("CompressedData not available");
+
+        var version = GetVersion();
+
+        using var r = CompressedData.OpenDecompressedReader();
+        using var rw = new GbxReaderWriter(r);
+
+        ReadWrite(rw, version);
+
+        CompressedData.Parsed = true;
+    }
+
+    private int GetVersion()
+    {
+        return Chunks.Get<Chunk0911F000>()?.Version ?? throw new InvalidOperationException("Version not found (Chunk0911F000 chunk is missing)");
+    }
+
     public partial class Chunk0911F000 : IVersionable
     {
         public int Version { get; set; }
@@ -132,7 +265,12 @@ public partial class CPlugEntRecordData : IReadableWritable
                 return;
             }
 
-            rw.ZlibData(ref n.compressedData, n, Version);
+            if (rw.Reader is not null)
+            {
+                n.CompressedData = rw.Reader.ReadZlibData();
+            }
+
+            rw.Writer?.WriteZlibData(n.CompressedData, n, Version);
         }
     }
 

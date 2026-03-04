@@ -22,7 +22,7 @@ public partial class CHmsLightMapCache
         private EPlugImageFileFmt bumpIntensFormat = EPlugImageFileFmt.Webp;
 
         /// <summary>
-        /// DiffuseWebp quality (0-100)
+        /// Diffuse quality (0-100)
         /// </summary>
         public int DiffuseQuality { get => diffuseQuality; set => diffuseQuality = value; }
 
@@ -30,7 +30,12 @@ public partial class CHmsLightMapCache
         public int DiffuseHeight { get => diffuseHeight; set => diffuseHeight = value; }
         public int BumpIntensWidth { get => bumpIntensWidth; set => bumpIntensWidth = value; }
         public int BumpIntensHeight { get => bumpIntensHeight; set => bumpIntensHeight = value; }
+
+        /// <summary>
+        /// Bump intensity quality (0-100)
+        /// </summary>
         public int BumpIntensQuality { get => bumpIntensQuality; set => bumpIntensQuality = value; }
+
         public EPlugImageFileFmt DiffuseFormat { get => diffuseFormat; set => diffuseFormat = value; }
         public int SpriteWidth { get => spriteWidth; set => spriteWidth = value; }
         public int SpriteHeight { get => spriteHeight; set => spriteHeight = value; }

@@ -1,6 +1,5 @@
 ﻿using GBX.NET.Inputs;
 using System.Collections.Immutable;
-using System.Numerics;
 
 namespace GBX.NET.Engines.Game;
 
