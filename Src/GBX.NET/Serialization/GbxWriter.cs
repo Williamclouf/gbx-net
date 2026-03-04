@@ -984,7 +984,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
     public void WriteZlibData(ZlibData? value, IReadableWritable readableWritable, int version = 0)
     {
-        if (value?.Exception is not null)
+        if (value?.Parsed == false)
         {
             Write(value.UncompressedSize);
             WriteData(value.Data);
@@ -1009,7 +1009,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
     public void WriteZlibData(ZlibData? value, IWritable writable, int version = 0)
     {
-        if (value?.Exception is not null)
+        if (value?.Parsed == false)
         {
             Write(value.UncompressedSize);
             WriteData(value.Data);
@@ -1033,7 +1033,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
     public void WriteZlibData(ZlibData? value, Action<GbxWriter> action)
     {
-        if (value?.Exception is not null)
+        if (value?.Parsed == false)
         {
             Write(value.UncompressedSize);
             WriteData(value.Data);
