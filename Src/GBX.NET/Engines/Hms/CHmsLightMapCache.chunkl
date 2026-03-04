@@ -1,1 +1,39 @@
 CHmsLightMapCache 0x06022000
+
+archive Frame
+ data Data
+ v3+
+  data Data2
+  v6+
+   data Data3
+   
+archive ProbeGridBoxOld
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ float
+ float
+ float
+
+archive ProbeGridBox
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ float
+ float
+ float
+ float
+ float
+ float
