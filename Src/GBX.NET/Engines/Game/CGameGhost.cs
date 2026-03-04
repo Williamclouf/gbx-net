@@ -30,11 +30,19 @@ public partial class CGameGhost
             {
                 if (sampleData is not null) return sampleData;
 
-                using var reader = CompressedData.OpenDecompressedReader();
-                sampleData = new Data();
-                sampleData.Read(reader);
-                CompressedData.Parsed = true;
-                return sampleData;
+                try
+                {
+                    using var reader = CompressedData.OpenDecompressedReader();
+                    sampleData = new Data();
+                    sampleData.Read(reader);
+                    CompressedData.Parsed = true;
+                    return sampleData;
+                }
+                catch (Exception ex)
+                {
+                    CompressedData.Exception = ex;
+                    throw;
+                }
             }
         }
     }

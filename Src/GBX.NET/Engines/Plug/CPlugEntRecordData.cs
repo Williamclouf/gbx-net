@@ -236,14 +236,22 @@ public partial class CPlugEntRecordData : IReadableWritable
     {
         if (CompressedData is null) throw new InvalidOperationException("CompressedData not available");
 
-        var version = GetVersion();
+        try
+        {
+            var version = GetVersion();
 
-        using var r = CompressedData.OpenDecompressedReader();
-        using var rw = new GbxReaderWriter(r);
+            using var r = CompressedData.OpenDecompressedReader();
+            using var rw = new GbxReaderWriter(r);
 
-        ReadWrite(rw, version);
+            ReadWrite(rw, version);
 
-        CompressedData.Parsed = true;
+            CompressedData.Parsed = true;
+        }
+        catch (Exception ex)
+        {
+            CompressedData.Exception = ex;
+            throw;
+        }
     }
 
     private int GetVersion()

@@ -4,7 +4,7 @@ public sealed class ZlibData(int uncompressedSize, byte[] data, Exception? excep
 {
     public int UncompressedSize { get; } = uncompressedSize;
     public byte[] Data { get; } = data;
-    public Exception? Exception { get; } = exception;
+    public Exception? Exception { get; set; } = exception;
 
     public bool Parsed { get; set; }
 

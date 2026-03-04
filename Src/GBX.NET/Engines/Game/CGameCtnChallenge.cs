@@ -1309,15 +1309,24 @@ public partial class CGameCtnChallenge :
     private void ParseLightMapCacheSmall()
     {
         if (LightmapCacheData is null) throw new InvalidOperationException("LightmapCacheData not available");
-        if (LightmapVersion is null) throw new InvalidOperationException("LightmapVersion not available");
 
-        using var r = LightmapCacheData.OpenDecompressedReader();
-        using var rw = new GbxReaderWriter(r);
+        try
+        {
+            if (LightmapVersion is null) throw new InvalidOperationException("LightmapVersion not available");
 
-        lightmapCacheSmall = new CHmsLightMapCache.Small();
-        lightmapCacheSmall.ReadWrite(LightmapVersion.Value, ref lightmapCache, lightmapFrames, rw);
+            using var r = LightmapCacheData.OpenDecompressedReader();
+            using var rw = new GbxReaderWriter(r);
 
-        LightmapCacheData.Parsed = true;
+            lightmapCacheSmall = new CHmsLightMapCache.Small();
+            lightmapCacheSmall.ReadWrite(LightmapVersion.Value, ref lightmapCache, lightmapFrames, rw);
+
+            LightmapCacheData.Parsed = true;
+        }
+        catch (Exception ex)
+        {
+            LightmapCacheData.Exception = ex;
+            throw;
+        }
     }
 
     public partial class Chunk0304303D
