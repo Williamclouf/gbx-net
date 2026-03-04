@@ -290,6 +290,12 @@ public partial class CGameCtnChallenge :
     [AppliedWithChunk<Chunk0304305B>]
     public ZlibData? LightmapCacheData { get; set; }
 
+#if NET9_0_OR_GREATER
+    private readonly Lock LightmapCacheDataLock = new();
+#else
+    private readonly object LightmapCacheDataLock = new();
+#endif
+
     private CHmsLightMapCache? lightmapCache;
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
     [AppliedWithChunk<Chunk0304303D>]
@@ -298,18 +304,40 @@ public partial class CGameCtnChallenge :
     {
         get
         {
-            if (Gbx.ZLib is null && lightmapCache is null && LightmapCacheData is not null)
+            // Lightmap cache is not compressed in version 1 and below
+            if (lightmapCache is not null || LightmapVersion < 2) return lightmapCache;
+            if (LightmapCacheData is null || LightmapCacheData.Parsed) return lightmapCache;
+
+            lock (LightmapCacheDataLock)
             {
-                throw new ZLibNotDefinedException();
+                if (lightmapCache is not null) return lightmapCache;
+                ReadWriteLightMapCacheSmall();
+                return lightmapCache;
             }
-            return lightmapCache;
         }
         set => lightmapCache = value;
     }
 
+    private LightmapFrame[]? lightmapFrames;
     [AppliedWithChunk<Chunk0304303D>]
     [AppliedWithChunk<Chunk0304305B>]
-    public LightmapFrame[]? LightmapFrames { get; set; }
+    public LightmapFrame[]? LightmapFrames
+    {
+        get
+        {
+            // Lightmap frames don't include (known) compressed values in version 4 and below
+            if (lightmapFrames is not null && LightmapVersion < 5) return lightmapFrames;
+            if (LightmapCacheData is null || LightmapCacheData.Parsed) return lightmapFrames;
+
+            lock (LightmapCacheDataLock)
+            {
+                if (lightmapCache is not null) return lightmapFrames;
+                ReadWriteLightMapCacheSmall();
+                return lightmapFrames;
+            }
+        }
+        set => lightmapFrames = value;
+    }
 
     private List<CGameCtnAnchoredObject>? anchoredObjects;
     [AppliedWithChunk<Chunk03043040>]
@@ -910,7 +938,7 @@ public partial class CGameCtnChallenge :
                     var exebuild = default(string);
                     var lighmapVersion = 0;
 
-                    if (LightmapFrames?.Length > 0)
+                    if (lightmapFrames?.Length > 0)
                     {
                         lighmapVersion = gameVersion switch
                         {
@@ -1265,6 +1293,20 @@ public partial class CGameCtnChallenge :
         }
     }
 
+    private void ReadWriteLightMapCacheSmall()
+    {
+        if (LightmapCacheData is null) throw new InvalidOperationException("LightmapCacheData not available");
+
+        var chunk = Chunks.Get<Chunk0304303D>() ?? Chunks.Get<Chunk0304305B>() ?? new Chunk0304303D();
+
+        using var r = LightmapCacheData.OpenDecompressedReader();
+        using var rw = new GbxReaderWriter(r);
+
+        chunk.ReadWriteCompressedData(this, rw);
+
+        LightmapCacheData.Parsed = true;
+    }
+
     public partial class Chunk0304303D
     {
         public int U01;
@@ -1292,7 +1334,7 @@ public partial class CGameCtnChallenge :
             ReadWriteLightMapCacheSmall(n, rw);
         }
 
-        internal void ReadWriteLightMapCacheSmall(CGameCtnChallenge n, GbxReaderWriter rw)
+        protected void ReadWriteLightMapCacheSmall(CGameCtnChallenge n, GbxReaderWriter rw)
         {
             n.LightmapVersion = rw.Int32(n.LightmapVersion.GetValueOrDefault(8));
 
@@ -1304,38 +1346,48 @@ public partial class CGameCtnChallenge :
 
             if (rw.Reader is not null)
             {
-                var frameCount = n.LightmapVersion >= 5 ? rw.Reader.ReadInt32() : 1;
+                var r = rw.Reader;
 
-                n.LightmapFrames = rw.Reader.ReadArrayReadable<LightmapFrame>(frameCount, n.LightmapVersion.GetValueOrDefault(8));
+                var frameCount = n.LightmapVersion >= 5 ? r.ReadInt32() : 1;
 
-                if (!n.LightmapFrames.Any(x => x.Data?.Length > 0 || x.Data2?.Length > 0 || x.Data3?.Length > 0))
+                n.lightmapFrames = r.ReadArrayReadable<LightmapFrame>(frameCount, n.LightmapVersion.GetValueOrDefault(8));
+
+                if (!n.lightmapFrames.Any(x => x.Data?.Length > 0 || x.Data2?.Length > 0 || x.Data3?.Length > 0))
                 {
                     return;
                 }
+
+                n.LightmapCacheData = r.ReadZlibData();
             }
 
             if (rw.Writer is not null)
             {
+                var w = rw.Writer;
+
                 if (n.LightmapVersion >= 5)
                 {
-                    rw.Writer.Write(n.LightmapFrames?.Length ?? 0);
+                    w.Write(n.lightmapFrames?.Length ?? 0);
                 }
 
-                if (n.LightmapFrames is null or { Length: 0 })
+                if (n.lightmapFrames is null or { Length: 0 })
                 {
                     return;
                 }
 
-                foreach (var frame in n.LightmapFrames)
+                foreach (var frame in n.lightmapFrames)
                 {
-                    rw.Writer.WriteWritable(frame, version: n.LightmapVersion.Value);
+                    w.WriteWritable(frame, version: n.LightmapVersion.Value);
                 }
-            }
 
-            n.LightmapCacheData = rw.ZlibData(n.LightmapCacheData, rw => ReadWriteCompressedData(n, rw));
+                w.WriteZlibData(n.LightmapCacheData, w =>
+                {
+                    using var rw = new GbxReaderWriter(w);
+                    ReadWriteCompressedData(n, rw);
+                });
+            }
         }
 
-        private void ReadWriteCompressedData(CGameCtnChallenge n, GbxReaderWriter rw)
+        internal void ReadWriteCompressedData(CGameCtnChallenge n, GbxReaderWriter rw)
         {
             rw.Node<CHmsLightMapCache>(ref n.lightmapCache);
 
@@ -1357,9 +1409,9 @@ public partial class CGameCtnChallenge :
                     {
                         rw.Data(ref U08);
                     }
-                    else if (n.LightmapFrames is not null)
+                    else if (n.lightmapFrames is not null)
                     {
-                        foreach (var frame in n.LightmapFrames)
+                        foreach (var frame in n.lightmapFrames)
                         {
                             frame.U01 = rw.Data(frame.U01);
                             frame.U02 = rw.Single(frame.U02);

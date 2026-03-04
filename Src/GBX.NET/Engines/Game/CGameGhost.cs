@@ -9,7 +9,11 @@ public partial class CGameGhost
     private ZlibData? compressedData;
     public ZlibData? CompressedData { get => compressedData; set => compressedData = value; }
 
-    private readonly object parseLock = new();
+#if NET9_0_OR_GREATER
+    private readonly Lock CompressedDataLock = new();
+#else
+    private readonly object CompressedDataLock = new();
+#endif
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
     [AppliedWithChunk<Chunk0303F003>]
@@ -19,22 +23,12 @@ public partial class CGameGhost
     {
         get
         {
-            if (sampleData is not null)
-            {
-                return sampleData;
-            }
+            if (sampleData is not null) return sampleData;
+            if (CompressedData is null) throw new InvalidOperationException("CompressedData not available");
 
-            if (CompressedData is null)
+            lock (CompressedDataLock)
             {
-                throw new InvalidOperationException("No compressed data available to parse.");
-            }
-
-            lock (parseLock)
-            {
-                if (sampleData is not null)
-                {
-                    return sampleData;
-                }
+                if (sampleData is not null) return sampleData;
 
                 using var reader = CompressedData.OpenDecompressedReader();
                 sampleData = new Data();
