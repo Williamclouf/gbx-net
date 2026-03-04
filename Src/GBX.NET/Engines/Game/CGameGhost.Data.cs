@@ -127,8 +127,8 @@ public partial class CGameGhost
             throw new NotSupportedException("Writing ghost data is not supported.");
         }
 
-        /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
-        /*internal void Parse()
+        /*/// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
+        internal void Parse()
         {
             if (SamplesRequested)
             {

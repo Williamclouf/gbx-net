@@ -33,6 +33,7 @@ public partial class CGameGhost
                 using var reader = CompressedData.OpenDecompressedReader();
                 sampleData = new Data();
                 sampleData.Read(reader);
+                CompressedData.Parsed = true;
                 return sampleData;
             }
         }
