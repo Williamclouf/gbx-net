@@ -89,8 +89,8 @@ public partial interface IGbxWriter : IDisposable
     void WriteSmallLen(int value);
     void WriteSmallString(string? value);
     void WriteMarker(string value);
-    void WriteZlibData(ZlibData? value, IReadableWritable readableWritable, int version = 0);
-    void WriteZlibData(ZlibData? value, IWritable writable, int version = 0);
+    void WriteZlibData(ZlibData? value, IReadableWritable? readableWritable, int version = 0);
+    void WriteZlibData(ZlibData? value, IWritable? writable, int version = 0);
     void WriteZlibData(ZlibData? value, Action<GbxWriter> action);
     void WriteOptimizedInt(int value, int determineFrom);
     void WriteVarNat15(short value);
@@ -982,13 +982,18 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         Write(value, StringLengthPrefix.None);
     }
 
-    public void WriteZlibData(ZlibData? value, IReadableWritable readableWritable, int version = 0)
+    public void WriteZlibData(ZlibData? value, IReadableWritable? readableWritable, int version = 0)
     {
         if (value?.Parsed == false)
         {
             Write(value.UncompressedSize);
             WriteData(value.Data);
             return;
+        }
+
+        if (readableWritable is null)
+        {
+            throw new Exception("Archive cannot be null if zlib data was parsed.");
         }
 
         using var uncompressedStream = new MemoryStream();
@@ -1007,13 +1012,18 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         compressedStream.WriteTo(BaseStream);
     }
 
-    public void WriteZlibData(ZlibData? value, IWritable writable, int version = 0)
+    public void WriteZlibData(ZlibData? value, IWritable? writable, int version = 0)
     {
         if (value?.Parsed == false)
         {
             Write(value.UncompressedSize);
             WriteData(value.Data);
             return;
+        }
+
+        if (writable is null)
+        {
+            throw new Exception("Archive cannot be null if zlib data was parsed.");
         }
 
         using var uncompressedStream = new MemoryStream();

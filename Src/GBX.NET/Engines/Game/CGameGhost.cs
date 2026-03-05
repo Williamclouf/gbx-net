@@ -84,7 +84,7 @@ public partial class CGameGhost
 
         public override void Write(CGameGhost n, GbxWriter w)
         {
-            w.WriteZlibData(n.compressedData, n.SampleData);
+            w.WriteZlibData(n.compressedData, n.sampleData);
         }
     }
 }
