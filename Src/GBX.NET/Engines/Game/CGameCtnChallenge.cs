@@ -1312,6 +1312,7 @@ public partial class CGameCtnChallenge :
 
         try
         {
+            if (lightmapFrames is null) throw new InvalidOperationException("LightmapFrames not available");
             if (LightmapVersion is null) throw new InvalidOperationException("LightmapVersion not available");
 
             using var r = LightmapCacheData.OpenDecompressedReader();

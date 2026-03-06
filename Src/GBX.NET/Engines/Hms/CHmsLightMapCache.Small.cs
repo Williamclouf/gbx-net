@@ -41,11 +41,13 @@ public partial class CHmsLightMapCache
         public int SpriteHeight { get => spriteHeight; set => spriteHeight = value; }
         public EPlugImageFileFmt BumpIntensFormat { get => bumpIntensFormat; set => bumpIntensFormat = value; }
 
-        public byte[]? U01;
-        public float? U02;
-
-        public void ReadWrite(int version, ref CHmsLightMapCache? lightmapCache, IEnumerable<Frame>? lightmapFrames, GbxReaderWriter rw)
+        public void ReadWrite(int version, ref CHmsLightMapCache? lightmapCache, Frame[] lightmapFrames, GbxReaderWriter rw)
         {
+            if (lightmapFrames is null)
+            {
+                throw new ArgumentNullException(nameof(lightmapFrames));
+            }
+
             rw.Node<CHmsLightMapCache>(ref lightmapCache);
 
             rw.Int32(ref diffuseQuality);
@@ -61,111 +63,109 @@ public partial class CHmsLightMapCache
                 if (version >= 4)
                 {
                     rw.EnumInt32<EPlugImageFileFmt>(ref diffuseFormat);
+                }
+            }
 
-                    if (version < 5)
+            if (version < 5)
+            {
+                lightmapFrames[0].U01 = rw.Data(lightmapFrames[0].U01);
+            }
+
+            foreach (var frame in lightmapFrames)
+            {
+                frame.U01 = rw.Data(frame.U01);
+                frame.U02 = rw.Single(frame.U02);
+
+                if (version >= 6)
+                {
+                    // NHmsLightMapCache::ArchiveToZip
+                    frame.Version = rw.Int32(frame.Version);
+
+                    if (frame.Version < 2)
                     {
-                        rw.Data(ref U01);
-                    }
-                    else if (lightmapFrames is not null)
-                    {
-                        foreach (var frame in lightmapFrames)
+                        frame.U03 = rw.Single(frame.U03);
+                        frame.U04 = rw.Int32(frame.U04);
+
+                        if (frame.Version != 0)
                         {
-                            frame.U01 = rw.Data(frame.U01);
-                            frame.U02 = rw.Single(frame.U02);
+                            frame.U05 = rw.Int32(frame.U05);
+                        }
 
-                            if (version >= 6)
+                        frame.U06 = rw.Int32(frame.U06);
+                        frame.U07 = rw.Int32(frame.U07);
+                        frame.U08 = rw.Int32(frame.U08);
+                        frame.U09 = rw.Iso4(frame.U09);
+                        frame.U10 = rw.Array<short>(frame.U10);
+                    }
+                    else
+                    {
+                        frame.U11 = rw.Single(frame.U11);
+                        frame.U12 = rw.Int32(frame.U12);
+
+                        if (frame.Version >= 5)
+                        {
+                            frame.U39 = rw.Single(frame.U39);
+                            frame.U40 = rw.Int32(frame.U40);
+
+                            if (frame.Version >= 6)
                             {
-                                // NHmsLightMapCache::ArchiveToZip
-                                frame.Version = rw.Int32(frame.Version);
-
-                                if (frame.Version < 2)
-                                {
-                                    frame.U03 = rw.Single(frame.U03);
-                                    frame.U04 = rw.Int32(frame.U04);
-
-                                    if (frame.Version != 0)
-                                    {
-                                        frame.U05 = rw.Int32(frame.U05);
-                                    }
-
-                                    frame.U06 = rw.Int32(frame.U06);
-                                    frame.U07 = rw.Int32(frame.U07);
-                                    frame.U08 = rw.Int32(frame.U08);
-                                    frame.U09 = rw.Iso4(frame.U09);
-                                    frame.U10 = rw.Array<short>(frame.U10);
-                                }
-                                else
-                                {
-                                    frame.U11 = rw.Single(frame.U11);
-                                    frame.U12 = rw.Int32(frame.U12);
-
-                                    if (frame.Version >= 5)
-                                    {
-                                        frame.U39 = rw.Single(frame.U39);
-                                        frame.U40 = rw.Int32(frame.U40);
-
-                                        if (frame.Version >= 6)
-                                        {
-                                            frame.U41 = rw.Single(frame.U41);
-                                            frame.U42 = rw.Int32(frame.U42);
-                                        }
-                                    }
-
-                                    frame.U13 = rw.Int32(frame.U13);
-                                    frame.U14 = rw.Int32(frame.U14);
-                                    frame.U15 = rw.Int32(frame.U15);
-
-                                    if (frame.Version < 4)
-                                    {
-                                        frame.U16 = rw.ArrayReadableWritable<ProbeGridBoxOld>(frame.U16);
-                                    }
-                                    else
-                                    {
-                                        frame.U17 = rw.ArrayReadableWritable<ProbeGridBox>(frame.U17);
-                                    }
-
-                                    frame.U18 = rw.Array<Int2>(frame.U18);
-                                    frame.U19 = rw.Array<short>(frame.U19);
-
-                                    if (frame.Version >= 3)
-                                    {
-                                        frame.U20 = rw.Int32(frame.U20);
-                                        frame.U21 = rw.Int32(frame.U21);
-                                        frame.U22 = rw.Int32(frame.U22);
-                                        frame.U23 = rw.Int32(frame.U23);
-                                        frame.U24 = rw.Int32(frame.U24);
-                                        frame.U25 = rw.Int32(frame.U25);
-
-                                        if (frame.Version >= 4)
-                                        {
-                                            frame.U33 = rw.Int32(frame.U33);
-                                            frame.U34 = rw.Int32(frame.U34);
-                                            frame.U35 = rw.Int32(frame.U35);
-                                        }
-
-                                        frame.U26 = rw.Single(frame.U26);
-                                        frame.U27 = rw.Single(frame.U27);
-                                        frame.U28 = rw.Single(frame.U28);
-                                        frame.U29 = rw.Single(frame.U29);
-                                        frame.U30 = rw.Single(frame.U30);
-                                        frame.U31 = rw.Single(frame.U31);
-                                        frame.U32 = rw.Array<int>(frame.U32);
-                                    }
-                                }
-                                //
-
-                                if (version >= 8)
-                                {
-                                    frame.U36 = rw.Int32(frame.U36);
-                                    frame.U37 = rw.Int32(frame.U37);
-
-                                    // Unchecked
-                                    if (version >= 10)
-                                    {
-                                        frame.U38 = rw.Int32(frame.U38);
-                                    }
-                                }
+                                frame.U41 = rw.Single(frame.U41);
+                                frame.U42 = rw.Int32(frame.U42);
                             }
+                        }
+
+                        frame.U13 = rw.Int32(frame.U13);
+                        frame.U14 = rw.Int32(frame.U14);
+                        frame.U15 = rw.Int32(frame.U15);
+
+                        if (frame.Version < 4)
+                        {
+                            frame.U16 = rw.ArrayReadableWritable<ProbeGridBoxOld>(frame.U16);
+                        }
+                        else
+                        {
+                            frame.U17 = rw.ArrayReadableWritable<ProbeGridBox>(frame.U17);
+                        }
+
+                        frame.U18 = rw.Array<Int2>(frame.U18);
+                        frame.U19 = rw.Array<short>(frame.U19);
+
+                        if (frame.Version >= 3)
+                        {
+                            frame.U20 = rw.Int32(frame.U20);
+                            frame.U21 = rw.Int32(frame.U21);
+                            frame.U22 = rw.Int32(frame.U22);
+                            frame.U23 = rw.Int32(frame.U23);
+                            frame.U24 = rw.Int32(frame.U24);
+                            frame.U25 = rw.Int32(frame.U25);
+
+                            if (frame.Version >= 4)
+                            {
+                                frame.U33 = rw.Int32(frame.U33);
+                                frame.U34 = rw.Int32(frame.U34);
+                                frame.U35 = rw.Int32(frame.U35);
+                            }
+
+                            frame.U26 = rw.Single(frame.U26);
+                            frame.U27 = rw.Single(frame.U27);
+                            frame.U28 = rw.Single(frame.U28);
+                            frame.U29 = rw.Single(frame.U29);
+                            frame.U30 = rw.Single(frame.U30);
+                            frame.U31 = rw.Single(frame.U31);
+                            frame.U32 = rw.Array<int>(frame.U32);
+                        }
+                    }
+                    //
+
+                    if (version >= 8)
+                    {
+                        frame.U36 = rw.Int32(frame.U36);
+                        frame.U37 = rw.Int32(frame.U37);
+
+                        // Unchecked
+                        if (version >= 10)
+                        {
+                            frame.U38 = rw.Int32(frame.U38);
                         }
                     }
                 }
@@ -176,7 +176,7 @@ public partial class CHmsLightMapCache
 
             if (version < 5)
             {
-                rw.Single(ref U02);
+                lightmapFrames[0].U02 = rw.Single(lightmapFrames[0].U02);
             }
 
             if (version >= 7)
