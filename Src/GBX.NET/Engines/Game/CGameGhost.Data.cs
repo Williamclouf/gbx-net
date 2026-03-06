@@ -1,12 +1,10 @@
-﻿using System.Collections.ObjectModel;
-
-namespace GBX.NET.Engines.Game;
+﻿namespace GBX.NET.Engines.Game;
 
 public partial class CGameGhost
 {
     public partial class Data : IReadable, IWritable
     {
-        private readonly byte[]? rawGhostData;
+        //private readonly byte[]? rawGhostData;
 
         /// <summary>
         /// How much time is between each sample.

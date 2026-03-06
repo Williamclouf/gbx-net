@@ -12,6 +12,7 @@ public partial class CPlugEntRecordData : IReadableWritable
     private List<NoticeRecordListElem> bulkNoticeList = [];
     private List<CustomModulesDeltaList> customModulesDeltaLists = [];
 
+    private ZlibData? compressedData;
     public ZlibData? CompressedData { get; set; }
 
 #if NET9_0_OR_GREATER
@@ -273,12 +274,7 @@ public partial class CPlugEntRecordData : IReadableWritable
                 return;
             }
 
-            if (rw.Reader is not null)
-            {
-                n.CompressedData = rw.Reader.ReadZlibData();
-            }
-
-            rw.Writer?.WriteZlibData(n.CompressedData, n, Version);
+            rw.ZlibData(ref n.compressedData, n, lazyLoad: true, Version);
         }
     }
 

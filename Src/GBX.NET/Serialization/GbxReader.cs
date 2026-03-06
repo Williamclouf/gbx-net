@@ -96,7 +96,7 @@ public partial interface IGbxReader : IDisposable
     string ReadSmallString();
     void ReadMarker(string value);
     [IgnoreForCodeGeneration] ZlibData ReadZlibData();
-    ZlibData ReadZlibData(IReadableWritable readableWritable, int version = 0);
+    [IgnoreForCodeGeneration] ZlibData ReadZlibData(IReadableWritable readableWritable, int version = 0);
     [IgnoreForCodeGeneration] ZlibData ReadZlibData(Action<GbxReader> action);
     int ReadOptimizedInt(int determineFrom);
     short ReadVarNat15();

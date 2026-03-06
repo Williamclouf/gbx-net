@@ -108,7 +108,7 @@ public partial class CHmsLightMapCache
                 rw.ZlibData(ref zlibData1, rw =>
                 {
                     rw.Array<float>(ref zlibData1Decompressed, count);
-                });
+                }, lazyLoad: false);
             }
 
             rw.ZlibData(ref zlibData2, rw =>
@@ -116,19 +116,19 @@ public partial class CHmsLightMapCache
                 rw.Array<short>(ref zlibData2Decompressed1, count);
                 rw.Array<short>(ref zlibData2Decompressed2, count);
                 rw.Array<short>(ref zlibData2Decompressed3, count);
-            });
+            }, lazyLoad: false);
 
             rw.ZlibData(ref zlibData3, rw =>
             {
                 // GmNat16_2 array
                 rw.Array<short>(ref zlibData3Decompressed, count * 2);
-            });
+            }, lazyLoad: false);
 
             rw.ZlibData(ref zlibData4, rw =>
             {
                 // GmNat16_2 array
                 rw.Array<short>(ref zlibData4Decompressed, count * 2);
-            });
+            }, lazyLoad: false);
 
             if (version >= 4)
             {
@@ -146,7 +146,7 @@ public partial class CHmsLightMapCache
                         rw.Array<short>(ref zlibData5Decompressed3, count * 2);
 
                         rw.Array<short>(ref zlibData5Decompressed4, count);
-                    });
+                    }, lazyLoad: false);
                 }
             }
 
@@ -178,7 +178,7 @@ public partial class CHmsLightMapCache
                             rw.Writer.WriteData(zlibData6Decompressed?[i] ?? []);
                         }
                     }
-                });
+                }, lazyLoad: false);
             }
         }
     }

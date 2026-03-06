@@ -310,8 +310,7 @@ public partial class CGameCtnChallenge :
     {
         get
         {
-            // Lightmap frames don't include (known) compressed values in version 4 and below
-            if (lightmapFrames is not null && LightmapVersion < 5) return lightmapFrames;
+            if (lightmapFrames is not null) return lightmapFrames;
             if (LightmapCacheData is null || LightmapCacheData.Parsed) return lightmapFrames;
 
             lock (LightmapCacheDataLock)

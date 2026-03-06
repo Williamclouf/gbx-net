@@ -6,8 +6,7 @@ public partial class CGameGhost
 
     public byte[]? RawData { get; set; }
 
-    private ZlibData? compressedData;
-    public ZlibData? CompressedData { get => compressedData; set => compressedData = value; }
+    public ZlibData? CompressedData { get; set; }
 
 #if NET9_0_OR_GREATER
     private readonly Lock CompressedDataLock = new();
@@ -79,12 +78,12 @@ public partial class CGameGhost
     {
         public override void Read(CGameGhost n, GbxReader r)
         {
-            n.compressedData = r.ReadZlibData();
+            n.CompressedData = r.ReadZlibData();
         }
 
         public override void Write(CGameGhost n, GbxWriter w)
         {
-            w.WriteZlibData(n.compressedData, n.sampleData);
+            w.WriteZlibData(n.CompressedData, n.sampleData);
         }
     }
 }

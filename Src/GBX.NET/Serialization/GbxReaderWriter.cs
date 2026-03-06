@@ -82,8 +82,16 @@ public partial interface IGbxReaderWriter : IDisposable
     void ArrayOptimizedInt([NotNullIfNotNull(nameof(value))] ref int[]? value, int? determineFrom = default);
 
     [return: NotNullIfNotNull(nameof(value))]
-    GBX.NET.Int2[]? ArrayOptimizedInt2(GBX.NET.Int2[]? value, int? determineFrom = default);
-    void ArrayOptimizedInt2([NotNullIfNotNull(nameof(value))] ref GBX.NET.Int2[]? value, int? determineFrom = default);
+    Int2[]? ArrayOptimizedInt2(Int2[]? value, int? determineFrom = default);
+    void ArrayOptimizedInt2([NotNullIfNotNull(nameof(value))] ref Int2[]? value, int? determineFrom = default);
+
+    [return: NotNullIfNotNull(nameof(value))]
+    ZlibData? ZlibData(ZlibData? value, Action<GbxReaderWriter> action, bool lazyLoad);
+    void ZlibData([NotNullIfNotNull(nameof(value))] ref ZlibData? value, Action<GbxReaderWriter> action, bool lazyLoad);
+
+    [return: NotNullIfNotNull(nameof(value))]
+    ZlibData? ZlibData(ZlibData? value, IReadableWritable readableWritable, bool lazyLoad, int version = 0);
+    void ZlibData([NotNullIfNotNull(nameof(value))] ref ZlibData? value, IReadableWritable readableWritable, bool lazyLoad, int version = 0);
 
     void Chunk<TNode, TChunk>(TNode node, TChunk? chunk)
         where TNode : IClass
@@ -536,9 +544,9 @@ public sealed partial class GbxReaderWriter : IGbxReaderWriter
     }
 
     [return: NotNullIfNotNull(nameof(value))]
-    public ZlibData? ZlibData(ZlibData? value, Action<GbxReaderWriter> action)
+    public ZlibData? ZlibData(ZlibData? value, Action<GbxReaderWriter> action, bool lazyLoad)
     {
-        if (Reader is not null) value = Reader.ReadZlibData(reader =>
+        if (Reader is not null) value = lazyLoad ? Reader.ReadZlibData() : Reader.ReadZlibData(reader =>
         {
             using var rw = new GbxReaderWriter(reader);
             action(rw);
@@ -551,7 +559,18 @@ public sealed partial class GbxReaderWriter : IGbxReaderWriter
         return value;
     }
 
-    public void ZlibData([NotNullIfNotNull(nameof(value))] ref ZlibData? value, Action<GbxReaderWriter> action)
-        => value = ZlibData(value, action);
+    public void ZlibData([NotNullIfNotNull(nameof(value))] ref ZlibData? value, Action<GbxReaderWriter> action, bool lazyLoad)
+        => value = ZlibData(value, action, lazyLoad);
 
+
+    [return: NotNullIfNotNull(nameof(value))]
+    public ZlibData? ZlibData(ZlibData? value, IReadableWritable readableWritable, bool lazyLoad, int version = 0)
+    {
+        if (Reader is not null) value = lazyLoad ? Reader.ReadZlibData() : Reader.ReadZlibData(readableWritable, version);
+        Writer?.WriteZlibData(value, readableWritable, version);
+        return value;
+    }
+
+    public void ZlibData([NotNullIfNotNull(nameof(value))] ref ZlibData? value, IReadableWritable readableWritable, bool lazyLoad, int version = 0)
+        => value = ZlibData(value, readableWritable, lazyLoad, version);
 }
