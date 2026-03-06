@@ -1026,7 +1026,6 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
         using var uncompressedStream = new MemoryStream();
         using var writer = new GbxWriter(uncompressedStream);
-        writer.LoadFrom(this);
 
         using var rwBuffer = new GbxReaderWriter(writer);
         readableWritable.ReadWrite(rwBuffer, version);
@@ -1056,7 +1055,6 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
         using var uncompressedStream = new MemoryStream();
         using var writer = new GbxWriter(uncompressedStream);
-        writer.LoadFrom(this);
 
         writable.Write(writer, version);
         writer.Flush();
@@ -1080,7 +1078,6 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
         using var uncompressedStream = new MemoryStream();
         using var writer = new GbxWriter(uncompressedStream);
-        writer.LoadFrom(this);
         action(writer);
         writer.Flush();
 
