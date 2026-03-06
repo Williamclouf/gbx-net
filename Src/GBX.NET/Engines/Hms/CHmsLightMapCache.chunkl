@@ -55,7 +55,14 @@ CHmsLightMapCache 0x06022000
  int
  v6+
   int<EBump> Bump
- SFrame[] Frames (version: Version)
+ v2-
+  float
+  float
+  float
+  float
+  float
+ v3+
+  SFrame[] Frames (version: Version)
  bool
  bool SpriteOriginY_WasWronglyTop
  SMapping Mapping
