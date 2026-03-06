@@ -10,11 +10,11 @@ CHmsLightMapCache 0x06022000
 0x013 (skippable)
  bool
  bool
- ulong
+ filetime TimeWrite
 
 0x015 (skippable)
  version
- ulong
+ ulong LightmapCacheUid
  id Collection
  id Decoration
  int
