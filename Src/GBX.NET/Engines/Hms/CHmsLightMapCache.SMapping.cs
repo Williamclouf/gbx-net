@@ -175,7 +175,7 @@ public partial class CHmsLightMapCache
                     {
                         for (var i = 0; i < arrayCount; i++)
                         {
-                            rw.Writer.Write(zlibData6Decompressed?[i] ?? Array.Empty<byte>());
+                            rw.Writer.WriteData(zlibData6Decompressed?[i] ?? []);
                         }
                     }
                 });
