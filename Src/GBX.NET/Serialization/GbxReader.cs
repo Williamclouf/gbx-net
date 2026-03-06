@@ -49,6 +49,7 @@ public partial interface IGbxReader : IDisposable
     Vec3 ReadVec3_10b();
     Vec3 ReadVec3Unit2();
     Vec3 ReadVec3_4();
+    Vec3 ReadVec3_6();
     Vec3 ReadVec3Unit4();
     Vec4 ReadVec4();
     BoxAligned ReadBoxAligned();
@@ -597,6 +598,31 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 #endif
 
         return ReadVec3Unit2() * mag;
+    }
+
+    public Vec3 ReadVec3_6()
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        Span<byte> buffer = stackalloc byte[6];
+        if (BaseStream.Read(buffer) != 6)
+        {
+            throw new EndOfStreamException("Failed to read Vec3_16 bytes.");
+        }
+#else
+        var buffer = ReadBytes(6);
+#endif
+
+#if NET5_0_OR_GREATER
+        var x = (float)BitConverter.ToHalf(buffer.Slice(0, 2));
+        var y = (float)BitConverter.ToHalf(buffer.Slice(2, 2));
+        var z = (float)BitConverter.ToHalf(buffer.Slice(4, 2));
+#else
+        var x = HalfUtility.HalfToFloat((ushort)(buffer[0] | (buffer[1] << 8)));
+        var y = HalfUtility.HalfToFloat((ushort)(buffer[2] | (buffer[3] << 8)));
+        var z = HalfUtility.HalfToFloat((ushort)(buffer[4] | (buffer[5] << 8)));
+#endif
+
+        return new Vec3(x, y, z);
     }
 
     public Vec3 ReadVec3_9()
@@ -1405,6 +1431,11 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             using var rwBuffer = new GbxReaderWriter(rBuffer);
             readableWritable.ReadWrite(rwBuffer, version);
 
+            if (uncompressedSize != rBuffer.BaseStream.Position)
+            {
+                throw new Exception($"Not all zlib data was read: {rBuffer.BaseStream.Position} / {uncompressedSize} bytes read.");
+            }
+
             return new ZlibData(uncompressedSize, data, exception: null) { Parsed = true };
         }
         catch (Exception ex)
@@ -1423,6 +1454,11 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             using var rBuffer = ZlibData.OpenDecompressedReader(uncompressedSize, data, referenceReader: this);
 
             action(rBuffer);
+
+            if (uncompressedSize != rBuffer.BaseStream.Position)
+            {
+                throw new Exception($"Not all zlib data was read: {rBuffer.BaseStream.Position} / {uncompressedSize} bytes read.");
+            }
 
             return new ZlibData(uncompressedSize, data, exception: null) { Parsed = true };
         }

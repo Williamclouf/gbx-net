@@ -56,6 +56,7 @@ public partial interface IGbxWriter : IDisposable
     void Write(Byte3 value);
     void Write(Vec2 value);
     void Write(Vec3 value);
+    void WriteVec3_6(Vec3 value);
     void WriteVec3_10b(Vec3 value);
     void WriteVec3Unit4(Vec3 value);
     void Write(Vec4 value);
@@ -561,6 +562,33 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         Write(value.X);
         Write(value.Y);
         Write(value.Z);
+    }
+
+    public void WriteVec3_6(Vec3 value)
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        Span<byte> buffer = stackalloc byte[6];
+        
+        BitConverter.TryWriteBytes(buffer.Slice(0, 2), (Half)value.X);
+        BitConverter.TryWriteBytes(buffer.Slice(2, 2), (Half)value.Y);
+        BitConverter.TryWriteBytes(buffer.Slice(4, 2), (Half)value.Z);
+        
+        BaseStream.Write(buffer);
+#else
+        var x = HalfUtility.FloatToHalf(value.X);
+        var y = HalfUtility.FloatToHalf(value.Y);
+        var z = HalfUtility.FloatToHalf(value.Z);
+
+        var buffer = new byte[6];
+        buffer[0] = (byte)(x & 0xFF);
+        buffer[1] = (byte)(x >> 8);
+        buffer[2] = (byte)(y & 0xFF);
+        buffer[3] = (byte)(y >> 8);
+        buffer[4] = (byte)(z & 0xFF);
+        buffer[5] = (byte)(z >> 8);
+
+        BaseStream.Write(buffer, 0, 6);
+#endif
     }
 
     public void WriteVec3_10b(Vec3 value)
