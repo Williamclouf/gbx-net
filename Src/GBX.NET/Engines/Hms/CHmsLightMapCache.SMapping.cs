@@ -43,13 +43,13 @@ public partial class CHmsLightMapCache
         public float[]? ZlibData1Decompressed { get => zlibData1Decompressed; set => zlibData1Decompressed = value; }
 
         private ZlibData? zlibData2;
-        private short[]? zlibData2Decompressed1;
-        private short[]? zlibData2Decompressed2;
-        private short[]? zlibData2Decompressed3;
+        private short[] zlibData2Decompressed1 = [];
+        private short[] zlibData2Decompressed2 = [];
+        private short[] zlibData2Decompressed3 = [];
         public ZlibData? ZlibData2 { get => zlibData2; set => zlibData2 = value; }
-        public short[]? ZlibData2Decompressed1 { get => zlibData2Decompressed1; set => zlibData2Decompressed1 = value; }
-        public short[]? ZlibData2Decompressed2 { get => zlibData2Decompressed2; set => zlibData2Decompressed2 = value; }
-        public short[]? ZlibData2Decompressed3 { get => zlibData2Decompressed3; set => zlibData2Decompressed3 = value; }
+        public short[] ZlibData2Decompressed1 { get => zlibData2Decompressed1; set => zlibData2Decompressed1 = value; }
+        public short[] ZlibData2Decompressed2 { get => zlibData2Decompressed2; set => zlibData2Decompressed2 = value; }
+        public short[] ZlibData2Decompressed3 { get => zlibData2Decompressed3; set => zlibData2Decompressed3 = value; }
 
         private ZlibData? zlibData3;
         private short[]? zlibData3Decompressed;
@@ -101,7 +101,7 @@ public partial class CHmsLightMapCache
                 rw.Int32(ref u10);
             }
 
-            var count = rw.Int32();
+            var count = rw.Int32(zlibData2Decompressed1.Length);
 
             if (version >= 1)
             {
