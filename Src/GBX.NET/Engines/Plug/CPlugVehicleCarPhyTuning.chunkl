@@ -653,19 +653,19 @@ CPlugVehicleCarPhyTuning 0x090ED000
                    v26+
                     float
                     v27+
-                     v34-
+                     v33-
                       float
                       float
                       float
                       CFuncKeysReal
                      v28+
-                      v34-
+                      v33-
                        CFuncKeysReal
                       v29+
                        int
                        float
                        float
-                       v34-
+                       v33-
                         v30+
                          CFuncKeysReal
                         v31+
@@ -885,19 +885,19 @@ CPlugVehicleCarPhyTuning 0x090ED000
  v17-
   float?
  v18+
-  Keys (version: Version - 20)
-  Keys (version: Version - 20)
-  Keys (version: Version - 20)
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
  float?
  float?
  CFuncKeysReal
  CFuncKeysReal
  CFuncKeysReal
- Keys (version: Version - 20)
- Keys (version: Version - 20)
+ Keys (version: Version - 21)
+ Keys (version: Version - 21)
  v1+
-  Keys (version: Version - 20)
-  Keys (version: Version - 20)
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
  v2+
   float?
  v3=
