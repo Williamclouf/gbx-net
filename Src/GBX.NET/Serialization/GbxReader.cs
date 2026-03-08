@@ -2147,6 +2147,10 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         {
             parentClassId = 0x01001000;
         }
+        else if (baseType == typeof(CGameCtnZone))
+        {
+            parentClassId = 0x2401C000;
+        }
 
         var parentClassIDBytes = BitConverter.GetBytes(parentClassId);
 
