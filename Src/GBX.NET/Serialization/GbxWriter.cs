@@ -973,7 +973,31 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
     public void WriteSystemTime(DateTime value)
     {
-        Write(value.Ticks);
+        if (value == DateTime.MinValue)
+        {
+            Write(0UL);
+            return;
+        }
+
+        var year = (ulong)value.Year;
+        var month = (ulong)value.Month;
+        var dayOfWeek = (ulong)value.DayOfWeek;
+        var day = (ulong)value.Day;
+        var hour = (ulong)value.Hour;
+        var minute = (ulong)value.Minute;
+        var second = (ulong)value.Second;
+        var millisecond = (ulong)value.Millisecond;
+
+        var data = year |
+            (month << 16) |
+            (dayOfWeek << 20) |
+            (day << 23) |
+            (hour << 32) |
+            (minute << 37) |
+            (second << 43) |
+            (millisecond << 49);
+
+        Write(data);
     }
 
     public void WriteUnixTime(DateTimeOffset value)

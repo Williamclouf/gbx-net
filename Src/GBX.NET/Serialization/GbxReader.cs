@@ -1351,7 +1351,31 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public DateTime ReadSystemTime()
     {
-        return new DateTime(ReadInt64());
+        var data = ReadUInt64();
+
+        var year = (int)(data & 0xFFFF);
+        var month = (int)((data >> 16) & 0xF);
+
+        if (year == 0 || month == 0)
+        {
+            return DateTime.MinValue;
+        }
+
+        var day = (int)((data >> 23) & 0x1F);
+
+        var hour = (int)((data >> 32) & 0x1F);
+        var minute = (int)((data >> 37) & 0x3F);
+        var second = (int)((data >> 43) & 0x3F);
+        var millisecond = (int)((data >> 49) & 0x3FF);
+
+        try
+        {
+            return new DateTime(year, month, day, hour, minute, second, millisecond);
+        }
+        catch
+        {
+            return DateTime.MinValue;
+        }
     }
 
     public DateTimeOffset ReadUnixTime()
