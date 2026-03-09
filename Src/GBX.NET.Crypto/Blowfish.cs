@@ -8,6 +8,7 @@ namespace GBX.NET.Crypto;
 public class Blowfish
 {
     private readonly int N = 16;
+    private readonly BlowfishTrick trick;
 
     public Blowfish(byte[] key, BlowfishTrick trick)
     {
@@ -78,12 +79,7 @@ public class Blowfish
         // Trick #2: reverse the order of first 10 elements in the P array
         if (trick == BlowfishTrick.LittleEndianPak18)
         {
-            var temp = (uint[])_p.Clone();
-
-            for (i = 0; i < 10; i++)
-            {
-                _p[i] = temp[9 - i];
-            }
+            Array.Reverse(_p, 0, 10);
         }
     }
 
@@ -565,5 +561,4 @@ public class Blowfish
                 0x90D4F869, 0xA65CDEA0, 0x3F09252D, 0xC208E69F, 0xB74E6132, 0xCE77E25B, 0x578FDFE3, 0x3AC372E6
             }
         };
-    private readonly BlowfishTrick trick;
 }
