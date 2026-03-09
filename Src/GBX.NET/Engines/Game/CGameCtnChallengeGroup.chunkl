@@ -32,15 +32,16 @@ CGameCtnChallengeGroup 0x0308F000
  id
 
 0x00A
- list<MapInfo> MapInfos
+ list<MapInfo> MapInfos (version: 1)
 
 0x00B
  version
- list<MapInfo> MapInfos (version: Version + 1)
+ list<MapInfo> MapInfos (version: Version + 2)
 
 archive MapInfo
  ident Metadata
- v1+
+ v2+
   string FilePath
- v1-
-  bool
+ v1+
+  v2-
+   bool
