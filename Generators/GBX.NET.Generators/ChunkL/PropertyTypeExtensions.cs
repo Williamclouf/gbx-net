@@ -123,7 +123,7 @@ internal static class PropertyTypeExtensions
             "uint8" => "byte",
             "int8" => "sbyte",
             "vec2" => "Vec2",
-            "vec3" => "Vec3",
+            "vec3" or "vec3_6" => "Vec3",
             "vec4" => "Vec4",
             "int2" => "Int2",
             "int3" => "Int3",

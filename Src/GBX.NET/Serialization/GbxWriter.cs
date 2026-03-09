@@ -56,6 +56,7 @@ public partial interface IGbxWriter : IDisposable
     void Write(Byte3 value);
     void Write(Vec2 value);
     void Write(Vec3 value);
+    void WriteVec3_6(Vec3 value);
     void WriteVec3_10b(Vec3 value);
     void WriteVec3Unit4(Vec3 value);
     void Write(Vec4 value);
@@ -89,6 +90,9 @@ public partial interface IGbxWriter : IDisposable
     void WriteSmallLen(int value);
     void WriteSmallString(string? value);
     void WriteMarker(string value);
+    void WriteZlibData(ZlibData? value, IReadableWritable? readableWritable, int version = 0);
+    void WriteZlibData(ZlibData? value, IWritable? writable, int version = 0);
+    void WriteZlibData(ZlibData? value, Action<GbxWriter> action);
     void WriteOptimizedInt(int value, int determineFrom);
     void WriteVarNat15(short value);
     void WriteWritable<T>(T? value, int version = 0) where T : IWritable, new();
@@ -560,6 +564,33 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         Write(value.Z);
     }
 
+    public void WriteVec3_6(Vec3 value)
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        Span<byte> buffer = stackalloc byte[6];
+        
+        BitConverter.TryWriteBytes(buffer.Slice(0, 2), (Half)value.X);
+        BitConverter.TryWriteBytes(buffer.Slice(2, 2), (Half)value.Y);
+        BitConverter.TryWriteBytes(buffer.Slice(4, 2), (Half)value.Z);
+        
+        BaseStream.Write(buffer);
+#else
+        var x = HalfUtility.FloatToHalf(value.X);
+        var y = HalfUtility.FloatToHalf(value.Y);
+        var z = HalfUtility.FloatToHalf(value.Z);
+
+        var buffer = new byte[6];
+        buffer[0] = (byte)(x & 0xFF);
+        buffer[1] = (byte)(x >> 8);
+        buffer[2] = (byte)(y & 0xFF);
+        buffer[3] = (byte)(y >> 8);
+        buffer[4] = (byte)(z & 0xFF);
+        buffer[5] = (byte)(z >> 8);
+
+        BaseStream.Write(buffer, 0, 6);
+#endif
+    }
+
     public void WriteVec3_10b(Vec3 value)
     {
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -942,7 +973,31 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
     public void WriteSystemTime(DateTime value)
     {
-        Write(value.Ticks);
+        if (value == DateTime.MinValue)
+        {
+            Write(0UL);
+            return;
+        }
+
+        var year = (ulong)value.Year;
+        var month = (ulong)value.Month;
+        var dayOfWeek = (ulong)value.DayOfWeek;
+        var day = (ulong)value.Day;
+        var hour = (ulong)value.Hour;
+        var minute = (ulong)value.Minute;
+        var second = (ulong)value.Second;
+        var millisecond = (ulong)value.Millisecond;
+
+        var data = year |
+            (month << 16) |
+            (dayOfWeek << 20) |
+            (day << 23) |
+            (hour << 32) |
+            (minute << 37) |
+            (second << 43) |
+            (millisecond << 49);
+
+        Write(data);
     }
 
     public void WriteUnixTime(DateTimeOffset value)
@@ -977,6 +1032,85 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
     public void WriteMarker(string value)
     {
         Write(value, StringLengthPrefix.None);
+    }
+
+    public void WriteZlibData(ZlibData? value, IReadableWritable? readableWritable, int version = 0)
+    {
+        if (value?.Parsed == false)
+        {
+            Write(value.UncompressedSize);
+            WriteData(value.Data);
+            return;
+        }
+
+        if (readableWritable is null)
+        {
+            throw new Exception("Archive cannot be null if zlib data was parsed.");
+        }
+
+        using var uncompressedStream = new MemoryStream();
+        using var writer = new GbxWriter(uncompressedStream);
+
+        using var rwBuffer = new GbxReaderWriter(writer);
+        readableWritable.ReadWrite(rwBuffer, version);
+        writer.Flush();
+
+        uncompressedStream.Position = 0;
+        using var compressedStream = new MemoryStream();
+        Gbx.ZLib.Compress(uncompressedStream, compressedStream);
+        Write((int)uncompressedStream.Length);
+        Write((int)compressedStream.Length);
+        compressedStream.WriteTo(BaseStream);
+    }
+
+    public void WriteZlibData(ZlibData? value, IWritable? writable, int version = 0)
+    {
+        if (value?.Parsed == false)
+        {
+            Write(value.UncompressedSize);
+            WriteData(value.Data);
+            return;
+        }
+
+        if (writable is null)
+        {
+            throw new Exception("Archive cannot be null if zlib data was parsed.");
+        }
+
+        using var uncompressedStream = new MemoryStream();
+        using var writer = new GbxWriter(uncompressedStream);
+
+        writable.Write(writer, version);
+        writer.Flush();
+
+        uncompressedStream.Position = 0;
+        using var compressedStream = new MemoryStream();
+        Gbx.ZLib.Compress(uncompressedStream, compressedStream);
+        Write((int)uncompressedStream.Length);
+        Write((int)compressedStream.Length);
+        compressedStream.WriteTo(BaseStream);
+    }
+
+    public void WriteZlibData(ZlibData? value, Action<GbxWriter> action)
+    {
+        if (value?.Parsed == false)
+        {
+            Write(value.UncompressedSize);
+            WriteData(value.Data);
+            return;
+        }
+
+        using var uncompressedStream = new MemoryStream();
+        using var writer = new GbxWriter(uncompressedStream);
+        action(writer);
+        writer.Flush();
+
+        uncompressedStream.Position = 0;
+        using var compressedStream = new MemoryStream();
+        Gbx.ZLib.Compress(uncompressedStream, compressedStream);
+        Write((int)uncompressedStream.Length);
+        Write((int)compressedStream.Length);
+        compressedStream.WriteTo(BaseStream);
     }
 
     public void WriteOptimizedInt(int value, int determineFrom)

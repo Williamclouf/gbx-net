@@ -5,29 +5,44 @@ public partial class CGameGhost
     private Data? sampleData;
 
     public byte[]? RawData { get; set; }
-    public CompressedData? CompressedData { get; set; }
 
-    private readonly object parseLock = new();
+    public ZlibData? CompressedData { get; set; }
+
+#if NET9_0_OR_GREATER
+    private readonly Lock CompressedDataLock = new();
+#else
+    private readonly object CompressedDataLock = new();
+#endif
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
     [AppliedWithChunk<Chunk0303F003>]
     [AppliedWithChunk<Chunk0303F005>]
     [AppliedWithChunk<Chunk0303F006>]
-    public Data? SampleData
+    public Data SampleData
     {
         get
         {
-            if (sampleData is null)
-            {
-                return null;
-            }
+            if (sampleData is not null) return sampleData;
+            if (CompressedData is null) throw new InvalidOperationException("CompressedData not available");
 
-            lock (parseLock)
+            lock (CompressedDataLock)
             {
-                sampleData.Parse();
-            }
+                if (sampleData is not null) return sampleData;
 
-            return sampleData;
+                try
+                {
+                    using var reader = CompressedData.OpenDecompressedReader();
+                    sampleData = new Data();
+                    sampleData.Read(reader);
+                    CompressedData.Parsed = true;
+                    return sampleData;
+                }
+                catch (Exception ex)
+                {
+                    CompressedData.Exception = ex;
+                    throw;
+                }
+            }
         }
     }
 
@@ -38,7 +53,7 @@ public partial class CGameGhost
         public override void Read(CGameGhost n, GbxReader r)
         {
             n.RawData = r.ReadData();
-            n.sampleData = new Data(n.RawData)
+            n.sampleData = new Data()
             {
                 Offsets = r.ReadArray<int>()
             };
@@ -63,17 +78,12 @@ public partial class CGameGhost
     {
         public override void Read(CGameGhost n, GbxReader r)
         {
-            var uncompressedSize = r.ReadInt32();
-            var data = r.ReadData();
-            n.CompressedData = new(uncompressedSize, data);
-
-            n.sampleData = new Data(n.CompressedData);
+            n.CompressedData = r.ReadZlibData();
         }
 
         public override void Write(CGameGhost n, GbxWriter w)
         {
-            w.Write(n.CompressedData?.UncompressedSize ?? 0);
-            w.WriteData(n.CompressedData?.Data);
+            w.WriteZlibData(n.CompressedData, n.sampleData);
         }
     }
 }

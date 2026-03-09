@@ -60,25 +60,46 @@ CPlugVehicleMaterial 0x090F1000
  float
  byte
  v1=
-  float?
-  float?
+  float
+  float
+ v7+
+  float
+  float
  v1+
-  float?
-  float?
-  float?
-  v2+
-   float?
-   v3+
-    float?
-    float?
-    float?
-    v4+
-     bool?
-     vec2?
-     v5+
-      float?
-      v6+
-       float?
-       v7+
-        float?
-        float?
+  float
+  float
+  float
+ v2+
+  float
+ v3+
+  float
+  float
+  float
+ v4+
+  bool
+  vec2
+ v5+
+  float
+ v6+
+  float
+ v8+
+  float
+  v13-
+   float
+ v9+
+  Keys (version: Version - 12)
+ v10+
+  Keys (version: Version - 12)
+ v11+
+  float
+ v13+
+  Keys (version: Version - 12)
+  Keys (version: Version - 12)
+  float
+  float
+  float
+ v14+
+  Keys (version: Version - 12)
+  int
+
+archive Keys
