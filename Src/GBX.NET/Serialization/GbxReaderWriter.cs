@@ -82,8 +82,16 @@ public partial interface IGbxReaderWriter : IDisposable
     void ArrayOptimizedInt([NotNullIfNotNull(nameof(value))] ref int[]? value, int? determineFrom = default);
 
     [return: NotNullIfNotNull(nameof(value))]
-    GBX.NET.Int2[]? ArrayOptimizedInt2(GBX.NET.Int2[]? value, int? determineFrom = default);
-    void ArrayOptimizedInt2([NotNullIfNotNull(nameof(value))] ref GBX.NET.Int2[]? value, int? determineFrom = default);
+    Int2[]? ArrayOptimizedInt2(Int2[]? value, int? determineFrom = default);
+    void ArrayOptimizedInt2([NotNullIfNotNull(nameof(value))] ref Int2[]? value, int? determineFrom = default);
+
+    [return: NotNullIfNotNull(nameof(value))]
+    ZlibData? ZlibData(ZlibData? value, Action<GbxReaderWriter> action, bool lazyLoad);
+    void ZlibData([NotNullIfNotNull(nameof(value))] ref ZlibData? value, Action<GbxReaderWriter> action, bool lazyLoad);
+
+    [return: NotNullIfNotNull(nameof(value))]
+    ZlibData? ZlibData(ZlibData? value, IReadableWritable readableWritable, bool lazyLoad, int version = 0);
+    void ZlibData([NotNullIfNotNull(nameof(value))] ref ZlibData? value, IReadableWritable readableWritable, bool lazyLoad, int version = 0);
 
     void Chunk<TNode, TChunk>(TNode node, TChunk? chunk)
         where TNode : IClass
@@ -191,7 +199,7 @@ public sealed partial class GbxReaderWriter : IGbxReaderWriter
             value = (T)Enum.ToObject(typeof(T), Reader.ReadInt32()); // CastTo<T>.From(Reader.ReadInt32());
         }
 
-        Writer?.Write((int)(object)value /* CastTo<int>.From(value) */);
+        Writer?.Write(Convert.ToInt32(value) /* CastTo<int>.From(value) */);
 
         return value;
     }
@@ -205,7 +213,7 @@ public sealed partial class GbxReaderWriter : IGbxReaderWriter
             value = (T)Enum.ToObject(typeof(T), Reader.ReadByte()); // CastTo<T>.From(Reader.ReadByte());
         }
 
-        Writer?.Write((byte)(int)(object)value /* CastTo<byte>.From(value) */);
+        Writer?.Write((byte)Convert.ToInt32(value));
 
         return value;
     }
@@ -219,7 +227,7 @@ public sealed partial class GbxReaderWriter : IGbxReaderWriter
             value = (T)Enum.ToObject(typeof(T), Reader.ReadInt32()); // CastTo<T>.From(Reader.ReadInt32());
         }
 
-        Writer?.Write(value.HasValue ? (int)(object)value : (int)(object)defaultValue /* CastTo<int>.From(value) */);
+        Writer?.Write(value.HasValue ? Convert.ToInt32(value) : Convert.ToInt32(defaultValue) /* CastTo<int>.From(value) */);
 
         return value;
     }
@@ -233,7 +241,7 @@ public sealed partial class GbxReaderWriter : IGbxReaderWriter
             value = (T)Enum.ToObject(typeof(T), Reader.ReadByte()); // CastTo<T>.From(Reader.ReadByte());
         }
 
-        Writer?.Write(value.HasValue ? (byte)(object)value : (byte)(object)defaultValue /* CastTo<byte>.From(value) */);
+        Writer?.Write(value.HasValue ? (byte)Convert.ToInt32(value) : (byte)Convert.ToInt32(defaultValue) /* CastTo<byte>.From(value) */);
 
         return value;
     }
@@ -534,4 +542,35 @@ public sealed partial class GbxReaderWriter : IGbxReaderWriter
             (chunk ?? new TChunk()).ReadWrite(node, this);
         }
     }
+
+    [return: NotNullIfNotNull(nameof(value))]
+    public ZlibData? ZlibData(ZlibData? value, Action<GbxReaderWriter> action, bool lazyLoad)
+    {
+        if (Reader is not null) value = lazyLoad ? Reader.ReadZlibData() : Reader.ReadZlibData(reader =>
+        {
+            using var rw = new GbxReaderWriter(reader);
+            action(rw);
+        });
+        Writer?.WriteZlibData(value, reader =>
+        {
+            using var rw = new GbxReaderWriter(reader);
+            action(rw);
+        });
+        return value;
+    }
+
+    public void ZlibData([NotNullIfNotNull(nameof(value))] ref ZlibData? value, Action<GbxReaderWriter> action, bool lazyLoad)
+        => value = ZlibData(value, action, lazyLoad);
+
+
+    [return: NotNullIfNotNull(nameof(value))]
+    public ZlibData? ZlibData(ZlibData? value, IReadableWritable readableWritable, bool lazyLoad, int version = 0)
+    {
+        if (Reader is not null) value = lazyLoad ? Reader.ReadZlibData() : Reader.ReadZlibData(readableWritable, version);
+        Writer?.WriteZlibData(value, readableWritable, version);
+        return value;
+    }
+
+    public void ZlibData([NotNullIfNotNull(nameof(value))] ref ZlibData? value, IReadableWritable readableWritable, bool lazyLoad, int version = 0)
+        => value = ZlibData(value, readableWritable, lazyLoad, version);
 }

@@ -7,6 +7,8 @@ CLI implementation for the GBX.NET tool framework using `Spectre.Console`.
 
 ## Framework support
 
+- .NET 10
+- .NET 9
 - .NET 8
 
 ## License

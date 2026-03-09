@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ExtractPakFileHashes": {
+      "commandName": "Project",
+      "commandLineArgs": "\"E:\\Maniaplanet3\\Packs\""
+    }
+  }
+}

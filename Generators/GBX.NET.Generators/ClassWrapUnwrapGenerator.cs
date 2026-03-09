@@ -1,7 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 
@@ -10,15 +9,8 @@ namespace GBX.NET.Generators;
 [Generator]
 public class ClassWrapUnwrapGenerator : IIncrementalGenerator
 {
-    private const bool Debug = false;
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        if (Debug && !Debugger.IsAttached)
-        {
-            Debugger.Launch();
-        }
-
         var wrapContents = context.AdditionalTextsProvider
             .Where(static file =>
             {

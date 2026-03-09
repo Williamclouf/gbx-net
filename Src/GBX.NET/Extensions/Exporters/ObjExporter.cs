@@ -7,6 +7,17 @@ internal static class ObjExporter
 {
     private static CultureInfo Invariant => CultureInfo.InvariantCulture;
 
+    private static void WriteHeader(string type, TextWriter objWriter, TextWriter mtlWriter)
+    {
+        objWriter.WriteLine("# GBX.NET 2 - {0} - OBJ Exporter (.obj)", type);
+        objWriter.WriteLine("# Exported at {0}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", Invariant));
+        objWriter.WriteLine();
+
+        mtlWriter.WriteLine("# GBX.NET 2 - {0} - OBJ Exporter (.mtl)", type);
+        mtlWriter.WriteLine("# Exported at {0}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", Invariant));
+        mtlWriter.WriteLine();
+    }
+
     public static void Export(CPlugCrystal crystal, TextWriter objWriter, TextWriter mtlWriter, int? mergeVerticesDigitThreshold = null)
     {
         if (crystal.Layers is null)
@@ -14,13 +25,7 @@ internal static class ObjExporter
             return;
         }
 
-        objWriter.WriteLine("# GBX.NET 2 - CPlugCrystal - OBJ Exporter (.obj)");
-        objWriter.WriteLine("# Exported on {0}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", Invariant));
-        objWriter.WriteLine();
-
-        mtlWriter.WriteLine("# GBX.NET 2 - CPlugCrystal - OBJ Exporter (.mtl)");
-        mtlWriter.WriteLine("# Exported on {0}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", Invariant));
-        mtlWriter.WriteLine();
+        WriteHeader(nameof(CPlugCrystal), objWriter, mtlWriter);
 
         foreach (var material in crystal.Materials.Select(x => x.MaterialUserInst).OfType<CPlugMaterialUserInst>())
         {
@@ -144,13 +149,7 @@ internal static class ObjExporter
 
     public static void Export(CPlugSolid solid, TextWriter objWriter, TextWriter mtlWriter, int? mergeVerticesDigitThreshold = null, int lod = 0)
     {
-        objWriter.WriteLine("# GBX.NET 2 - CPlugSolid - OBJ Exporter (.obj)");
-        objWriter.WriteLine("# Exported on {0}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", Invariant));
-        objWriter.WriteLine();
-
-        mtlWriter.WriteLine("# GBX.NET 2 - CPlugSolid - OBJ Exporter (.mtl)");
-        mtlWriter.WriteLine("# Exported on {0}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", Invariant));
-        mtlWriter.WriteLine();
+        WriteHeader(nameof(CPlugSolid), objWriter, mtlWriter);
 
         if (solid.Tree is not CPlugTree tree)
         {
@@ -162,14 +161,11 @@ internal static class ObjExporter
         var positionsDict = mergeVerticesDigitThreshold.HasValue
             ? new Dictionary<Vec3, int>(new Vec3EqualityComparer(mergeVerticesDigitThreshold.Value)) : [];
 
-        foreach (var (t, loc) in tree.GetAllChildrenWithLocation(lod))
+        var unknownMaterialDict = new Dictionary<CPlug, int>();
+
+        foreach (var (t, loc) in solid.GetAllChildrenWithLocation(lod))
         {
             if (t.Visual is null)
-            {
-                continue;
-            }
-
-            if (t.ShaderFile is null)
             {
                 continue;
             }
@@ -179,7 +175,20 @@ internal static class ObjExporter
                 continue;
             }
 
-            var materialName = GbxPath.GetFileNameWithoutExtension(t.ShaderFile.FilePath);
+            string materialName;
+            if (t.ShaderFile is not null)
+            {
+                materialName = GbxPath.GetFileNameWithoutExtension(t.ShaderFile.FilePath);
+            }
+            else if (t.Shader is not null)
+            {
+                unknownMaterialDict[t.Shader] = unknownMaterialDict.Count;
+                materialName = "Unknown" + unknownMaterialDict.Count;
+            }
+            else
+            {
+                materialName = "Unknown";
+            }
 
             if (!materials.Contains(materialName))
             {
@@ -204,7 +213,7 @@ internal static class ObjExporter
             {
                 var locatedPos = new Vec3(
                     pos.X * loc.XX + pos.Y * loc.XY + pos.Z * loc.XZ + loc.TX,
-                    pos.X * loc.YZ + pos.Y * loc.YY + pos.Z * loc.YZ + loc.TY,
+                    pos.X * loc.YX + pos.Y * loc.YY + pos.Z * loc.YZ + loc.TY,
                     pos.X * loc.ZX + pos.Y * loc.ZY + pos.Z * loc.ZZ + loc.TZ
                 );
 
@@ -222,9 +231,47 @@ internal static class ObjExporter
             }
         }
 
+        var normalsDict = new Dictionary<Vec3, int>();
+
+        foreach (var (t, loc) in solid.GetAllChildrenWithLocation(lod))
+        {
+            if (t.Visual is null)
+            {
+                continue;
+            }
+
+            if (t.Visual is not CPlugVisualIndexedTriangles visual)
+            {
+                continue;
+            }
+
+            foreach (var normal in visual.VertexStreams
+                .SelectMany(x => x.Normals ?? [])
+                .Concat(visual.Vertices.Select(x => x.Normal).OfType<Vec3>()))
+            {
+                var normalized = new Vec3(
+                    normal.X * loc.XX + normal.Y * loc.XY + normal.Z * loc.XZ,
+                    normal.X * loc.YX + normal.Y * loc.YY + normal.Z * loc.YZ,
+                    normal.X * loc.ZX + normal.Y * loc.ZY + normal.Z * loc.ZZ
+                ).GetNormalized();
+
+                if (normalsDict.ContainsKey(normalized))
+                {
+                    continue;
+                }
+
+                objWriter.WriteLine("vn {0} {1} {2}",
+                    normalized.X.ToString(Invariant),
+                    normalized.Y.ToString(Invariant),
+                    normalized.Z.ToString(Invariant));
+
+                normalsDict.Add(normalized, normalsDict.Count);
+            }
+        }
+
         var uvs = new Dictionary<Vec2, int>();
 
-        foreach (var (t, loc) in tree.GetAllChildrenWithLocation(lod))
+        foreach (var (t, loc) in solid.GetAllChildrenWithLocation(lod))
         {
             if (t.Visual is null)
             {
@@ -256,7 +303,7 @@ internal static class ObjExporter
             }
         }
 
-        foreach (var (t, loc) in tree.GetAllChildrenWithLocation(lod))
+        foreach (var (t, loc) in solid.GetAllChildrenWithLocation(lod))
         {
             if (t.Visual is null)
             {
@@ -268,17 +315,24 @@ internal static class ObjExporter
                 continue;
             }
 
-            if (t.ShaderFile is null)
-            {
-                continue;
-            }
-
             if (visual.IndexBuffer is null)
             {
                 continue;
             }
 
-            var materialName = GbxPath.GetFileNameWithoutExtension(t.ShaderFile.FilePath);
+            string materialName;
+            if (t.ShaderFile is not null)
+            {
+                materialName = GbxPath.GetFileNameWithoutExtension(t.ShaderFile.FilePath);
+            }
+            else if (t.Shader is not null)
+            {
+                materialName = "Unknown" + unknownMaterialDict[t.Shader];
+            }
+            else
+            {
+                materialName = "Unknown";
+            }
 
             objWriter.WriteLine("g {0}", materialName);
             objWriter.WriteLine("usemtl {0}", materialName);
@@ -292,18 +346,48 @@ internal static class ObjExporter
                     objWriter.Write('f');
                 }
 
-                var v = visual.Vertices[index];
+                CPlugVisual3D.Vertex v;
+                if (visual.VertexStreams.Count > 0)
+                {
+                    var vStream = visual.VertexStreams[0];
+                    v = new CPlugVisual3D.Vertex(vStream.Positions?[index] ?? new(), vStream.Normals?[index], null, null, null, null, null);
+                }
+                else
+                {
+                    v = visual.Vertices[index];
+                }
+
                 var locatedPos = new Vec3(
                     v.Position.X * loc.XX + v.Position.Y * loc.XY + v.Position.Z * loc.XZ + loc.TX,
-                    v.Position.X * loc.YZ + v.Position.Y * loc.YY + v.Position.Z * loc.YZ + loc.TY,
+                    v.Position.X * loc.YX + v.Position.Y * loc.YY + v.Position.Z * loc.YZ + loc.TY,
                     v.Position.X * loc.ZX + v.Position.Y * loc.ZY + v.Position.Z * loc.ZZ + loc.TZ
                 );
 
-                var faceIndex = visual.TexCoords.Length > 0
-                    ? $" {positionsDict[locatedPos] + 1}/{uvs[visual.TexCoords[0].TexCoords[index].UV] + 1}"
-                    : $" {positionsDict[locatedPos] + 1}";
+                objWriter.Write(' ');
+                objWriter.Write(positionsDict[locatedPos] + 1);
 
-                objWriter.Write(faceIndex);
+                var normalized = v.Normal is null ? default(Vec3?) : new Vec3(
+                    v.Normal.Value.X * loc.XX + v.Normal.Value.Y * loc.XY + v.Normal.Value.Z * loc.XZ,
+                    v.Normal.Value.X * loc.YX + v.Normal.Value.Y * loc.YY + v.Normal.Value.Z * loc.YZ,
+                    v.Normal.Value.X * loc.ZX + v.Normal.Value.Y * loc.ZY + v.Normal.Value.Z * loc.ZZ
+                ).GetNormalized();
+
+                if (visual.TexCoords.Length > 0)
+                {
+                    objWriter.Write('/');
+                    objWriter.Write(uvs[visual.TexCoords[0].TexCoords[index].UV] + 1);
+
+                    if (normalized.HasValue)
+                    {
+                        objWriter.Write('/');
+                        objWriter.Write(normalsDict[normalized.Value] + 1);
+                    }
+                }
+                else if (normalized.HasValue)
+                {
+                    objWriter.Write("//");
+                    objWriter.Write(normalsDict[normalized.Value] + 1);
+                }
 
                 if (++triangleCounter % 3 == 0)
                 {
@@ -317,27 +401,23 @@ internal static class ObjExporter
 
     public static void Export(CPlugSolid2Model solid, TextWriter objWriter, TextWriter mtlWriter, int? mergeVerticesDigitThreshold = null, int lod = 0)
     {
-        objWriter.WriteLine("# GBX.NET 2 - CPlugSolid2Model - OBJ Exporter (.obj)");
-        objWriter.WriteLine("# Exported on {0}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", Invariant));
-        objWriter.WriteLine();
-
-        mtlWriter.WriteLine("# GBX.NET 2 - CPlugSolid2Model - OBJ Exporter (.mtl)");
-        mtlWriter.WriteLine("# Exported on {0}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", Invariant));
-        mtlWriter.WriteLine();
+        WriteHeader(nameof(CPlugSolid2Model), objWriter, mtlWriter);
 
         var materials = new HashSet<string>();
 
         var positionsDict = mergeVerticesDigitThreshold.HasValue
             ? new Dictionary<Vec3, int>(new Vec3EqualityComparer(mergeVerticesDigitThreshold.Value)) : [];
 
-        if (solid.Visuals is null || solid.Visuals.Length == 0)
+        if (solid.Visuals is null || solid.Visuals.Length == 0 || solid.ShadedGeoms is null || solid.ShadedGeoms.Length == 0)
         {
             throw new Exception("CPlugSolid2Model has no Visuals.");
         }
 
-        foreach (var geom in solid.ShadedGeoms ?? [])
+        var pickedLod = solid.ShadedGeoms.Any(x => x.LodMask == lod) ? lod : solid.ShadedGeoms.Min(x => x.LodMask);
+
+        foreach (var geom in solid.ShadedGeoms)
         {
-            if (geom.Lod != -1 && geom.Lod != lod)
+            if (geom.LodMask != -1 && geom.LodMask != pickedLod)
             {
                 continue;
             }
@@ -386,9 +466,9 @@ internal static class ObjExporter
 
         var uvs = new Dictionary<Vec2, int>();
 
-        foreach (var geom in solid.ShadedGeoms ?? [])
+        foreach (var geom in solid.ShadedGeoms)
         {
-            if (geom.Lod != -1 && geom.Lod != lod)
+            if (geom.LodMask != -1 && geom.LodMask != pickedLod)
             {
                 continue;
             }
@@ -431,9 +511,9 @@ internal static class ObjExporter
             }
         }
 
-        foreach (var geom in solid.ShadedGeoms ?? [])
+        foreach (var geom in solid.ShadedGeoms)
         {
-            if (geom.Lod != -1 && geom.Lod != lod)
+            if (geom.LodMask != -1 && geom.LodMask != pickedLod)
             {
                 continue;
             }
@@ -455,20 +535,31 @@ internal static class ObjExporter
 
             var triangleCounter = 0;
 
+            var positions = visual.VertexStreams.FirstOrDefault()?.Positions;
             foreach (var index in visual.IndexBuffer.Indices)
             {
+                if (index >= positions?.Length)
+                {
+                    continue;
+                }
+                
                 if (triangleCounter % 3 == 0)
                 {
                     objWriter.Write('f');
                 }
-
-                var v = visual.VertexStreams.FirstOrDefault()?.Positions?[index] ?? visual.Vertices[index].Position;
+                
+                var v = positions?[index] ?? visual.Vertices[index].Position;
 
                 var uv = visual.TexCoords.Length == 0
-                    ? (visual.VertexStreams.Count > 0 ? visual.VertexStreams[0].UVs.Values.First()[index] : (0, 0))
+                    ? (visual.VertexStreams.Count > 0 ? visual.VertexStreams[0].UVs.Values.FirstOrDefault()?[index] : (0, 0))
                     : visual.TexCoords[0].TexCoords[index].UV;
 
-                var uvIndex = uvs[uv];
+                if (uv is null)
+                {
+                    continue;
+                }
+
+                var uvIndex = uvs[uv.Value];
 
                 var faceIndex = $" {positionsDict[v] + 1}/{uvIndex + 1}";
 
@@ -499,6 +590,11 @@ internal static class ObjExporter
         if (solid.MaterialInsts is { Length: > 0 } materialInsts)
         {
             return materialInsts[materialIndex].Link ?? "Unknown";
+        }
+
+        if (solid.MaterialIds is { Length: > 0 } materialIds)
+        {
+            return materialIds[materialIndex];
         }
 
         return "Unknown";

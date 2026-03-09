@@ -15,6 +15,7 @@ jobs:
     
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_BODY: ${{ github.event.release.body }}
     
     steps:
       - uses: actions/checkout@v4
@@ -22,7 +23,11 @@ jobs:
           submodules: recursive
       
       - name: Set release information
-        run: gh release edit ${{ github.ref_name }} -n "$(echo -e '***[Release is being automatically created, please wait...](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})***\n\n${{ github.event.release.body }}')"
+        run: |
+          FINAL_BODY="***[Release is being automatically created, please wait...](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})***
+          
+          $RELEASE_BODY"
+          gh release edit ${{ github.ref_name }} -n "$FINAL_BODY"
     
   build:
     needs: prepare-description
@@ -37,23 +42,33 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: |
+          10.0.x
+          9.0.x
           8.0.x
-          6.0.x
+          
+    - name: Install wasm-tools
+      run: dotnet workload install wasm-tools
           
     - name: Restore dependencies
       run: dotnet restore
       
     - name: Build
-      run: dotnet build -c Release --no-restore /p:ContinuousIntegrationBuild=true
+      run: dotnet build -c Release --no-restore -p:ContinuousIntegrationBuild=true
       
     - name: Test
       run: dotnet test -c Release --no-build --verbosity normal
+      
+    - name: Pack templates
+      run: dotnet pack Templates -c Release --no-build --no-restore -p:ContinuousIntegrationBuild=true
       
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4
       with:
         name: build
-        path: Src/GBX.NET*/bin/Release/*.*nupkg
+        path: |
+          Src/GBX.NET*/bin/Release/*.*nupkg
+          Templates/bin/Release/*.*nupkg
+
   
   publish:    
     needs: build
@@ -61,17 +76,19 @@ jobs:
     strategy:
       matrix:
         lib:
-        - GBX.NET
-        - GBX.NET.Hashing
-        - GBX.NET.Imaging
-        - GBX.NET.Imaging.SkiaSharp
-        - GBX.NET.Imaging.ImageSharp
-        - GBX.NET.LZO
-        - GBX.NET.ZLib
-        - GBX.NET.NewtonsoftJson
-        - GBX.NET.Tool
-        - GBX.NET.Tool.CLI
-        - GBX.NET.Crypto
+        - Src/GBX.NET
+        - Src/GBX.NET.Hashing
+        - Src/GBX.NET.Imaging
+        - Src/GBX.NET.Imaging.SkiaSharp
+        - Src/GBX.NET.Imaging.ImageSharp
+        - Src/GBX.NET.LZO
+        - Src/GBX.NET.ZLib
+        - Src/GBX.NET.NewtonsoftJson
+        - Src/GBX.NET.Tool
+        - Src/GBX.NET.Tool.CLI
+        - Src/GBX.NET.Crypto
+        - Src/GBX.NET.PAK
+        - Templates
     
     name: Publish ${{ matrix.lib }}
     runs-on: ubuntu-latest
@@ -107,8 +124,13 @@ jobs:
     
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_BODY: ${{ github.event.release.body }}
     
     steps:
       - uses: actions/checkout@v4
       - name: Set release information
-        run: gh release edit ${{ github.ref_name }} -n "$(echo -e '${{ github.event.release.body }}\n\nAssets were automatically generated using the [publish workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).')"
+        run: |
+          FINAL_BODY="${RELEASE_BODY}
+          
+          Assets were automatically generated using the [publish workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+          gh release edit ${{ github.ref_name }} -n "$FINAL_BODY"

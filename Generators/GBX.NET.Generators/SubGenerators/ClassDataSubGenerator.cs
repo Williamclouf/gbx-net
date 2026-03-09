@@ -159,60 +159,6 @@ internal class ClassDataSubGenerator
         AppendEnumsLine(sb, classInfo, context);
 
         sb.AppendLine();
-        sb.Append("    public static ");
-
-        if (classInfo.Name != "CMwNod")
-        {
-            sb.Append("new ");
-        }
-
-        sb.AppendLine("IClass? New(uint classId) => classId switch");
-        sb.AppendLine("    {");
-
-        if (!classInfo.IsAbstract)
-        {
-            sb.Append("        0x");
-            sb.Append(classInfo.Id.GetValueOrDefault().ToString("X8"));
-            sb.Append(" => new ");
-            sb.Append(classInfo.Name);
-            sb.AppendLine("(),");
-        }
-
-        RecurseInheritanceInverted(classInfo.Name, []);
-
-        void RecurseInheritanceInverted(string name, HashSet<uint> alreadyAddedInheritance)
-        {
-            if (!inheritanceInverted.TryGetValue(name, out var classes))
-            {
-                return;
-            }
-
-            foreach (var classIdAndDataModel in classes)
-            {
-                if (alreadyAddedInheritance.Contains(classIdAndDataModel.Key))
-                {
-                    continue;
-                }
-
-                if (!classIdAndDataModel.Value.IsAbstract)
-                {
-                    sb.Append("        0x");
-                    sb.Append(classIdAndDataModel.Key.ToString("X8"));
-                    sb.Append(" => new ");
-                    sb.Append(classIdAndDataModel.Value.Name);
-                    sb.AppendLine("(),");
-                }
-
-                RecurseInheritanceInverted(classIdAndDataModel.Value.Name, alreadyAddedInheritance);
-            }
-        }
-
-
-        sb.AppendLine("        _ => null");
-
-        sb.AppendLine("    };");
-
-        sb.AppendLine();
 
         AppendChunkMethodsLine(sb, classInfo, existingMembers);
 
@@ -1194,17 +1140,23 @@ internal class ClassDataSubGenerator
             }
             else if (structureKind.GetValueOrDefault() == 0)
             {
-                sb.AppendLine();
-                sb.Append("        public override void ReadWrite(");
-                sb.Append(classInfo.Name);
-                sb.AppendLine(" n, GbxReaderWriter rw)");
-                sb.AppendLine("        {");
+                var doReadWriteMethod = !existingChunkMembers.OfType<IMethodSymbol>()
+                    .Any(x => x.Name == "ReadWrite" && x.Parameters.Length == 2 && x.Parameters[0].Type.Name == classInfo.Name && x.Parameters[1].Type.Name == "GbxReaderWriter");
 
-                var memberWriter = new MemberSerializationWriter(
-                    sb, SerializationType.ReadWrite, archive: null, existingFields, existingProps, classInfo, classInfos, archiveInfos, autoProperty: false, context);
-                memberWriter.Append(indent: 3, chunk.ChunkLDefinition.Members);
+                if (doReadWriteMethod)
+                {
+                    sb.AppendLine();
+                    sb.Append("        public override void ReadWrite(");
+                    sb.Append(classInfo.Name);
+                    sb.AppendLine(" n, GbxReaderWriter rw)");
+                    sb.AppendLine("        {");
 
-                sb.AppendLine("        }");
+                    var memberWriter = new MemberSerializationWriter(
+                        sb, SerializationType.ReadWrite, archive: null, existingFields, existingProps, classInfo, classInfos, archiveInfos, autoProperty: false, context);
+                    memberWriter.Append(indent: 3, chunk.ChunkLDefinition.Members);
+
+                    sb.AppendLine("        }");
+                }
             }
         }
 

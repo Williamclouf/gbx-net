@@ -1,4 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+#if NET8_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
+#endif
 
 namespace GBX.NET.Components;
 
@@ -16,10 +20,10 @@ public sealed class GbxRefTable
     /// </summary>
     public IReadOnlyCollection<UnlinkedGbxRefTableResource> Resources { get; internal set; } = [];
 
-    public Dictionary<GbxRefTableFile, byte[]> ExternalData { get; } = [];
+    public Dictionary<string, Func<Gbx>> ExternalNodes { get; set; } = [];
 
     /// <summary>
-    /// Directory path of the Gbx file used to resolve external files via the file system. File system is not used if this is null, instead, <see cref="ExternalData"/> is used.
+    /// Directory path of the Gbx file used to resolve external files via the file system. File system is not used if this is null, instead, <see cref="ExternalNodes"/> is used.
     /// </summary>
     public string? FileSystemPath { get; init; }
 
@@ -38,6 +42,7 @@ public sealed class GbxRefTable
     public string GetFullFilePath(GbxRefTableFile file) => Path.GetFullPath(GetFilePath(file));
     public string GetFullFilePath(UnlinkedGbxRefTableFile file) => Path.GetFullPath(GetFilePath(file));
 
+    // TODO: should also have async variant in the future
     public CMwNod? LoadNode(GbxRefTableFile file, GbxReadSettings settings = default, bool exceptions = false)
     {
         if (file is null)
@@ -53,8 +58,32 @@ public sealed class GbxRefTable
 
             if (!File.Exists(filePath))
             {
-                logger?.LogWarning("File not found: {FilePath}", filePath);
-                return default;
+#if NET5_0_OR_GREATER
+                if (OperatingSystem.IsWindows())
+                {
+                    logger?.LogWarning("File not found: {FilePath}", filePath);
+                    return default;
+                }
+#endif
+
+                var directory = Path.GetDirectoryName(filePath);
+                if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+                {
+                    logger?.LogWarning("Directory not found: {Directory}", directory);
+                    logger?.LogWarning("File not found: {FilePath}", filePath);
+                    return default;
+                }
+
+                var fileName = Path.GetFileName(filePath);
+
+                filePath = Directory.EnumerateFiles(directory)
+                    .FirstOrDefault(f => string.Equals(Path.GetFileName(f), fileName, StringComparison.OrdinalIgnoreCase));
+
+                if (filePath is null)
+                {
+                    logger?.LogWarning("File not found in directory {Directory}: {FileName}", directory, fileName);
+                    return default;
+                }
             }
 
             logger?.LogDebug("Loading node from file: {FilePath}", filePath);
@@ -88,37 +117,9 @@ public sealed class GbxRefTable
             }
         }
 
-        if (ExternalData.TryGetValue(file, out var data))
+        if (ExternalNodes?.TryGetValue(file.FilePath, out var nodFunc) == true)
         {
-            using var ms = new MemoryStream(data);
-
-            var scope = logger?.BeginScope("External [{Length} bytes]", data.Length);
-
-            try
-            {
-                var gbx = Gbx.Parse(ms, settings);
-
-                scope?.Dispose();
-
-                if (gbx.Node is null)
-                {
-                    logger?.LogWarning("Failed to load node from External [{Length} bytes] ({Gbx})", data.Length, gbx);
-                }
-
-                return gbx.Node;
-            }
-            catch (Exception ex)
-            {
-                scope?.Dispose();
-                logger?.LogError(ex, "Failed to load node from file: {Length} bytes", data.Length);
-
-                if (exceptions)
-                {
-                    throw;
-                }
-
-                return default;
-            }
+            return nodFunc();
         }
 
         return default;
@@ -139,6 +140,9 @@ public sealed class GbxRefTable
         return new GbxRefTableWriter(this, header, writer).Write(rawBody);
     }
 
+#if NET8_0_OR_GREATER
+    [Experimental("GBXNET10001")]
+#endif
     public GbxRefTable DeepClone()
     {
         var refTable = new GbxRefTable
@@ -149,11 +153,9 @@ public sealed class GbxRefTable
             FileSystemPath = FileSystemPath
         };
 
-        foreach (var pair in ExternalData)
+        foreach (var pair in ExternalNodes)
         {
-            // TODO: Deep clone file or not?
-            var file = new GbxRefTableFile(refTable, pair.Key.Flags, pair.Key.UseFile, pair.Key.FilePath);
-            refTable.ExternalData.Add(file, pair.Value.ToArray());
+            refTable.ExternalNodes.Add(pair.Key, pair.Value);
         }
 
         return refTable;

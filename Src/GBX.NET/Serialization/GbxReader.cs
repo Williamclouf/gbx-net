@@ -49,6 +49,7 @@ public partial interface IGbxReader : IDisposable
     Vec3 ReadVec3_10b();
     Vec3 ReadVec3Unit2();
     Vec3 ReadVec3_4();
+    Vec3 ReadVec3_6();
     Vec3 ReadVec3Unit4();
     Vec4 ReadVec4();
     BoxAligned ReadBoxAligned();
@@ -63,6 +64,7 @@ public partial interface IGbxReader : IDisposable
     TransQuat ReadTransQuat();
     bool ReadBoolean();
     bool ReadBoolean(bool asByte);
+    bool ReadBoolean(BoolType type);
     byte[] ReadData();
     Task<byte[]> ReadDataAsync(CancellationToken cancellationToken = default);
     byte[] ReadData(int length);
@@ -89,10 +91,15 @@ public partial interface IGbxReader : IDisposable
     TimeSpan? ReadTimeOfDay();
     DateTime ReadFileTime();
     DateTime ReadSystemTime();
+    DateTimeOffset ReadUnixTime();
     int ReadSmallLen();
     string ReadSmallString();
     void ReadMarker(string value);
+    [IgnoreForCodeGeneration] ZlibData ReadZlibData();
+    [IgnoreForCodeGeneration] ZlibData ReadZlibData(IReadableWritable readableWritable, int version = 0);
+    [IgnoreForCodeGeneration] ZlibData ReadZlibData(Action<GbxReader> action);
     int ReadOptimizedInt(int determineFrom);
+    short ReadVarNat15();
     T ReadReadable<T>(int version = 0) where T : IReadable, new();
     TReadable ReadReadable<TReadable, TNode>(TNode node, int version = 0)
         where TNode : IClass
@@ -263,7 +270,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
         if (BaseStream.Read(buffer) != 3)
         {
-            return false;
+            throw new EndOfStreamException("Failed to read GBX magic bytes.");
         }
 
         return buffer[0] == 'G' && buffer[1] == 'B' && buffer[2] == 'X';
@@ -540,14 +547,23 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         return new(ReadSingle(), ReadSingle(), ReadSingle());
     }
 
+    /// <summary>
+    /// Reads a 4-byte <see cref="Vec3"/> with 10-bit components in [-511, 511] converted to [-1, 1].
+    /// </summary>
+    /// <returns></returns>
     public Vec3 ReadVec3_10b()
     {
         var val = ReadInt32();
 
-        return new Vec3(
-            (val & 0x3FF) / (float)0x1FF,
-            ((val >> 10) & 0x3FF) / (float)0x1FF,
-            ((val >> 20) & 0x3FF) / (float)0x1FF);
+        var x = val & 0x3FF;
+        var y = (val >> 10) & 0x3FF;
+        var z = (val >> 20) & 0x3FF;
+
+        x = (x & 0x200) != 0 ? x - 0x400 : x;
+        y = (y & 0x200) != 0 ? y - 0x400 : y;
+        z = (z & 0x200) != 0 ? z - 0x400 : z;
+
+        return new Vec3(x, y, z) / 511f;
     }
 
     /// <summary>
@@ -582,6 +598,51 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 #endif
 
         return ReadVec3Unit2() * mag;
+    }
+
+    public Vec3 ReadVec3_6()
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        Span<byte> buffer = stackalloc byte[6];
+        if (BaseStream.Read(buffer) != 6)
+        {
+            throw new EndOfStreamException("Failed to read Vec3_16 bytes.");
+        }
+#else
+        var buffer = ReadBytes(6);
+#endif
+
+#if NET5_0_OR_GREATER
+        var x = (float)BitConverter.ToHalf(buffer.Slice(0, 2));
+        var y = (float)BitConverter.ToHalf(buffer.Slice(2, 2));
+        var z = (float)BitConverter.ToHalf(buffer.Slice(4, 2));
+#else
+        var x = HalfUtility.HalfToFloat((ushort)(buffer[0] | (buffer[1] << 8)));
+        var y = HalfUtility.HalfToFloat((ushort)(buffer[2] | (buffer[3] << 8)));
+        var z = HalfUtility.HalfToFloat((ushort)(buffer[4] | (buffer[5] << 8)));
+#endif
+
+        return new Vec3(x, y, z);
+    }
+
+    public Vec3 ReadVec3_9()
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        Span<byte> buffer = stackalloc byte[9];
+        if (BaseStream.Read(buffer) != 9)
+        {
+            throw new EndOfStreamException("Failed to read Vec3_9 bytes.");
+        }
+#else
+        var buffer = ReadBytes(9);
+#endif
+
+        var x = (float)((((buffer[0] << 16) | (buffer[2] << 8) | buffer[1]) - 0x800000) * 0.002f);
+        var y = (float)((((buffer[3] << 16) | (buffer[5] << 8) | buffer[4]) - 0x800000) * 0.002f);
+        var z = (float)((((buffer[6] << 16) | (buffer[8] << 8) | buffer[7]) - 0x800000) * 0.002f);
+
+        // Return the Vector3
+        return new Vec3(x, y, z);
     }
 
     /// <summary>
@@ -780,6 +841,22 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         }
 
         return booleanAsByte != 0;
+    }
+
+    public bool ReadBoolean(BoolType type)
+    {
+        switch (type)
+        {
+            case BoolType.Int32:
+                return ReadBoolean();
+            case BoolType.Byte:
+                return ReadBoolean(asByte: true);
+            case BoolType.Text:
+                var bytes = ReadString(20);
+                return bool.Parse(ReadToCRLF());
+            default:
+                throw new ArgumentException("Invalid boolean type.", nameof(type));
+        }
     }
 
     public override string ReadString()
@@ -1063,80 +1140,19 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public T? ReadNodeRef<T>(out GbxRefTableFile? file) where T : IClass
     {
-        var index = default(int?);
+        var node = ReadNodeRef(out file);
 
-        if (encapsulation is null)
-        {
-            index = ReadInt32();
-
-            if (index == -1)
-            {
-                file = null;
-                return default;
-            }
-
-            if (NodeDict.TryGetValue(index.Value, out var existingNode))
-            {
-                logger?.LogDebug("NodeRef #{Index}: {ExistingNode} (existing)", index.Value, existingNode);
-
-                file = null;
-                return (T)existingNode;
-            }
-
-            if (refTable?.TryGetValue(index.Value, out var externalNode) == true)
-            {
-                logger?.LogDebug("NodeRef #{Index}: {ExternalNode} (external)", index.Value, externalNode);
-
-                file = externalNode as GbxRefTableFile;
-                return default;
-            }
-        }
-
-        file = null;
-
-        var rawClassId = ReadHexUInt32();
-
-        if (encapsulation is not null && rawClassId == uint.MaxValue)
+        if (node is null)
         {
             return default;
         }
 
-        var classId = ClassManager.Wrap(rawClassId);
-
-        if (logger is not null)
+        if (node is not T typedNode)
         {
-            if (classId == rawClassId)
-            {
-                logger.LogDebug("NodeRef #{Index}: 0x{ClassId:X8} ({ClassName})", index, classId, ClassManager.GetName(classId));
-            }
-            else
-            {
-                logger.LogDebug("NodeRef #{Index}: 0x{ClassId:X8} ({ClassName}, raw: 0x{RawClassId:X8})", index, classId, ClassManager.GetName(classId), rawClassId);
-            }
+            throw new InvalidCastException($"Node cannot be casted to {typeof(T).Name}.");
         }
 
-#if NET8_0_OR_GREATER
-        var node = T.New(classId) ?? throw new Exception($"Unknown class ID: 0x{classId:X8} ({ClassManager.GetName(classId) ?? "unknown class name"})");
-#else
-        var node = ClassManager.New(classId) ?? throw new Exception($"Unknown class ID: 0x{classId:X8} ({ClassManager.GetName(classId) ?? "unknown class name"})");
-#endif
-
-        if (node is not T nod)
-        {
-            throw new InvalidCastException($"Class ID 0x{classId:X8} ({ClassManager.GetName(classId) ?? "unknown class name"}) cannot be casted to {typeof(T).Name}.");
-        }
-
-        if (index.HasValue)
-        {
-            if (logger is not null && NodeDict.TryGetValue(index.Value, out var existingNode))
-            {
-                logger.LogWarning("NodeRef #{Index}: {ExistingNode} (existing was overwriten!)", index.Value, existingNode);
-            }
-
-            NodeDict[index.Value] = nod;
-        }
-
-        return ReadNode(nod);
+        return typedNode;
     }
 
     [IgnoreForCodeGeneration]
@@ -1246,11 +1262,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
         using var _ = logger?.BeginScope("{ClassName} (aux)", ClassManager.GetName(node.GetType()));
 
-#if NET8_0_OR_GREATER
-        T.Read(node, rw);
-#else
         node.ReadWrite(rw);
-#endif
 
         return node;
     }
@@ -1278,11 +1290,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
         var classId = ClassManager.Wrap(rawClassId);
 
-#if NET8_0_OR_GREATER
-        var node = T.New(classId) ?? throw new Exception($"Unknown class ID: 0x{classId:X8} ({ClassManager.GetName(classId) ?? "unknown class name"})");
-#else
         var node = ClassManager.New(classId) ?? throw new Exception($"Unknown class ID: 0x{classId:X8} ({ClassManager.GetName(classId) ?? "unknown class name"})");
-#endif
 
         if (node is not T metaNod)
         {
@@ -1343,7 +1351,36 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public DateTime ReadSystemTime()
     {
-        return new DateTime(ReadInt64());
+        var data = ReadUInt64();
+
+        var year = (int)(data & 0xFFFF);
+        var month = (int)((data >> 16) & 0xF);
+
+        if (year == 0 || month == 0)
+        {
+            return DateTime.MinValue;
+        }
+
+        var day = (int)((data >> 23) & 0x1F);
+
+        var hour = (int)((data >> 32) & 0x1F);
+        var minute = (int)((data >> 37) & 0x3F);
+        var second = (int)((data >> 43) & 0x3F);
+        var millisecond = (int)((data >> 49) & 0x3FF);
+
+        try
+        {
+            return new DateTime(year, month, day, hour, minute, second, millisecond);
+        }
+        catch
+        {
+            return DateTime.MinValue;
+        }
+    }
+
+    public DateTimeOffset ReadUnixTime()
+    {
+        return DateTimeOffset.FromUnixTimeSeconds(ReadUInt32());
     }
 
     public int ReadSmallLen()
@@ -1400,12 +1437,82 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 #endif
     }
 
+    public ZlibData ReadZlibData()
+    {
+        var uncompressedSize = ReadInt32();
+        var data = ReadData();
+        return new ZlibData(uncompressedSize, data, exception: null);
+    }
+
+    public ZlibData ReadZlibData(IReadableWritable readableWritable, int version = 0)
+    {
+        var uncompressedSize = ReadInt32();
+        var data = ReadData();
+
+        try
+        {
+            using var rBuffer = ZlibData.OpenDecompressedReader(uncompressedSize, data, referenceReader: this);
+            using var rwBuffer = new GbxReaderWriter(rBuffer);
+            readableWritable.ReadWrite(rwBuffer, version);
+
+            if (uncompressedSize != rBuffer.BaseStream.Position)
+            {
+                throw new Exception($"Not all zlib data was read: {rBuffer.BaseStream.Position} / {uncompressedSize} bytes read.");
+            }
+
+            return new ZlibData(uncompressedSize, data, exception: null) { Parsed = true };
+        }
+        catch (Exception ex)
+        {
+            return new ZlibData(uncompressedSize, data, ex) { Parsed = true };
+        }
+    }
+
+    public ZlibData ReadZlibData(Action<GbxReader> action)
+    {
+        var uncompressedSize = ReadInt32();
+        var data = ReadData();
+
+        try
+        {
+            using var rBuffer = ZlibData.OpenDecompressedReader(uncompressedSize, data, referenceReader: this);
+
+            action(rBuffer);
+
+            if (uncompressedSize != rBuffer.BaseStream.Position)
+            {
+                throw new Exception($"Not all zlib data was read: {rBuffer.BaseStream.Position} / {uncompressedSize} bytes read.");
+            }
+
+            return new ZlibData(uncompressedSize, data, exception: null) { Parsed = true };
+        }
+        catch (Exception ex)
+        {
+            return new ZlibData(uncompressedSize, data, ex) { Parsed = true };
+        }
+    }
+
     public int ReadOptimizedInt(int determineFrom) => (uint)determineFrom switch
     {
         > ushort.MaxValue => ReadInt32(),
         > byte.MaxValue => ReadUInt16(),
         _ => ReadByte()
     };
+
+    public short ReadVarNat15()
+    {
+        var b1 = ReadByte();
+
+        if ((b1 & 0x80) == 0)
+        {
+            // Single byte (0..127)
+            return (short)(b1 & 0x7F);
+        }
+
+        // Two bytes (128..32767)
+        var b2 = ReadByte();
+        return (short)((b1 & 0x7F) | (b2 << 7));
+    }
 
     public int[] ReadArrayOptimizedInt(int length, int? determineFrom = null)
     {
@@ -1940,9 +2047,9 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         {
             var buffer = new byte[BaseStream.Length - BaseStream.Position];
 #if NET6_0_OR_GREATER
-            _ = await BaseStream.ReadAsync(buffer, cancellationToken);
+            await BaseStream.ReadExactlyAsync(buffer, cancellationToken);
 #else
-            _ = await BaseStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+            _ = await BaseStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken); // this can still break on network streams 
 #endif
             return buffer;
         }
@@ -2035,5 +2142,44 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         {
             reader.Format = format;
         }
+    }
+
+    internal bool TryInitializeDecryption(IClass node)
+    {
+        if (Settings.EncryptionInitializer is null)
+        {
+            return false;
+        }
+
+        var baseType = node.GetType().BaseType ?? throw new ThisShouldNotHappenException();
+
+        var parentClassId = ClassManager.ClassIds[baseType];
+
+        if (parentClassId == 0x07031000)
+        {
+            parentClassId = 0x07001000;
+        }
+        else if (baseType == typeof(CGameCtnBlockInfo))
+        {
+            parentClassId = 0x24005000;
+        }
+        else if (baseType == typeof(CPlugVehiclePhyTuning))
+        {
+            parentClassId = 0x0A02E000;
+        }
+        else if (baseType == typeof(CFuncKeysReal)) // weird case of CPlugCurveSimpleNod
+        {
+            parentClassId = 0x01001000;
+        }
+        else if (baseType == typeof(CGameCtnZone))
+        {
+            parentClassId = 0x2401C000;
+        }
+
+        var parentClassIDBytes = BitConverter.GetBytes(parentClassId);
+
+        Settings.EncryptionInitializer.Initialize(parentClassIDBytes, 0, 4);
+
+        return true;
     }
 }

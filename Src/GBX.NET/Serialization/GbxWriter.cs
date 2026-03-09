@@ -42,6 +42,7 @@ public partial interface IGbxWriter : IDisposable
     void WriteDataUInt64(ulong value);
     void Write(bool value);
     void Write(bool value, bool asByte);
+    void Write(bool value, BoolType type);
     void Write(string? value);
     void Write(string? value, StringLengthPrefix lengthPrefix);
     void WriteGbxMagic();
@@ -55,7 +56,9 @@ public partial interface IGbxWriter : IDisposable
     void Write(Byte3 value);
     void Write(Vec2 value);
     void Write(Vec3 value);
+    void WriteVec3_6(Vec3 value);
     void WriteVec3_10b(Vec3 value);
+    void WriteVec3Unit4(Vec3 value);
     void Write(Vec4 value);
     void Write(BoxAligned value);
     void Write(BoxInt3 value);
@@ -83,10 +86,15 @@ public partial interface IGbxWriter : IDisposable
     void WriteTimeOfDay(TimeSpan? value);
     void WriteFileTime(DateTime value);
     void WriteSystemTime(DateTime value);
+    void WriteUnixTime(DateTimeOffset value);
     void WriteSmallLen(int value);
     void WriteSmallString(string? value);
     void WriteMarker(string value);
+    void WriteZlibData(ZlibData? value, IReadableWritable? readableWritable, int version = 0);
+    void WriteZlibData(ZlibData? value, IWritable? writable, int version = 0);
+    void WriteZlibData(ZlibData? value, Action<GbxWriter> action);
     void WriteOptimizedInt(int value, int determineFrom);
+    void WriteVarNat15(short value);
     void WriteWritable<T>(T? value, int version = 0) where T : IWritable, new();
     void WriteWritable<TWritable, TNode>(TWritable? value, TNode node, int version = 0)
         where TNode : IClass
@@ -264,6 +272,24 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         else
         {
             Write(Convert.ToInt32(value));
+        }
+    }
+
+    public void Write(bool value, BoolType type)
+    {
+        switch (type)
+        {
+            case BoolType.Int32:
+                Write(value);
+                return;
+            case BoolType.Byte:
+                Write(value, asByte: true);
+                return;
+            case BoolType.Text:
+                Write(value ? "True\r\n" : "False\r\n");
+                return;
+            default:
+                throw new ArgumentException("Invalid boolean type.", nameof(type));
         }
     }
 
@@ -538,9 +564,61 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         Write(value.Z);
     }
 
+    public void WriteVec3_6(Vec3 value)
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        Span<byte> buffer = stackalloc byte[6];
+        
+        BitConverter.TryWriteBytes(buffer.Slice(0, 2), (Half)value.X);
+        BitConverter.TryWriteBytes(buffer.Slice(2, 2), (Half)value.Y);
+        BitConverter.TryWriteBytes(buffer.Slice(4, 2), (Half)value.Z);
+        
+        BaseStream.Write(buffer);
+#else
+        var x = HalfUtility.FloatToHalf(value.X);
+        var y = HalfUtility.FloatToHalf(value.Y);
+        var z = HalfUtility.FloatToHalf(value.Z);
+
+        var buffer = new byte[6];
+        buffer[0] = (byte)(x & 0xFF);
+        buffer[1] = (byte)(x >> 8);
+        buffer[2] = (byte)(y & 0xFF);
+        buffer[3] = (byte)(y >> 8);
+        buffer[4] = (byte)(z & 0xFF);
+        buffer[5] = (byte)(z >> 8);
+
+        BaseStream.Write(buffer, 0, 6);
+#endif
+    }
+
     public void WriteVec3_10b(Vec3 value)
     {
-        Write((int)(value.X * 0x1FF) + ((int)(value.Y * 0x1FF) << 10) + ((int)(value.Z * 0x1FF) << 20));
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        var x = (int)MathF.Round(MathF.Max(-1f, MathF.Min(1f, value.X)) * 511f);
+        var y = (int)MathF.Round(MathF.Max(-1f, MathF.Min(1f, value.Y)) * 511f);
+        var z = (int)MathF.Round(MathF.Max(-1f, MathF.Min(1f, value.Z)) * 511f);
+#else
+        var x = (int)Math.Round(Math.Max(-1f, Math.Min(1f, value.X)) * 511f);
+        var y = (int)Math.Round(Math.Max(-1f, Math.Min(1f, value.Y)) * 511f);
+        var z = (int)Math.Round(Math.Max(-1f, Math.Min(1f, value.Z)) * 511f);
+#endif
+
+        x &= 0x3FF;
+        y &= 0x3FF;
+        z &= 0x3FF;
+
+        Write((z << 20) | (y << 10) | x);
+    }
+
+    public void WriteVec3Unit4(Vec3 value)
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        Write((short)(MathF.Atan2(value.Y, value.X) * short.MaxValue / MathF.PI));
+        Write((short)(MathF.Asin(value.Z) * short.MaxValue / (MathF.PI / 2)));
+#else
+        Write((short)(Math.Atan2(value.Y, value.X) * short.MaxValue / Math.PI));
+        Write((short)(Math.Asin(value.Z) * short.MaxValue / (Math.PI / 2)));
+#endif
     }
 
     public void Write(Vec4 value)
@@ -895,7 +973,36 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
     public void WriteSystemTime(DateTime value)
     {
-        Write(value.Ticks);
+        if (value == DateTime.MinValue)
+        {
+            Write(0UL);
+            return;
+        }
+
+        var year = (ulong)value.Year;
+        var month = (ulong)value.Month;
+        var dayOfWeek = (ulong)value.DayOfWeek;
+        var day = (ulong)value.Day;
+        var hour = (ulong)value.Hour;
+        var minute = (ulong)value.Minute;
+        var second = (ulong)value.Second;
+        var millisecond = (ulong)value.Millisecond;
+
+        var data = year |
+            (month << 16) |
+            (dayOfWeek << 20) |
+            (day << 23) |
+            (hour << 32) |
+            (minute << 37) |
+            (second << 43) |
+            (millisecond << 49);
+
+        Write(data);
+    }
+
+    public void WriteUnixTime(DateTimeOffset value)
+    {
+        Write((uint)value.ToUnixTimeSeconds());
     }
 
     public void WriteSmallLen(int value)
@@ -906,7 +1013,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        Write((byte)value | 0x80);
+        Write((byte)(value | 0x80));
         Write((ushort)(value >> 7));
     }
 
@@ -927,6 +1034,85 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         Write(value, StringLengthPrefix.None);
     }
 
+    public void WriteZlibData(ZlibData? value, IReadableWritable? readableWritable, int version = 0)
+    {
+        if (value?.Parsed == false)
+        {
+            Write(value.UncompressedSize);
+            WriteData(value.Data);
+            return;
+        }
+
+        if (readableWritable is null)
+        {
+            throw new Exception("Archive cannot be null if zlib data was parsed.");
+        }
+
+        using var uncompressedStream = new MemoryStream();
+        using var writer = new GbxWriter(uncompressedStream);
+
+        using var rwBuffer = new GbxReaderWriter(writer);
+        readableWritable.ReadWrite(rwBuffer, version);
+        writer.Flush();
+
+        uncompressedStream.Position = 0;
+        using var compressedStream = new MemoryStream();
+        Gbx.ZLib.Compress(uncompressedStream, compressedStream);
+        Write((int)uncompressedStream.Length);
+        Write((int)compressedStream.Length);
+        compressedStream.WriteTo(BaseStream);
+    }
+
+    public void WriteZlibData(ZlibData? value, IWritable? writable, int version = 0)
+    {
+        if (value?.Parsed == false)
+        {
+            Write(value.UncompressedSize);
+            WriteData(value.Data);
+            return;
+        }
+
+        if (writable is null)
+        {
+            throw new Exception("Archive cannot be null if zlib data was parsed.");
+        }
+
+        using var uncompressedStream = new MemoryStream();
+        using var writer = new GbxWriter(uncompressedStream);
+
+        writable.Write(writer, version);
+        writer.Flush();
+
+        uncompressedStream.Position = 0;
+        using var compressedStream = new MemoryStream();
+        Gbx.ZLib.Compress(uncompressedStream, compressedStream);
+        Write((int)uncompressedStream.Length);
+        Write((int)compressedStream.Length);
+        compressedStream.WriteTo(BaseStream);
+    }
+
+    public void WriteZlibData(ZlibData? value, Action<GbxWriter> action)
+    {
+        if (value?.Parsed == false)
+        {
+            Write(value.UncompressedSize);
+            WriteData(value.Data);
+            return;
+        }
+
+        using var uncompressedStream = new MemoryStream();
+        using var writer = new GbxWriter(uncompressedStream);
+        action(writer);
+        writer.Flush();
+
+        uncompressedStream.Position = 0;
+        using var compressedStream = new MemoryStream();
+        Gbx.ZLib.Compress(uncompressedStream, compressedStream);
+        Write((int)uncompressedStream.Length);
+        Write((int)compressedStream.Length);
+        compressedStream.WriteTo(BaseStream);
+    }
+
     public void WriteOptimizedInt(int value, int determineFrom)
     {
         switch ((uint)determineFrom)
@@ -941,6 +1127,20 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
                 Write((byte)value);
                 break;
         };
+    }
+
+    public void WriteVarNat15(short value)
+    {
+        if (value < 0x80)
+        {
+            // Single byte
+            Write((byte)value);
+            return;
+        }
+
+        // Two bytes
+        Write((byte)((value & 0x7F) | 0x80));
+        Write((byte)(value >> 7));
     }
 
     public void WriteArrayOptimizedInt(int[]? value, int? determineFrom = null, bool hasLengthPrefix = true)
@@ -1362,7 +1562,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
         foreach (var item in value)
         {
-            WriteNodeRef(item.Node, item.File);
+            WriteNodeRef(item?.Node, item?.File);
         }
     }
 

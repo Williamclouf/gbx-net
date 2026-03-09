@@ -1,4 +1,7 @@
 ﻿using System.Collections.Immutable;
+#if NET8_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 using System.Text;
 
 namespace GBX.NET.Components;
@@ -10,8 +13,8 @@ public sealed partial class GbxBody
 {
     private readonly ImmutableArray<byte> rawData = ImmutableArray<byte>.Empty;
 
-    public int UncompressedSize { get; init; }
-    public int? CompressedSize { get; init; }
+    public int UncompressedSize { get; internal init; }
+    public int? CompressedSize { get; internal init; }
 
     public float? CompressionRatio => CompressedSize.HasValue ? (float)CompressedSize / UncompressedSize : null;
 
@@ -21,15 +24,7 @@ public sealed partial class GbxBody
     public ImmutableArray<byte> RawData
     {
         get => rawData;
-        init
-        {
-            rawData = value;
-
-            if (!value.IsDefaultOrEmpty)
-            {
-                UncompressedSize = value.Length;
-            }
-        }
+        internal init => rawData = value;
     }
 
     public Exception? Exception { get; internal set; }
@@ -94,6 +89,9 @@ public sealed partial class GbxBody
         new GbxBodyWriter(this, writer).Write(uncompressedInputStream, compressionOfBody);
     }
 
+#if NET8_0_OR_GREATER
+    [Experimental("GBXNET10001")]
+#endif
     public GbxBody DeepClone() => new()
     {
         RawData = RawData,

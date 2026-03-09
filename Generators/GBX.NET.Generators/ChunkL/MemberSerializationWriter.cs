@@ -272,12 +272,20 @@ internal sealed class MemberSerializationWriter
 
         sb.AppendIndent(indent);
 
-        if (!self && !isUnknown)
+        if (chunkProperty.Type.PrimaryType is "version" or "versionb")
         {
-            sb.Append("n.");
+            sb.Append("Version");
+        }
+        else
+        {
+            if (!self && !isUnknown)
+            {
+                sb.Append("n.");
+            }
+
+            sb.Append(name);
         }
 
-        sb.Append(name);
         sb.Append(" = ");
 
         if (chunkProperty is ChunkEnum chunkEnum)
@@ -289,9 +297,26 @@ internal sealed class MemberSerializationWriter
 
         sb.Append("r.Read");
 
+        if (chunkProperty.Type.PrimaryType == "version")
+        {
+            sb.Append("Int32();");
+            return;
+        }
+
+        if (chunkProperty.Type.PrimaryType == "versionb")
+        {
+            sb.Append("Byte();");
+            return;
+        }
+
         if (chunkProperty.Type.IsArray)
         {
             sb.Append("Array");
+
+            if (chunkProperty.Properties?.ContainsKey("external") == true)
+            {
+                sb.Append("External");
+            }
         }
 
         AppendAnyRead(chunkProperty, onlyReadable: true);
@@ -301,32 +326,42 @@ internal sealed class MemberSerializationWriter
         var contextual = archives.TryGetValue(chunkProperty.Type.PrimaryType, out var archiveModel)
             && archiveModel.ChunkLDefinition?.Properties.ContainsKey("contextual") == true;
 
+        var comma = false;
+
         if (contextual)
         {
             sb.Append('n');
+            comma = true;
         }
 
         if (chunkProperty.Properties?.TryGetValue("version", out var version) == true)
         {
-            if (contextual)
+            if (comma)
             {
                 sb.Append(", ");
             }
 
             sb.Append("version: ");
             sb.Append(version);
+
+            comma = true;
         }
 
         if (chunkProperty.Properties?.ContainsKey("external") == true && !chunkProperty.Type.IsArray)
         {
-            sb.Append(", out ");
+            if (comma)
+            {
+                sb.Append(", ");
+            }
+
+            sb.Append("out ");
 
             if (!self && !isUnknown)
             {
                 sb.Append("n.");
             }
 
-            sb.Append(name);
+            sb.Append(char.ToLowerInvariant(name[0]) + name.Substring(1));
             sb.Append("File");
         }
 
@@ -357,7 +392,13 @@ internal sealed class MemberSerializationWriter
         if (chunkProperty.Type.IsArray && chunkProperty.Type.PrimaryType != "data")
         {
             sb.Append("Array");
+
+            if (chunkProperty.Properties?.ContainsKey("external") == true)
+            {
+                sb.Append("External");
+            }
         }
+
 
         if (chunkProperty.Type.PrimaryType == "data")
         {
@@ -461,6 +502,11 @@ internal sealed class MemberSerializationWriter
         if (chunkProperty.Type.PrimaryType.ToLowerInvariant() == "boolbyte")
         {
             sb.Append(", asByte: true");
+        }
+
+        if (chunkProperty.Type.PrimaryType.ToLowerInvariant() == "booltext")
+        {
+            sb.Append(", type: BoolType.Text");
         }
 
         if (chunkProperty.Properties?.TryGetValue("prefix", out var prefix) == true)
@@ -615,6 +661,11 @@ internal sealed class MemberSerializationWriter
         if (chunkProperty.Type.PrimaryType.ToLowerInvariant() == "boolbyte")
         {
             sb.Append(", asByte: true");
+        }
+
+        if (chunkProperty.Type.PrimaryType.ToLowerInvariant() == "booltext")
+        {
+            sb.Append(", type: BoolType.Text");
         }
 
         if (chunkProperty.Properties?.TryGetValue("prefix", out var prefix) == true)
@@ -834,10 +885,11 @@ internal sealed class MemberSerializationWriter
             "uint8" or "byte" => nameof(Byte),
             "int8" or "sbyte" => nameof(SByte),
             "float" => nameof(Single),
-            "bool" or "boolbyte" => nameof(Boolean),
+            "bool" or "boolbyte" or "booltext" => nameof(Boolean),
             "string" => nameof(String),
             "vec2" => "Vec2",
             "vec3" => "Vec3",
+            "vec3_6" => "Vec3_6",
             "vec4" => "Vec4",
             "int2" => "Int2",
             "int3" => "Int3",
@@ -857,6 +909,7 @@ internal sealed class MemberSerializationWriter
             "timeofday" => "TimeOfDay",
             "filetime" => "FileTime",
             "systemtime" => "SystemTime",
+            "unixtime" => "UnixTime",
             "ident" or "meta" => "Ident",
             "id" or "lookbackstring" => "IdAsString",
             "packdesc" or "fileref" => "PackDesc",

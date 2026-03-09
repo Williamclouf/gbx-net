@@ -3,22 +3,14 @@ using GBX.NET.Generators.Models;
 using GBX.NET.Generators.SubGenerators;
 using Microsoft.CodeAnalysis;
 using System.Collections.Immutable;
-using System.Diagnostics;
 
 namespace GBX.NET.Generators;
 
 [Generator]
 public partial class ClassChunkLMixedGenerator : IIncrementalGenerator
 {
-    private const bool Debug = false;
-
     public virtual void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        if (Debug && !Debugger.IsAttached)
-        {
-            Debugger.Launch();
-        }
-
         var chunklFiles = context.AdditionalTextsProvider
             .Where(static file =>
             {
@@ -33,9 +25,16 @@ public partial class ClassChunkLMixedGenerator : IIncrementalGenerator
 
                 using var reader = new StringReader(chunklText);
 
-                return new ChunkLFile(
-                    DataModel: ChunkLSerializer.Deserialize(reader),
-                    Engine: Path.GetFileName(Path.GetDirectoryName(chunklFile.Path)));
+                try
+                {
+                    return new ChunkLFile(
+                        DataModel: ChunkLSerializer.Deserialize(reader),
+                        Engine: Path.GetFileName(Path.GetDirectoryName(chunklFile.Path)));
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"Failed to parse chunkl file: {chunklFile.Path}", ex);
+                }
             });
 
         var gbxClasses = context.CompilationProvider
@@ -230,7 +229,7 @@ public partial class ClassChunkLMixedGenerator : IIncrementalGenerator
         var classIdContents = context.AdditionalTextsProvider
             .Where(static file =>
             {
-                return file.Path.EndsWith("ClassId.txt") && Path.GetDirectoryName(file.Path).EndsWith("Resources");
+                return (file.Path.EndsWith("ClassId.txt") || file.Path.EndsWith("ClassIdManual.txt")) && Path.GetDirectoryName(file.Path).EndsWith("Resources");
             })
             .Select((additionalText, cancellationToken) =>
             {

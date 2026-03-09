@@ -1,45 +1,69 @@
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.Extensions.FileProviders;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using Serilog;
+using Serilog.Sinks.SystemConsole.Themes;
+using System.Net;
+using System.Reflection;
+using System.Runtime.Versioning;
+
+// ALERT
+// This project no longer works properly on .NET 10, prefer using just the client variant.
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Logging.AddOpenTelemetry(options =>
-{
-    options.IncludeScopes = true;
-    options.IncludeFormattedMessage = true;
-    options.AddOtlpExporter();
-});
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(theme: AnsiConsoleTheme.Sixteen, applyThemeToRedirectedOutput: true)
+    .WriteTo.OpenTelemetry(options =>
+    {
+        options.Endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+        options.Protocol = builder.Configuration["OTEL_EXPORTER_OTLP_PROTOCOL"]?.ToLowerInvariant() switch
+        {
+            "grpc" => Serilog.Sinks.OpenTelemetry.OtlpProtocol.Grpc,
+            "http/protobuf" or null or "" => Serilog.Sinks.OpenTelemetry.OtlpProtocol.HttpProtobuf,
+            _ => throw new NotSupportedException($"OTLP protocol {builder.Configuration["OTEL_EXPORTER_OTLP_PROTOCOL"]} is not supported")
+        };
+        options.Headers = builder.Configuration["OTEL_EXPORTER_OTLP_HEADERS"]?
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => x.Split('=', 2, StringSplitOptions.RemoveEmptyEntries))
+            .ToDictionary(x => x[0], x => x[1]) ?? [];
+    })
+    .CreateLogger();
+
+builder.Services.AddSerilog();
 
 builder.Services.AddOpenTelemetry()
-    .WithMetrics(x =>
+    .WithMetrics(options =>
     {
-        x.AddRuntimeInstrumentation()
+        options
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
             .AddProcessInstrumentation()
-            .AddMeter("Microsoft.AspNetCore.Hosting")
-            .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
-            .AddMeter("Microsoft.AspNetCore.Http.Connections")
-            .AddMeter("Microsoft.AspNetCore.Routing")
-            .AddMeter("Microsoft.AspNetCore.Diagnostics")
-            .AddMeter("Microsoft.AspNetCore.RateLimiting")
-            .AddMeter("System.Net.Http")
             .AddOtlpExporter();
+
+        options.AddMeter("System.Net.Http");
     })
-    .WithTracing(x =>
+    .WithTracing(options =>
     {
         if (builder.Environment.IsDevelopment())
         {
-            x.SetSampler<AlwaysOnSampler>();
+            options.SetSampler<AlwaysOnSampler>();
         }
 
-        x.AddAspNetCoreInstrumentation()
+        options
+            .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddOtlpExporter();
     });
+builder.Services.AddMetrics();
 
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddControllers();
@@ -52,36 +76,63 @@ builder.Services.AddResponseCompression(options =>
     options.Providers.Add<GzipCompressionProvider>();
 });
 
+// Figures out HTTPS behind proxies
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    foreach (var knownProxy in builder.Configuration.GetSection("KnownProxies").Get<string[]>() ?? [])
+    {
+        if (IPAddress.TryParse(knownProxy, out var ipAddress))
+        {
+            options.KnownProxies.Add(ipAddress);
+            continue;
+        }
+
+        foreach (var hostIpAddress in Dns.GetHostAddresses(knownProxy))
+        {
+            options.KnownProxies.Add(hostIpAddress);
+        }
+    }
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    var assembly = Assembly.GetExecutingAssembly();
+    var attr = assembly.GetCustomAttribute<TargetFrameworkAttribute>();
+    var version =  attr!.FrameworkName.Split('=')[1];
+    var netVersion = "net" + version.TrimStart('v');
+    var dllPath = Path.Combine(builder.Environment.ContentRootPath, "..", "Client", "bin", "Debug", netVersion);
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(dllPath),
+        RequestPath = "/refs",
+        ServeUnknownFileTypes = true,
+    });
     app.UseWebAssemblyDebugging();
+    app.UseForwardedHeaders();
 }
 else
 {
     app.UseExceptionHandler("/Error");
+    app.UseForwardedHeaders();
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
-app.UseBlazorFrameworkFiles();
-app.UseStaticFiles();
-
 app.UseRouting();
 
-app.UseResponseCompression();
-
-app.UseForwardedHeaders(new()
+app.UseBlazorFrameworkFiles();
+app.UseStaticFiles(new StaticFileOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    ServeUnknownFileTypes = true,
 });
-
-app.UseAuthentication();
-app.UseAuthorization();
 
 app.MapRazorPages();
 app.MapControllers();

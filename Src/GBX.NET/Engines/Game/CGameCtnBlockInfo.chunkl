@@ -9,22 +9,22 @@ CGameCtnBlockInfo 0x0304E000
 
 0x00B [TM10, TMSX]
  int
- CSceneMobil // VariantBaseGround
- CSceneMobil
- CSceneMobil // VariantBaseAir
+ CSceneMobil GroundHelperMobil
+ CSceneMobil AirHelperMobil
+ CSceneMobil ConstructionModeHelperMobil
 
 0x00C [TM10, TMSX, TMF]
  iso4? SpawnLocGround
  iso4? SpawnLocAir
 
 0x00D [TMSX, TMF]
- bool // something with replacing?
+ bool IsReplacement
 
 0x00E [TMF]
  int<EWayPointType> WayPointType
- CSceneMobil // helper
- CSceneMobil // helper
- CSceneMobil // arrow
+ CSceneMobil GroundHelperMobil
+ CSceneMobil AirHelperMobil
+ CSceneMobil ConstructionModeHelperMobil
 
 0x00F [TMF, TMT, MP4]
  bool NoRespawn
@@ -45,9 +45,9 @@ CGameCtnBlockInfo 0x0304E000
  v6-
   CGameWaypointSpecialProperty U01
  v2+
-  CGamePodiumInfo PodiumInfo
+  CMwNod PodiumInfo // CGamePodiumInfo or CPlugMediaClipList
   v3+
-   CGamePodiumInfo IntroInfo
+   CMwNod IntroInfo // CGamePodiumInfo or CPlugMediaClipList
    v4+
     bool CharPhySpecialPropertyCustomizable
     v5=
@@ -83,14 +83,16 @@ CGameCtnBlockInfo 0x0304E000
   iso4 Sound1Loc
   iso4 Sound2Loc
  v3+
-  if Sound1 != null
+  if Sound1 != null || Sound1File != null
    iso4 Sound1Loc
-  if Sound2 != null
+  if Sound2 != null || Sound2File != null
    iso4 Sound2Loc
 
 0x02B [TMT.v1, MP4.v1]
  version
- int
+ int<EBaseType> BaseType
+ v0=
+  throw
 
 0x02C [TMT, MP4]
  CGameCtnBlockInfoVariantAir[]_deprec AdditionalVariantsAir
@@ -103,9 +105,11 @@ CGameCtnBlockInfo 0x0304E000
   byte
 
 0x031
- int
- int
- int
+ version
+ CMwNod (external)
+ CPlugGameSkinAndFolder MaterialModifier (external)
+ v1+
+  CPlugGameSkinAndFolder MaterialModifier2 (external) // not verified
 
 enum EWayPointType
  Start
@@ -123,3 +127,14 @@ enum EMultiDir
  PerpendicularDirsOnly
  NextDirOnly
  PreviousDirOnly
+
+enum ESelection
+ Random
+ Obsolete
+ AutoRotate
+
+enum EBaseType
+ None
+ Conductor
+ Generator
+ Collector
