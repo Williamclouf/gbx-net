@@ -335,6 +335,7 @@ public partial class CGameCtnChallenge :
         get
         {
             if (LightmapCacheData is null || LightmapCacheData.Parsed) return lightmapCacheSmall;
+
             lock (LightmapCacheDataLock)
             {
                 if (LightmapCacheData is null || LightmapCacheData.Parsed) return lightmapCacheSmall;
@@ -355,9 +356,51 @@ public partial class CGameCtnChallenge :
     [AppliedWithChunk<Chunk03043040>]
     public List<CGameCtnAnchoredObject>? AnchoredObjects { get => anchoredObjects; set => anchoredObjects = value; }
 
+#if NET9_0_OR_GREATER
+    private readonly Lock ZoneGenealogyDataLock = new();
+#else
+    private readonly object ZoneGenealogyDataLock = new();
+#endif
+
+    public EncapsulatedData? ZoneGenealogyData { get; set; }
+
     private List<CGameCtnZoneGenealogy>? zoneGenealogy;
     [AppliedWithChunk<Chunk03043043>]
-    public List<CGameCtnZoneGenealogy>? ZoneGenealogy { get => zoneGenealogy; set => zoneGenealogy = value; }
+    public List<CGameCtnZoneGenealogy>? ZoneGenealogy
+    {
+        get
+        {
+            if (ZoneGenealogyData is null || ZoneGenealogyData.Parsed) return zoneGenealogy;
+
+            lock (ZoneGenealogyDataLock)
+            {
+                if (ZoneGenealogyData is null || ZoneGenealogyData.Parsed) return zoneGenealogy;
+
+                try
+                {
+                    using var ms = new MemoryStream(ZoneGenealogyData.Data);
+                    using var r = new GbxReader(ms);
+                    using var _ = new Encapsulation(r);
+                    zoneGenealogy = r.ReadListNodeRef<CGameCtnZoneGenealogy>()!;
+
+                    ZoneGenealogyData.Parsed = true;
+                }
+                catch (Exception ex)
+                {
+                    ZoneGenealogyData.Exception = ex;
+                    throw;
+                }
+                return zoneGenealogy;
+            }
+        }
+        set
+        {
+            lock (ZoneGenealogyDataLock)
+            {
+                zoneGenealogy = value;
+            }
+        }
+    }
 
     private CScriptTraitsMetadata? scriptMetadata;
     [AppliedWithChunk<Chunk03043044>]
@@ -1656,11 +1699,16 @@ public partial class CGameCtnChallenge :
 
     public partial class Chunk03043043
     {
-        public override void ReadWrite(CGameCtnChallenge n, GbxReaderWriter rw)
+        public override void Read(CGameCtnChallenge n, GbxReader r)
         {
-            rw.Encapsulated(rw =>
+            n.ZoneGenealogyData = r.ReadEncapsulated();
+        }
+
+        public override void Write(CGameCtnChallenge n, GbxWriter w)
+        {
+            w.WriteEncapsulated(n.ZoneGenealogyData, w =>
             {
-                rw.ListNodeRef<CGameCtnZoneGenealogy>(ref n.zoneGenealogy!);
+                w.WriteListNodeRef<CGameCtnZoneGenealogy>(n.zoneGenealogy!);
             });
         }
     }

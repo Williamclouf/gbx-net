@@ -150,6 +150,7 @@ public partial interface IGbxWriter : IDisposable
 
     void WriteEncapsulated(EncapsulatedData value);
     void WriteEncapsulated(Action<GbxWriter> action);
+    void WriteEncapsulated(EncapsulatedData? value, Action<GbxWriter> action);
 
     void ResetIdState();
 }
@@ -1827,6 +1828,17 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
         Write((int)ms.Length);
         ms.WriteTo(BaseStream);
+    }
+
+    public void WriteEncapsulated(EncapsulatedData? value, Action<GbxWriter> action)
+    {
+        if (value?.Parsed == false)
+        {
+            WriteData(value.Data);
+            return;
+        }
+
+        WriteEncapsulated(action);
     }
 
     public void WriteEncapsulated(EncapsulatedData value)
