@@ -42,13 +42,11 @@ public partial class CGamePlayerProfileChunk_AccountSettings
     {
         public int Version { get; set; }
 
-        public bool U01;
         public ulong U02;
 
         public override void ReadWrite(CGamePlayerProfileChunk_AccountSettings n, GbxReaderWriter rw)
         {
             rw.VersionInt32(this);
-            rw.Boolean(ref U01);
 
             if (Version < 2)
             {
@@ -56,40 +54,16 @@ public partial class CGamePlayerProfileChunk_AccountSettings
                 rw.ArrayNodeRef_deprec<CGameNetOnlineMessage>(ref n.inboxMessages!);
                 rw.ArrayNodeRef_deprec<CGameNetOnlineMessage>(ref n.readMessages!);
                 rw.ArrayNodeRef_deprec<CGameNetOnlineMessage>(ref n.outboxMessages!);
+                return;
             }
-            else
+
+            rw.Encapsulated(rw =>
             {
-                if (rw.Reader is not null)
-                {
-                    var r = rw.Reader;
-
-                    var size = r.ReadInt32();
-
-                    using var _ = new Encapsulation(r);
-
-                    U02 = r.ReadUInt64();
-                    n.inboxMessages = r.ReadArrayNodeRef_deprec<CGameNetOnlineMessage>();
-                    n.readMessages = r.ReadArrayNodeRef_deprec<CGameNetOnlineMessage>();
-                    n.outboxMessages = r.ReadArrayNodeRef_deprec<CGameNetOnlineMessage>();
-                }
-
-                if (rw.Writer is not null)
-                {
-                    var w = rw.Writer;
-
-                    using var ms = new MemoryStream();
-                    using var wBuffer = new GbxWriter(ms);
-                    using var _ = new Encapsulation(wBuffer);
-
-                    wBuffer.Write(U02);
-                    wBuffer.WriteArrayNodeRef_deprec(n.inboxMessages);
-                    wBuffer.WriteArrayNodeRef_deprec(n.readMessages);
-                    wBuffer.WriteArrayNodeRef_deprec(n.outboxMessages);
-
-                    w.Write((int)ms.Length);
-                    ms.WriteTo(w.BaseStream);
-                }
-            }
+                rw.UInt64(ref U02);
+                rw.ArrayNodeRef_deprec<CGameNetOnlineMessage>(ref n.inboxMessages!);
+                rw.ArrayNodeRef_deprec<CGameNetOnlineMessage>(ref n.readMessages!);
+                rw.ArrayNodeRef_deprec<CGameNetOnlineMessage>(ref n.outboxMessages!);
+            });
         }
     }
 }
