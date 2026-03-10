@@ -268,6 +268,8 @@ public partial class CGamePlayerProfile
                     using var ms = new MemoryStream();
                     using var chunkWriter = new GbxWriter(ms, w.Settings);
                     using var chunkRw = new GbxReaderWriter(chunkWriter);
+                    chunkWriter.Write(chunk.SkipArchiveVersion.GetValueOrDefault());
+                    chunkWriter.Write(chunk.ArchiveVersion);
                     chunk.ReadWrite(chunkRw);
 
                     var chunkData = ms.ToArray();
