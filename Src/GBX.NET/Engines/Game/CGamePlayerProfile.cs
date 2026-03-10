@@ -146,23 +146,53 @@ public partial class CGamePlayerProfile
                 for (var i = 0; i < n.oldProfileChunks.Length; i++)
                 {
                     var chunkId = r.ReadUInt32();
-                    var u01 = r.ReadString();
-                    var u02 = r.ReadString();
-                    var u03 = r.ReadString();
-                    var u04 = r.ReadInt32();
+                    var chunkName = r.ReadString();
+                    var chunkGroup = r.ReadString();
+                    var checksum = r.ReadString();
+                    var lastUpdated = r.ReadUnixTime();
                     var archiveVersion = r.ReadInt32();
 
-                    switch (chunkId)
+                    CGamePlayerProfileChunk chunk = chunkId switch
                     {
-                        case 0x0312C000:
-                            // CGamePlayerProfileChunk_AccountSettings::ArchiveOldVersion
-                            var chunk = new CGamePlayerProfileChunk_AccountSettings();
-                            chunk.ReadWrite(rw, archiveVersion);
-                            n.oldProfileChunks[i] = chunk;
-                            break;
-                        default:
-                            throw new NotImplementedException($"ProfileChunk 0x{chunkId:X8} is not implemented.");
+                        0x0312C000 => new CGamePlayerProfileChunk_AccountSettings(), // CGamePlayerProfileChunk_AccountSettings::ArchiveOldVersion
+                        _ => throw new NotImplementedException($"ProfileChunk 0x{chunkId:X8} is not implemented."),
+                    };
+
+                    if (chunk is not IReadableWritable readableWritable)
+                    {
+                        throw new InvalidOperationException($"Profile chunk of type {chunk.GetType()} does not implement IReadableWritable, which is required for old archives.");
                     }
+
+                    readableWritable.ReadWrite(rw, archiveVersion);
+                    n.oldProfileChunks[i] = chunk;
+
+                    chunk.ChunkName = chunkName;
+                    chunk.ChunkGroup = chunkGroup;
+                    chunk.Checksum = checksum;
+                    chunk.LastUpdated = lastUpdated;
+                    chunk.ArchiveVersion = archiveVersion;
+                }
+            }
+
+            if (rw.Writer is GbxWriter w)
+            {
+                w.Write(n.oldProfileChunks?.Length ?? 0);
+
+                foreach (var chunk in n.oldProfileChunks ?? [])
+                {
+                    if (chunk is not IReadableWritable readableWritable)
+                    {
+                        throw new InvalidOperationException($"Profile chunk of type {chunk.GetType()} does not implement IReadableWritable, which is required for old archives.");
+                    }
+
+                    w.Write(ClassManager.GetId(chunk.GetType()) ?? throw new InvalidOperationException($"Type {chunk.GetType()} is not registered in ClassManager."));
+                    w.Write(chunk.ChunkName);
+                    w.Write(chunk.ChunkGroup);
+                    w.Write(chunk.Checksum);
+                    w.WriteUnixTime(chunk.LastUpdated);
+                    w.Write(chunk.ArchiveVersion);
+
+                    readableWritable.ReadWrite(rw, chunk.ArchiveVersion);
                 }
             }
         }
@@ -187,32 +217,61 @@ public partial class CGamePlayerProfile
                 for (var i = 0; i < n.profileChunks.Length; i++)
                 {
                     var chunkId = r.ReadUInt32();
-                    var u01 = r.ReadString();
-                    var u02 = r.ReadString();
-                    var u03 = r.ReadString();
-                    var u04 = r.ReadInt32();
-
-                    if (Version >= 2)
-                    {
-                        var u05 = r.ReadInt32();
-                    }
+                    var chunkName = r.ReadString();
+                    var chunkGroup = r.ReadString();
+                    var checksum = r.ReadString();
+                    var lastUpdated = r.ReadUnixTime();
+                    var unknownTimestamp = Version >= 2 ? r.ReadUnixTime() : default(DateTimeOffset?);
+                    if (unknownTimestamp == DateTimeOffset.FromUnixTimeSeconds(0)) unknownTimestamp = null;
 
                     var chunkData = r.ReadData();
                     using var ms = new MemoryStream(chunkData);
                     using var chunkReader = new GbxReader(ms, r.Settings);
                     using var chunkRw = new GbxReaderWriter(chunkReader);
 
-                    var u06 = chunkReader.ReadInt32();
-                    var u07 = chunkReader.ReadInt32();
+                    var skipArchiveVersion = chunkReader.ReadInt32();
+                    var archiveVersion = chunkReader.ReadInt32();
 
-                    var chunk = (CGamePlayerProfileChunk?)ClassManager.New(chunkId)
-                        ?? throw new NotImplementedException($"Profile chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId)}) is not implemented.");
+                    var chunk = (CGamePlayerProfileChunk)(ClassManager.New(chunkId)
+                        ?? throw new NotImplementedException($"Profile chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId)}) is not implemented."));
 
-                    if (chunk is not null)
+                    chunk.ChunkName = chunkName;
+                    chunk.ChunkGroup = chunkGroup;
+                    chunk.Checksum = checksum;
+                    chunk.LastUpdated = lastUpdated;
+                    chunk.UnknownTimestamp = unknownTimestamp;
+                    chunk.SkipArchiveVersion = skipArchiveVersion;
+                    chunk.ArchiveVersion = archiveVersion;
+
+                    chunk.ReadWrite(chunkRw);
+                    n.profileChunks[i] = chunk;
+                }
+            }
+
+            if (rw.Writer is GbxWriter w)
+            {
+                w.Write(n.profileChunks?.Length ?? 0);
+
+                foreach (var chunk in n.profileChunks ?? [])
+                {
+                    w.Write(ClassManager.GetId(chunk.GetType()) ?? throw new InvalidOperationException($"Type {chunk.GetType()} is not registered in ClassManager."));
+                    w.Write(chunk.ChunkName);
+                    w.Write(chunk.ChunkGroup);
+                    w.Write(chunk.Checksum);
+                    w.WriteUnixTime(chunk.LastUpdated);
+
+                    if (Version >= 2)
                     {
-                        chunk.ReadWrite(chunkRw);
-                        n.profileChunks[i] = chunk;
+                        w.WriteUnixTime(chunk.UnknownTimestamp ?? DateTimeOffset.FromUnixTimeSeconds(0));
                     }
+
+                    using var ms = new MemoryStream();
+                    using var chunkWriter = new GbxWriter(ms, w.Settings);
+                    using var chunkRw = new GbxReaderWriter(chunkWriter);
+                    chunk.ReadWrite(chunkRw);
+
+                    var chunkData = ms.ToArray();
+                    w.WriteData(chunkData);
                 }
             }
         }
