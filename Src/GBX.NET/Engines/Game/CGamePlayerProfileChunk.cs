@@ -1,12 +1,46 @@
-﻿namespace GBX.NET.Engines.Game;
+﻿using System.Text;
+
+namespace GBX.NET.Engines.Game;
 
 public partial class CGamePlayerProfileChunk
 {
     public string ChunkName { get; set; } = string.Empty;
     public string ChunkGroup { get; set; } = string.Empty;
     public string Checksum { get; set; } = string.Empty;
-    public DateTimeOffset LastUpdated { get; set; }
+    public DateTimeOffset LastUpdatedAt { get; set; }
     public int ArchiveVersion { get; set; }
     public int? SkipArchiveVersion { get; set; }
-    public DateTimeOffset? UnknownTimestamp { get; set; }
+    public DateTimeOffset? CreatedAt { get; set; }
+
+    public override string ToString()
+    {
+        var sb = new StringBuilder(GetType().Name);
+
+        sb.Append(" {");
+
+        if (!string.IsNullOrEmpty(ChunkName))
+        {
+            sb.Append(' ');
+            sb.Append(ChunkName);
+        }
+
+        if (!string.IsNullOrEmpty(ChunkGroup))
+        {
+            sb.Append(' ');
+            sb.Append(ChunkGroup);
+        }
+
+        sb.Append(' ');
+        sb.Append(LastUpdatedAt.ToString("yyyy-MM-dd'T'HH:mm:ss"));
+
+        if (CreatedAt.HasValue)
+        {
+            sb.Append(" | ");
+            sb.Append(CreatedAt.Value.ToString("yyyy-MM-dd'T'HH:mm:ss"));
+        }
+
+        sb.Append(" }");
+
+        return sb.ToString();
+    }
 }

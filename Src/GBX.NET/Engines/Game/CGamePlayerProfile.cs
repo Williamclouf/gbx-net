@@ -169,7 +169,7 @@ public partial class CGamePlayerProfile
                     chunk.ChunkName = chunkName;
                     chunk.ChunkGroup = chunkGroup;
                     chunk.Checksum = checksum;
-                    chunk.LastUpdated = lastUpdated;
+                    chunk.LastUpdatedAt = lastUpdated;
                     chunk.ArchiveVersion = archiveVersion;
                 }
             }
@@ -189,7 +189,7 @@ public partial class CGamePlayerProfile
                     w.Write(chunk.ChunkName);
                     w.Write(chunk.ChunkGroup);
                     w.Write(chunk.Checksum);
-                    w.WriteUnixTime(chunk.LastUpdated);
+                    w.WriteUnixTime(chunk.LastUpdatedAt);
                     w.Write(chunk.ArchiveVersion);
 
                     readableWritable.ReadWrite(rw, chunk.ArchiveVersion);
@@ -221,8 +221,8 @@ public partial class CGamePlayerProfile
                     var chunkGroup = r.ReadString();
                     var checksum = r.ReadString();
                     var lastUpdated = r.ReadUnixTime();
-                    var unknownTimestamp = Version >= 2 ? r.ReadUnixTime() : default(DateTimeOffset?);
-                    if (unknownTimestamp == DateTimeOffset.FromUnixTimeSeconds(0)) unknownTimestamp = null;
+                    var createdAt = Version >= 2 ? r.ReadUnixTime() : default(DateTimeOffset?);
+                    if (createdAt == DateTimeOffset.FromUnixTimeSeconds(0)) createdAt = null;
 
                     var chunkData = r.ReadData();
                     using var ms = new MemoryStream(chunkData);
@@ -238,8 +238,8 @@ public partial class CGamePlayerProfile
                     chunk.ChunkName = chunkName;
                     chunk.ChunkGroup = chunkGroup;
                     chunk.Checksum = checksum;
-                    chunk.LastUpdated = lastUpdated;
-                    chunk.UnknownTimestamp = unknownTimestamp;
+                    chunk.LastUpdatedAt = lastUpdated;
+                    chunk.CreatedAt = createdAt;
                     chunk.SkipArchiveVersion = skipArchiveVersion;
                     chunk.ArchiveVersion = archiveVersion;
 
@@ -258,11 +258,11 @@ public partial class CGamePlayerProfile
                     w.Write(chunk.ChunkName);
                     w.Write(chunk.ChunkGroup);
                     w.Write(chunk.Checksum);
-                    w.WriteUnixTime(chunk.LastUpdated);
+                    w.WriteUnixTime(chunk.LastUpdatedAt);
 
                     if (Version >= 2)
                     {
-                        w.WriteUnixTime(chunk.UnknownTimestamp ?? DateTimeOffset.FromUnixTimeSeconds(0));
+                        w.WriteUnixTime(chunk.CreatedAt ?? DateTimeOffset.FromUnixTimeSeconds(0));
                     }
 
                     using var ms = new MemoryStream();
