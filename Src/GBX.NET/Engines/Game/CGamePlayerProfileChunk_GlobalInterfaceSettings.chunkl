@@ -1,2 +1,32 @@
 CGamePlayerProfileChunk_GlobalInterfaceSettings 0x03179000
 - inherits: CGamePlayerProfileChunk
+
+0x001 (skippable)
+ version
+ SPluginSettings[] PluginSettings
+
+0x002 (skippable)
+ version
+ byte
+ 
+0x003 (skippable)
+ version
+ byte
+ 
+0x004 (skippable)
+ version
+ bool
+ v1+
+  bool
+  v2+
+   bool
+
+0x005 (skippable)
+ version
+ int
+
+archive SPluginSettings
+ string
+ float
+ float
+ float

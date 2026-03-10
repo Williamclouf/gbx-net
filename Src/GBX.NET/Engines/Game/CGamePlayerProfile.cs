@@ -147,7 +147,7 @@ public partial class CGamePlayerProfile
                 {
                     var chunkId = r.ReadUInt32();
                     var chunkName = r.ReadString();
-                    var chunkGroup = r.ReadString();
+                    var gameName = r.ReadString();
                     var checksum = r.ReadString();
                     var lastUpdated = r.ReadUnixTime();
                     var archiveVersion = r.ReadInt32();
@@ -167,7 +167,7 @@ public partial class CGamePlayerProfile
                     n.oldProfileChunks[i] = chunk;
 
                     chunk.ChunkName = chunkName;
-                    chunk.ChunkGroup = chunkGroup;
+                    chunk.GameName = gameName;
                     chunk.Checksum = checksum;
                     chunk.LastUpdatedAt = lastUpdated;
                     chunk.ArchiveVersion = archiveVersion;
@@ -187,7 +187,7 @@ public partial class CGamePlayerProfile
 
                     w.Write(ClassManager.GetId(chunk.GetType()) ?? throw new InvalidOperationException($"Type {chunk.GetType()} is not registered in ClassManager."));
                     w.Write(chunk.ChunkName);
-                    w.Write(chunk.ChunkGroup);
+                    w.Write(chunk.GameName);
                     w.Write(chunk.Checksum);
                     w.WriteUnixTime(chunk.LastUpdatedAt);
                     w.Write(chunk.ArchiveVersion);
@@ -218,7 +218,7 @@ public partial class CGamePlayerProfile
                 {
                     var chunkId = r.ReadUInt32();
                     var chunkName = r.ReadString();
-                    var chunkGroup = r.ReadString();
+                    var gameName = r.ReadString();
                     var checksum = r.ReadString();
                     var lastUpdated = r.ReadUnixTime();
                     var createdAt = Version >= 2 ? r.ReadUnixTime() : default(DateTimeOffset?);
@@ -236,7 +236,7 @@ public partial class CGamePlayerProfile
                         ?? throw new NotImplementedException($"Profile chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId)}) is not implemented."));
 
                     chunk.ChunkName = chunkName;
-                    chunk.ChunkGroup = chunkGroup;
+                    chunk.GameName = gameName;
                     chunk.Checksum = checksum;
                     chunk.LastUpdatedAt = lastUpdated;
                     chunk.CreatedAt = createdAt;
@@ -256,7 +256,7 @@ public partial class CGamePlayerProfile
                 {
                     w.Write(ClassManager.GetId(chunk.GetType()) ?? throw new InvalidOperationException($"Type {chunk.GetType()} is not registered in ClassManager."));
                     w.Write(chunk.ChunkName);
-                    w.Write(chunk.ChunkGroup);
+                    w.Write(chunk.GameName);
                     w.Write(chunk.Checksum);
                     w.WriteUnixTime(chunk.LastUpdatedAt);
 

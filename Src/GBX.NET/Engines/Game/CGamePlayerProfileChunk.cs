@@ -5,7 +5,7 @@ namespace GBX.NET.Engines.Game;
 public partial class CGamePlayerProfileChunk
 {
     public string ChunkName { get; set; } = string.Empty;
-    public string ChunkGroup { get; set; } = string.Empty;
+    public string GameName { get; set; } = string.Empty;
     public string Checksum { get; set; } = string.Empty;
     public DateTimeOffset LastUpdatedAt { get; set; }
     public int ArchiveVersion { get; set; }
@@ -24,10 +24,10 @@ public partial class CGamePlayerProfileChunk
             sb.Append(ChunkName);
         }
 
-        if (!string.IsNullOrEmpty(ChunkGroup))
+        if (!string.IsNullOrEmpty(GameName))
         {
             sb.Append(' ');
-            sb.Append(ChunkGroup);
+            sb.Append(GameName);
         }
 
         sb.Append(' ');

@@ -38,11 +38,12 @@ public partial class CGamePlayerProfileChunk_AccountSettings
         set => flags2 = BitHelper.SetBit(flags2, 1, value);
     }
 
+    private DateTime receivedMessagesAt;
+    public DateTime ReceivedMessagesAt { get => receivedMessagesAt; set => receivedMessagesAt = value; }
+
     public partial class Chunk0312C005 : IVersionable
     {
         public int Version { get; set; }
-
-        public ulong U02;
 
         public override void ReadWrite(CGamePlayerProfileChunk_AccountSettings n, GbxReaderWriter rw)
         {
@@ -50,7 +51,7 @@ public partial class CGamePlayerProfileChunk_AccountSettings
 
             if (Version < 2)
             {
-                rw.UInt64(ref U02);
+                rw.SystemTime(ref n.receivedMessagesAt);
                 rw.ArrayNodeRef_deprec<CGameNetOnlineMessage>(ref n.inboxMessages!);
                 rw.ArrayNodeRef_deprec<CGameNetOnlineMessage>(ref n.readMessages!);
                 rw.ArrayNodeRef_deprec<CGameNetOnlineMessage>(ref n.outboxMessages!);
@@ -59,7 +60,7 @@ public partial class CGamePlayerProfileChunk_AccountSettings
 
             rw.Encapsulated(rw =>
             {
-                rw.UInt64(ref U02);
+                rw.SystemTime(ref n.receivedMessagesAt);
                 rw.ArrayNodeRef_deprec<CGameNetOnlineMessage>(ref n.inboxMessages!);
                 rw.ArrayNodeRef_deprec<CGameNetOnlineMessage>(ref n.readMessages!);
                 rw.ArrayNodeRef_deprec<CGameNetOnlineMessage>(ref n.outboxMessages!);
