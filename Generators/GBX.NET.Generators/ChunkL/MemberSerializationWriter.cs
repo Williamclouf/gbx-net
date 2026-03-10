@@ -889,6 +889,7 @@ internal sealed class MemberSerializationWriter
             "string" => nameof(String),
             "vec2" => "Vec2",
             "vec3" => "Vec3",
+            "vec3_6" => "Vec3_6",
             "vec4" => "Vec4",
             "int2" => "Int2",
             "int3" => "Int3",

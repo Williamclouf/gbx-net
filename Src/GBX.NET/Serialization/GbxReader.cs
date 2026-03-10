@@ -49,6 +49,7 @@ public partial interface IGbxReader : IDisposable
     Vec3 ReadVec3_10b();
     Vec3 ReadVec3Unit2();
     Vec3 ReadVec3_4();
+    Vec3 ReadVec3_6();
     Vec3 ReadVec3Unit4();
     Vec4 ReadVec4();
     BoxAligned ReadBoxAligned();
@@ -94,6 +95,9 @@ public partial interface IGbxReader : IDisposable
     int ReadSmallLen();
     string ReadSmallString();
     void ReadMarker(string value);
+    [IgnoreForCodeGeneration] ZlibData ReadZlibData();
+    [IgnoreForCodeGeneration] ZlibData ReadZlibData(IReadableWritable readableWritable, int version = 0);
+    [IgnoreForCodeGeneration] ZlibData ReadZlibData(Action<GbxReader> action);
     int ReadOptimizedInt(int determineFrom);
     short ReadVarNat15();
     T ReadReadable<T>(int version = 0) where T : IReadable, new();
@@ -594,6 +598,31 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 #endif
 
         return ReadVec3Unit2() * mag;
+    }
+
+    public Vec3 ReadVec3_6()
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        Span<byte> buffer = stackalloc byte[6];
+        if (BaseStream.Read(buffer) != 6)
+        {
+            throw new EndOfStreamException("Failed to read Vec3_16 bytes.");
+        }
+#else
+        var buffer = ReadBytes(6);
+#endif
+
+#if NET5_0_OR_GREATER
+        var x = (float)BitConverter.ToHalf(buffer.Slice(0, 2));
+        var y = (float)BitConverter.ToHalf(buffer.Slice(2, 2));
+        var z = (float)BitConverter.ToHalf(buffer.Slice(4, 2));
+#else
+        var x = HalfUtility.HalfToFloat((ushort)(buffer[0] | (buffer[1] << 8)));
+        var y = HalfUtility.HalfToFloat((ushort)(buffer[2] | (buffer[3] << 8)));
+        var z = HalfUtility.HalfToFloat((ushort)(buffer[4] | (buffer[5] << 8)));
+#endif
+
+        return new Vec3(x, y, z);
     }
 
     public Vec3 ReadVec3_9()
@@ -1322,7 +1351,31 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public DateTime ReadSystemTime()
     {
-        return new DateTime(ReadInt64());
+        var data = ReadUInt64();
+
+        var year = (int)(data & 0xFFFF);
+        var month = (int)((data >> 16) & 0xF);
+
+        if (year == 0 || month == 0)
+        {
+            return DateTime.MinValue;
+        }
+
+        var day = (int)((data >> 23) & 0x1F);
+
+        var hour = (int)((data >> 32) & 0x1F);
+        var minute = (int)((data >> 37) & 0x3F);
+        var second = (int)((data >> 43) & 0x3F);
+        var millisecond = (int)((data >> 49) & 0x3FF);
+
+        try
+        {
+            return new DateTime(year, month, day, hour, minute, second, millisecond);
+        }
+        catch
+        {
+            return DateTime.MinValue;
+        }
     }
 
     public DateTimeOffset ReadUnixTime()
@@ -1382,6 +1435,61 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         }
 
 #endif
+    }
+
+    public ZlibData ReadZlibData()
+    {
+        var uncompressedSize = ReadInt32();
+        var data = ReadData();
+        return new ZlibData(uncompressedSize, data, exception: null);
+    }
+
+    public ZlibData ReadZlibData(IReadableWritable readableWritable, int version = 0)
+    {
+        var uncompressedSize = ReadInt32();
+        var data = ReadData();
+
+        try
+        {
+            using var rBuffer = ZlibData.OpenDecompressedReader(uncompressedSize, data, referenceReader: this);
+            using var rwBuffer = new GbxReaderWriter(rBuffer);
+            readableWritable.ReadWrite(rwBuffer, version);
+
+            if (uncompressedSize != rBuffer.BaseStream.Position)
+            {
+                throw new Exception($"Not all zlib data was read: {rBuffer.BaseStream.Position} / {uncompressedSize} bytes read.");
+            }
+
+            return new ZlibData(uncompressedSize, data, exception: null) { Parsed = true };
+        }
+        catch (Exception ex)
+        {
+            return new ZlibData(uncompressedSize, data, ex) { Parsed = true };
+        }
+    }
+
+    public ZlibData ReadZlibData(Action<GbxReader> action)
+    {
+        var uncompressedSize = ReadInt32();
+        var data = ReadData();
+
+        try
+        {
+            using var rBuffer = ZlibData.OpenDecompressedReader(uncompressedSize, data, referenceReader: this);
+
+            action(rBuffer);
+
+            if (uncompressedSize != rBuffer.BaseStream.Position)
+            {
+                throw new Exception($"Not all zlib data was read: {rBuffer.BaseStream.Position} / {uncompressedSize} bytes read.");
+            }
+
+            return new ZlibData(uncompressedSize, data, exception: null) { Parsed = true };
+        }
+        catch (Exception ex)
+        {
+            return new ZlibData(uncompressedSize, data, ex) { Parsed = true };
+        }
     }
 
     public int ReadOptimizedInt(int determineFrom) => (uint)determineFrom switch
@@ -1939,9 +2047,9 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         {
             var buffer = new byte[BaseStream.Length - BaseStream.Position];
 #if NET6_0_OR_GREATER
-            _ = await BaseStream.ReadAsync(buffer, cancellationToken);
+            await BaseStream.ReadExactlyAsync(buffer, cancellationToken);
 #else
-            _ = await BaseStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+            _ = await BaseStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken); // this can still break on network streams 
 #endif
             return buffer;
         }
@@ -2062,6 +2170,10 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         else if (baseType == typeof(CFuncKeysReal)) // weird case of CPlugCurveSimpleNod
         {
             parentClassId = 0x01001000;
+        }
+        else if (baseType == typeof(CGameCtnZone))
+        {
+            parentClassId = 0x2401C000;
         }
 
         var parentClassIDBytes = BitConverter.GetBytes(parentClassId);

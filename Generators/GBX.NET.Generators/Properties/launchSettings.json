@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "GBX.NET.Generators": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\Tools\\ParseRepeater\\ParseRepeater.csproj"
+    }
+  }
+}

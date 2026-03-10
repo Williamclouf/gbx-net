@@ -5,20 +5,21 @@ archive
  string Description
  string NickName
  byte Flags
- string OnlineLogin
- string OnlinePassword
- string OnlineValidationKey
- string OnlineSupportKey
- string LastUsedMSAddress
- string LastUsedMSPath
- string LastSessionId
- string League
- v3-
-  int
- int OnlineRemainingNickNamesChangesCount
- int OnlinePlanets
- v1+
-  string RSAPublicKey
+ if (Flags & 1) != 0
+  string OnlineLogin
+  string OnlinePassword
+  string OnlineValidationKey
+  string OnlineSupportKey
+  string LastUsedMSAddress
+  string LastUsedMSPath
+  string LastSessionId
+  string League
+  v3-
+   int
+  int OnlineRemainingNickNamesChangesCount
+  int OnlinePlanets
+  v1+
+   string RSAPublicKey
  string RSAPrivateKey
  ulong
  int
@@ -168,7 +169,7 @@ archive
 archive SPlayerTagsConfig
  int
  PlayerTagConfig[] PlayerTags
- ulong[]
+ int[]
 
 archive PlayerTagConfig
  string TagId

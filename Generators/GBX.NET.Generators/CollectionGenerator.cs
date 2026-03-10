@@ -1,6 +1,5 @@
 ﻿using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis;
-using System.Diagnostics;
 using System.Text;
 
 namespace GBX.NET.Generators;
@@ -8,15 +7,8 @@ namespace GBX.NET.Generators;
 [Generator]
 public class CollectionGenerator : IIncrementalGenerator
 {
-    private const bool Debug = false;
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        if (Debug && !Debugger.IsAttached)
-        {
-            Debugger.Launch();
-        }
-
         var contents = context.AdditionalTextsProvider
             .Where(static file =>
             {

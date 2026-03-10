@@ -49,9 +49,9 @@
  bool IsShowPlayerGhost
 
 0x047
- CGameNetOnlineMessage[]_deprec
- CGameNetOnlineMessage[]_deprec
- CGameNetOnlineMessage[]_deprec
+ CGameNetOnlineMessage[]_deprec InboxMessages
+ CGameNetOnlineMessage[]_deprec ReadMessages
+ CGameNetOnlineMessage[]_deprec OutboxMessages
 
 0x04A
  CSceneMobil[] // might be false

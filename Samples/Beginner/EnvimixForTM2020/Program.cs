@@ -6,7 +6,6 @@ using System.Text;
 using TmEssentials;
 
 Gbx.LZO = new Lzo();
-Gbx.CRC32 = new CRC32();
 
 var cars = new[] { "CarSport", "CarSnow", "CarRally", "CarDesert", "CharacterPilot" };
 var envs = new[] { "Stadium", "Snow", "Rally", "Desert" };
