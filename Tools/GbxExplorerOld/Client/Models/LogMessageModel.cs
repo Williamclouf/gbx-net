@@ -16,6 +16,7 @@ public class LogMessageModel
     public string TextColor => LogLevel switch
     {
         LogLevel.Information => "black",
+        LogLevel.Trace => "lightgray",
         _ => "white",
     };
 
@@ -25,6 +26,7 @@ public class LogMessageModel
         LogLevel.Debug => "gray",
         LogLevel.Warning => "darkgoldenrod",
         LogLevel.Error => "red",
+        LogLevel.Trace => "dimgrey",
         _ => "black",
     };
 
@@ -34,6 +36,7 @@ public class LogMessageModel
         LogLevel.Debug => "Debug",
         LogLevel.Warning => "Warn",
         LogLevel.Error => "Error",
+        LogLevel.Trace => "Trace",
         _ => "",
     };
 
@@ -43,6 +46,7 @@ public class LogMessageModel
         LogLevel.Debug => "DEBUG",
         LogLevel.Warning => "WARN",
         LogLevel.Error => "ERROR",
+        LogLevel.Trace => "TRACE",
         _ => "",
     };
 
