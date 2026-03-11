@@ -15,11 +15,11 @@ CGamePlayerProfileChunk_GlobalInterfaceSettings 0x03179000
  
 0x004 (skippable)
  version
- bool
+ bool OpenWebLinksInSteamOverlay
  v1+
-  bool
+  bool SynchonizeSteamWorkshopFiles
   v2+
-   bool
+   bool PreferSteamScreenshots
 
 0x005 (skippable)
  version
