@@ -1708,7 +1708,7 @@ public partial class CGameCtnChallenge :
         {
             w.WriteEncapsulated(n.ZoneGenealogyData, w =>
             {
-                w.WriteListNodeRef<CGameCtnZoneGenealogy>(n.zoneGenealogy!);
+                w.WriteListNodeRef<CGameCtnZoneGenealogy>(n.ZoneGenealogy!);
             });
         }
     }
