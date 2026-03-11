@@ -146,6 +146,9 @@ public partial interface IGbxReader : IDisposable
     List<string> ReadListId();
     List<string> ReadListId_deprec();
 
+    [IgnoreForCodeGeneration] EncapsulatedData ReadEncapsulated();
+    [IgnoreForCodeGeneration] void ReadEncapsulated(Action<GbxReader> action);
+
     uint PeekUInt32();
     void SkipData(int length);
     byte[] ReadToEnd();
@@ -1937,6 +1940,29 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
     {
         ReadDeprecVersion();
         return ReadListId();
+    }
+
+    public EncapsulatedData ReadEncapsulated()
+    {
+        ReadInt32(); // always 0
+        return new EncapsulatedData(ReadData(), exception: null);
+    }
+
+    public void ReadEncapsulated(Action<GbxReader> action)
+    {
+        ReadInt32(); // always 0
+        var size = ReadInt32();
+        var startPos = BaseStream.Position;
+
+        using var _ = new Encapsulation(this);
+        action(this);
+
+        var endPos = BaseStream.Position;
+
+        if (endPos - startPos != size)
+        {
+            throw new Exception($"Encapsulation size mismatch: expected {size} bytes, but read {endPos - startPos} bytes.");
+        }
     }
 
     internal (Vec3 position, Quat rotation, float speed, Vec3 velocity) ReadTransform()

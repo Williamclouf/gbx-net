@@ -51,9 +51,6 @@ public class MemoryLogger : ILogger
 
         var logMsg = new LogMessageModel(logLevel, message, CurrentScope, exception, DateTime.Now);
 
-        if (logLevel != LogLevel.Trace)
-        {
-            _log.Log(logMsg);
-        }
+        _log.Log(logMsg);
     }
 }

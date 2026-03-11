@@ -148,6 +148,10 @@ public partial interface IGbxWriter : IDisposable
     [IgnoreForCodeGeneration] void WriteListId(IList<string>? value, int length);
     [IgnoreForCodeGeneration] void WriteListId_deprec(IList<string>? value);
 
+    void WriteEncapsulated(EncapsulatedData value);
+    void WriteEncapsulated(Action<GbxWriter> action);
+    void WriteEncapsulated(EncapsulatedData? value, Action<GbxWriter> action);
+
     void ResetIdState();
 }
 
@@ -1810,5 +1814,35 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
     {
         WriteDeprecVersion();
         WriteListId(value);
+    }
+
+    public void WriteEncapsulated(Action<GbxWriter> action)
+    {
+        Write(0);
+
+        using var ms = new MemoryStream();
+        using var wBuffer = new GbxWriter(ms);
+        using var _ = new Encapsulation(wBuffer);
+
+        action(wBuffer);
+
+        Write((int)ms.Length);
+        ms.WriteTo(BaseStream);
+    }
+
+    public void WriteEncapsulated(EncapsulatedData? value, Action<GbxWriter> action)
+    {
+        if (value?.Parsed == false)
+        {
+            WriteData(value.Data);
+            return;
+        }
+
+        WriteEncapsulated(action);
+    }
+
+    public void WriteEncapsulated(EncapsulatedData value)
+    {
+        WriteData(value.Data);
     }
 }

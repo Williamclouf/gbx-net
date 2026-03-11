@@ -335,6 +335,7 @@ public partial class CGameCtnChallenge :
         get
         {
             if (LightmapCacheData is null || LightmapCacheData.Parsed) return lightmapCacheSmall;
+
             lock (LightmapCacheDataLock)
             {
                 if (LightmapCacheData is null || LightmapCacheData.Parsed) return lightmapCacheSmall;
@@ -355,9 +356,51 @@ public partial class CGameCtnChallenge :
     [AppliedWithChunk<Chunk03043040>]
     public List<CGameCtnAnchoredObject>? AnchoredObjects { get => anchoredObjects; set => anchoredObjects = value; }
 
+#if NET9_0_OR_GREATER
+    private readonly Lock ZoneGenealogyDataLock = new();
+#else
+    private readonly object ZoneGenealogyDataLock = new();
+#endif
+
+    public EncapsulatedData? ZoneGenealogyData { get; set; }
+
     private List<CGameCtnZoneGenealogy>? zoneGenealogy;
     [AppliedWithChunk<Chunk03043043>]
-    public List<CGameCtnZoneGenealogy>? ZoneGenealogy { get => zoneGenealogy; set => zoneGenealogy = value; }
+    public List<CGameCtnZoneGenealogy>? ZoneGenealogy
+    {
+        get
+        {
+            if (ZoneGenealogyData is null || ZoneGenealogyData.Parsed) return zoneGenealogy;
+
+            lock (ZoneGenealogyDataLock)
+            {
+                if (ZoneGenealogyData is null || ZoneGenealogyData.Parsed) return zoneGenealogy;
+
+                try
+                {
+                    using var ms = new MemoryStream(ZoneGenealogyData.Data);
+                    using var r = new GbxReader(ms);
+                    using var _ = new Encapsulation(r);
+                    zoneGenealogy = r.ReadListNodeRef<CGameCtnZoneGenealogy>()!;
+
+                    ZoneGenealogyData.Parsed = true;
+                }
+                catch (Exception ex)
+                {
+                    ZoneGenealogyData.Exception = ex;
+                    throw;
+                }
+                return zoneGenealogy;
+            }
+        }
+        set
+        {
+            lock (ZoneGenealogyDataLock)
+            {
+                zoneGenealogy = value;
+            }
+        }
+    }
 
     private CScriptTraitsMetadata? scriptMetadata;
     [AppliedWithChunk<Chunk03043044>]
@@ -1399,7 +1442,6 @@ public partial class CGameCtnChallenge :
 
     public partial class Chunk03043040 : IVersionable
     {
-        public int U01;
         public int[]? U02;
 
         /// <summary>
@@ -1410,312 +1452,275 @@ public partial class CGameCtnChallenge :
         public override void Read(CGameCtnChallenge n, GbxReader r)
         {
             Version = r.ReadInt32();
-            U01 = r.ReadInt32(); // always 0
-            var size = r.ReadInt32();
 
-            using var _ = new Encapsulation(r);
-
-            n.anchoredObjects = r.ReadListNodeRef_deprec<CGameCtnAnchoredObject>()!;
-
-            if (Version >= 1 && Version != 5 && Version < 8)
+            r.ReadEncapsulated(r =>
             {
-                // defines which (second element) items are deleted together with other (first element) item?
-                var itemsOnItem = r.ReadArray<Int2>();
+                n.anchoredObjects = r.ReadListNodeRef_deprec<CGameCtnAnchoredObject>()!;
 
-                foreach (var item in itemsOnItem)
+                if (Version >= 1 && Version != 5 && Version < 8)
                 {
-                    n.anchoredObjects[item.Y].PlacedOnItem = n.anchoredObjects[item.X];
-                }
-            }
+                    // defines which (second element) items are deleted together with other (first element) item?
+                    var itemsOnItem = r.ReadArray<Int2>();
 
-            if (Version >= 5)
-            {
-                if (Version >= 9)
-                {
-                    throw new ChunkVersionNotSupportedException(Version);
-                }
-
-                var blockIndexes = r.ReadArray<int>(); // block indexes, -1 means itemIndexes will have the value instead
-                var usedBlocks = new CGameCtnBlock?[blockIndexes.Length];
-
-                for (var i = 0; i < blockIndexes.Length; i++)
-                {
-                    var index = blockIndexes[i];
-
-                    if (index > -1)
+                    foreach (var item in itemsOnItem)
                     {
-                        usedBlocks[i] = n.blocks![index];
+                        n.anchoredObjects[item.Y].PlacedOnItem = n.anchoredObjects[item.X];
                     }
                 }
 
-                var snapItemGroups = Version < 7 ? r.ReadArray<int>() : null; // snap item group - only some snapped items will delete on a block. they are consistent numbers
-
-                var usedItems = default(CGameCtnAnchoredObject[]);
-
-                if (Version >= 6)
+                if (Version >= 5)
                 {
-                    var itemIndexes = r.ReadArray<int>(); // item indexes
-                    usedItems = new CGameCtnAnchoredObject[itemIndexes.Length];
-
-                    for (var i = 0; i < itemIndexes.Length; i++)
+                    if (Version >= 9)
                     {
-                        var index = itemIndexes[i];
+                        throw new ChunkVersionNotSupportedException(Version);
+                    }
+
+                    var blockIndexes = r.ReadArray<int>(); // block indexes, -1 means itemIndexes will have the value instead
+                    var usedBlocks = new CGameCtnBlock?[blockIndexes.Length];
+
+                    for (var i = 0; i < blockIndexes.Length; i++)
+                    {
+                        var index = blockIndexes[i];
 
                         if (index > -1)
                         {
-                            usedItems[i] = n.anchoredObjects![index];
+                            usedBlocks[i] = n.blocks![index];
                         }
                     }
-                }
 
-                snapItemGroups ??= Version >= 7 ? r.ReadArray<int>() : null;
+                    var snapItemGroups = Version < 7 ? r.ReadArray<int>() : null; // snap item group - only some snapped items will delete on a block. they are consistent numbers
 
-                if (Version != 6)
-                {
-                    var U07 = r.ReadArray<int>();
+                    var usedItems = default(CGameCtnAnchoredObject[]);
 
-                    if (U07.Any(x => x != -1))
+                    if (Version >= 6)
                     {
-                        throw new NotSupportedException("U07 has something else than -1");
+                        var itemIndexes = r.ReadArray<int>(); // item indexes
+                        usedItems = new CGameCtnAnchoredObject[itemIndexes.Length];
+
+                        for (var i = 0; i < itemIndexes.Length; i++)
+                        {
+                            var index = itemIndexes[i];
+
+                            if (index > -1)
+                            {
+                                usedItems[i] = n.anchoredObjects![index];
+                            }
+                        }
+                    }
+
+                    snapItemGroups ??= Version >= 7 ? r.ReadArray<int>() : null;
+
+                    if (Version != 6)
+                    {
+                        var U07 = r.ReadArray<int>();
+
+                        if (U07.Any(x => x != -1))
+                        {
+                            throw new NotSupportedException("U07 has something else than -1");
+                        }
+                    }
+
+                    // always the same count as anchoredObjects
+                    var snappedIndexes = r.ReadArray<int>(); // "snapped onto block/item" indexes
+
+                    for (var i = 0; i < snappedIndexes.Length; i++)
+                    {
+                        var snappedIndex = snappedIndexes[i];
+
+                        if (snappedIndex <= -1)
+                        {
+                            continue;
+                        }
+
+                        var usedBlock = usedBlocks[snappedIndex];
+
+                        if (usedBlock is not null)
+                        {
+                            n.anchoredObjects[i].SnappedOnBlock = usedBlock;
+                        }
+
+                        var usedItem = usedItems?[snappedIndex];
+
+                        if (usedItem is not null)
+                        {
+                            n.anchoredObjects[i].SnappedOnItem = usedItem;
+                        }
+
+                        n.anchoredObjects[i].SnappedOnGroup = snapItemGroups?[snappedIndex] ?? 0;
                     }
                 }
-
-                // always the same count as anchoredObjects
-                var snappedIndexes = r.ReadArray<int>(); // "snapped onto block/item" indexes
-
-                for (var i = 0; i < snappedIndexes.Length; i++)
-                {
-                    var snappedIndex = snappedIndexes[i];
-
-                    if (snappedIndex <= -1)
-                    {
-                        continue;
-                    }
-
-                    var usedBlock = usedBlocks[snappedIndex];
-
-                    if (usedBlock is not null)
-                    {
-                        n.anchoredObjects[i].SnappedOnBlock = usedBlock;
-                    }
-
-                    var usedItem = usedItems?[snappedIndex];
-
-                    if (usedItem is not null)
-                    {
-                        n.anchoredObjects[i].SnappedOnItem = usedItem;
-                    }
-
-                    n.anchoredObjects[i].SnappedOnGroup = snapItemGroups?[snappedIndex] ?? 0;
-                }
-            }
+            });
         }
 
         public override void Write(CGameCtnChallenge n, GbxWriter w)
         {
             w.Write(Version);
-            w.Write(U01);
 
-            using var itemMs = new MemoryStream();
-            using var itemW = new GbxWriter(itemMs);
-            using var _ = new Encapsulation(itemW);
-
-            itemW.WriteListNodeRef_deprec((n.anchoredObjects ?? [])!);
-
-            var itemDict = new Dictionary<CGameCtnAnchoredObject, int>();
-
-            if (n.anchoredObjects is not null)
+            w.WriteEncapsulated(w =>
             {
-                for (var i = 0; i < n.anchoredObjects.Count; i++)
-                {
-                    itemDict[n.anchoredObjects[i]] = i;
-                }
-            }
+                w.WriteListNodeRef_deprec((n.anchoredObjects ?? [])!);
 
-            if (Version >= 1 && Version != 5 && Version < 8)
-            {
-                var pairs = new List<Int2>();
+                var itemDict = new Dictionary<CGameCtnAnchoredObject, int>();
 
                 if (n.anchoredObjects is not null)
                 {
                     for (var i = 0; i < n.anchoredObjects.Count; i++)
                     {
-                        var placedOnItem = n.anchoredObjects[i].PlacedOnItem;
-
-                        if (placedOnItem is not null && itemDict.TryGetValue(placedOnItem, out int index))
-                        {
-                            pairs.Add((index, i));
-                        }
+                        itemDict[n.anchoredObjects[i]] = i;
                     }
                 }
 
-                itemW.WriteList(pairs);
-            }
-
-            if (Version >= 5)
-            {
-                var blockDict = new Dictionary<CGameCtnBlock, int>();
-
-                if (n.blocks is not null)
+                if (Version >= 1 && Version != 5 && Version < 8)
                 {
-                    for (var i = 0; i < n.blocks.Count; i++)
+                    var pairs = new List<Int2>();
+
+                    if (n.anchoredObjects is not null)
                     {
-                        blockDict[n.blocks[i]] = i;
-                    }
-                }
-
-                var usedBlockIndexHashSet = new HashSet<(int blockIndex, int group)>();
-                var usedBlockIndexList = new List<(int blockIndex, int group)>();
-                var usedItemIndexHashSet = new HashSet<(int itemIndex, int group)>();
-                var usedItemIndexList = new List<(int itemIndex, int group)>();
-
-                var indicesOnUsedBlocksAndItems = new Dictionary<(int index, int group), int>();
-                var snappedOnIndices = new List<int>(n.anchoredObjects?.Count ?? 0);
-
-                foreach (var item in n.GetAnchoredObjects())
-                {
-                    var isItemNotSnappedOnBlock = item.SnappedOnBlock is null || !blockDict.ContainsKey(item.SnappedOnBlock);
-                    var isItemNotSnappedOnItem = item.SnappedOnItem is null || !itemDict.ContainsKey(item.SnappedOnItem);
-
-                    if (isItemNotSnappedOnBlock && isItemNotSnappedOnItem)
-                    {
-                        snappedOnIndices.Add(-1);
-                        continue;
-                    }
-
-                    var groupIndex = item.SnappedOnGroup ?? 0;
-                    var unique = (-1, groupIndex);
-
-                    if (item.SnappedOnBlock is not null)
-                    {
-                        var blockIndex = blockDict[item.SnappedOnBlock];
-
-                        unique = (blockIndex, groupIndex);
-
-                        if (!usedBlockIndexHashSet.Contains(unique))
+                        for (var i = 0; i < n.anchoredObjects.Count; i++)
                         {
-                            usedBlockIndexList.Add(unique);
-                            usedBlockIndexHashSet.Add(unique);
+                            var placedOnItem = n.anchoredObjects[i].PlacedOnItem;
 
-                            if (isItemNotSnappedOnItem)
+                            if (placedOnItem is not null && itemDict.TryGetValue(placedOnItem, out int index))
                             {
-                                usedItemIndexList.Add((-1, groupIndex));
+                                pairs.Add((index, i));
                             }
                         }
                     }
 
-                    if (item.SnappedOnItem is not null && itemDict.TryGetValue(item.SnappedOnItem, out var itemIndex))
+                    w.WriteList(pairs);
+                }
+
+                if (Version >= 5)
+                {
+                    var blockDict = new Dictionary<CGameCtnBlock, int>();
+
+                    if (n.blocks is not null)
                     {
-                        unique = (itemIndex, groupIndex);
-
-                        if (!usedItemIndexHashSet.Contains(unique))
+                        for (var i = 0; i < n.blocks.Count; i++)
                         {
-                            usedItemIndexList.Add(unique);
-                            usedItemIndexHashSet.Add(unique);
-
-                            if (item.SnappedOnBlock is null)
-                            {
-                                usedBlockIndexList.Add((-1, groupIndex));
-                            }
+                            blockDict[n.blocks[i]] = i;
                         }
                     }
 
-                    if (indicesOnUsedBlocksAndItems.TryGetValue(unique, out int indexOfBlockOrItemIndex))
+                    var usedBlockIndexHashSet = new HashSet<(int blockIndex, int group)>();
+                    var usedBlockIndexList = new List<(int blockIndex, int group)>();
+                    var usedItemIndexHashSet = new HashSet<(int itemIndex, int group)>();
+                    var usedItemIndexList = new List<(int itemIndex, int group)>();
+
+                    var indicesOnUsedBlocksAndItems = new Dictionary<(int index, int group), int>();
+                    var snappedOnIndices = new List<int>(n.anchoredObjects?.Count ?? 0);
+
+                    foreach (var item in n.GetAnchoredObjects())
                     {
-                        snappedOnIndices.Add(indexOfBlockOrItemIndex);
+                        var isItemNotSnappedOnBlock = item.SnappedOnBlock is null || !blockDict.ContainsKey(item.SnappedOnBlock);
+                        var isItemNotSnappedOnItem = item.SnappedOnItem is null || !itemDict.ContainsKey(item.SnappedOnItem);
+
+                        if (isItemNotSnappedOnBlock && isItemNotSnappedOnItem)
+                        {
+                            snappedOnIndices.Add(-1);
+                            continue;
+                        }
+
+                        var groupIndex = item.SnappedOnGroup ?? 0;
+                        var unique = (-1, groupIndex);
+
+                        if (item.SnappedOnBlock is not null)
+                        {
+                            var blockIndex = blockDict[item.SnappedOnBlock];
+
+                            unique = (blockIndex, groupIndex);
+
+                            if (!usedBlockIndexHashSet.Contains(unique))
+                            {
+                                usedBlockIndexList.Add(unique);
+                                usedBlockIndexHashSet.Add(unique);
+
+                                if (isItemNotSnappedOnItem)
+                                {
+                                    usedItemIndexList.Add((-1, groupIndex));
+                                }
+                            }
+                        }
+
+                        if (item.SnappedOnItem is not null && itemDict.TryGetValue(item.SnappedOnItem, out var itemIndex))
+                        {
+                            unique = (itemIndex, groupIndex);
+
+                            if (!usedItemIndexHashSet.Contains(unique))
+                            {
+                                usedItemIndexList.Add(unique);
+                                usedItemIndexHashSet.Add(unique);
+
+                                if (item.SnappedOnBlock is null)
+                                {
+                                    usedBlockIndexList.Add((-1, groupIndex));
+                                }
+                            }
+                        }
+
+                        if (indicesOnUsedBlocksAndItems.TryGetValue(unique, out int indexOfBlockOrItemIndex))
+                        {
+                            snappedOnIndices.Add(indexOfBlockOrItemIndex);
+                        }
+                        else
+                        {
+                            indicesOnUsedBlocksAndItems[unique] = indicesOnUsedBlocksAndItems.Count;
+                            snappedOnIndices.Add(indicesOnUsedBlocksAndItems.Count - 1);
+                        }
                     }
-                    else
+
+                    w.WriteArray(usedBlockIndexList.Select(x => x.blockIndex).ToArray());
+
+                    if (Version < 7)
                     {
-                        indicesOnUsedBlocksAndItems[unique] = indicesOnUsedBlocksAndItems.Count;
-                        snappedOnIndices.Add(indicesOnUsedBlocksAndItems.Count - 1);
+                        w.WriteArray(usedBlockIndexList.Select(x => x.group).ToArray());
                     }
+
+                    if (Version >= 6)
+                    {
+                        w.WriteArray(usedItemIndexList.Select(x => x.itemIndex).ToArray());
+                    }
+
+                    if (Version >= 7)
+                    {
+                        w.WriteArray(usedBlockIndexList.Select(x => x.group).ToArray());
+                    }
+
+                    if (Version != 6)
+                    {
+                        w.WriteArray(Enumerable.Repeat(-1, usedBlockIndexList.Count).ToArray());
+                    }
+
+                    w.WriteArray(snappedOnIndices.ToArray());
                 }
-
-                itemW.WriteArray(usedBlockIndexList.Select(x => x.blockIndex).ToArray());
-
-                if (Version < 7)
-                {
-                    itemW.WriteArray(usedBlockIndexList.Select(x => x.group).ToArray());
-                }
-
-                if (Version >= 6)
-                {
-                    itemW.WriteArray(usedItemIndexList.Select(x => x.itemIndex).ToArray());
-                }
-
-                if (Version >= 7)
-                {
-                    itemW.WriteArray(usedBlockIndexList.Select(x => x.group).ToArray());
-                }
-
-                if (Version != 6)
-                {
-                    itemW.WriteArray(Enumerable.Repeat(-1, usedBlockIndexList.Count).ToArray());
-                }
-
-                itemW.WriteArray(snappedOnIndices.ToArray());
-            }
-
-            w.Write((int)itemMs.Length);
-            w.Write(itemMs.ToArray());
+            });
         }
     }
 
     public partial class Chunk03043043
     {
-        public int U01;
-
         public override void Read(CGameCtnChallenge n, GbxReader r)
         {
-            U01 = r.ReadInt32(); // always 0
-            var size = r.ReadInt32();
-
-            using var _ = new Encapsulation(r);
-
-            n.zoneGenealogy = r.ReadListNodeRef<CGameCtnZoneGenealogy>()!;
+            n.ZoneGenealogyData = r.ReadEncapsulated();
         }
 
         public override void Write(CGameCtnChallenge n, GbxWriter w)
         {
-            w.Write(U01);
-
-            using var ms = new MemoryStream();
-            using var wBuffer = new GbxWriter(ms);
-            using var _ = new Encapsulation(wBuffer);
-
-            wBuffer.WriteListNodeRef((n.zoneGenealogy ?? [])!);
-
-            w.Write((int)ms.Length);
-            ms.WriteTo(w.BaseStream);
+            w.WriteEncapsulated(n.ZoneGenealogyData, w =>
+            {
+                w.WriteListNodeRef<CGameCtnZoneGenealogy>(n.zoneGenealogy!);
+            });
         }
     }
 
     public partial class Chunk03043044
     {
-        public int U01;
-
-        public override void Read(CGameCtnChallenge n, GbxReader r)
+        public override void ReadWrite(CGameCtnChallenge n, GbxReaderWriter rw)
         {
-            U01 = r.ReadInt32(); // always 0
-            var size = r.ReadInt32();
-
-            using var _ = new Encapsulation(r);
-
-            n.scriptMetadata = r.ReadNode<CScriptTraitsMetadata>()!;
-        }
-
-        public override void Write(CGameCtnChallenge n, GbxWriter w)
-        {
-            w.Write(U01);
-
-            using var ms = new MemoryStream();
-            using var wBuffer = new GbxWriter(ms);
-            using var _ = new Encapsulation(wBuffer);
-
-            wBuffer.WriteNode(n.scriptMetadata!);
-
-            w.Write((int)ms.Length);
-            ms.WriteTo(w.BaseStream);
+            rw.Encapsulated(rw =>
+            {
+                rw.Node<CScriptTraitsMetadata>(ref n.scriptMetadata!);
+            });
         }
     }
 
@@ -1795,8 +1800,7 @@ public partial class CGameCtnChallenge :
     {
         public int Version { get; set; } = 3;
 
-        public int U01;
-        public byte[]? U02;
+        public EncapsulatedData? U02;
         public byte U03;
 
         public override void Read(CGameCtnChallenge n, GbxReader r)
@@ -1805,11 +1809,7 @@ public partial class CGameCtnChallenge :
 
             if (Version < 2)
             {
-                U01 = r.ReadInt32(); // always 0
-                var size = r.ReadInt32();
-
-                using var _ = new Encapsulation(r);
-                U02 = r.ReadData(size);
+                U02 = r.ReadEncapsulated();
                 return;
             }
 
@@ -1832,8 +1832,7 @@ public partial class CGameCtnChallenge :
 
             if (Version < 2)
             {
-                w.Write(U01);
-                w.WriteData(U02);
+                w.WriteEncapsulated(U02);
                 return;
             }
 
@@ -1851,118 +1850,110 @@ public partial class CGameCtnChallenge :
     {
         public int Version { get; set; }
 
-        public int U01;
-
         public override void Read(CGameCtnChallenge n, GbxReader r)
         {
             Version = r.ReadInt32();
-            U01 = r.ReadInt32(); // always 0
-            var size = r.ReadInt32();
 
-            using var _ = new Encapsulation(r);
-
-            n.ExpectedEmbeddedItemModels = r.ReadArrayIdent().ToImmutableList();
-
-            n.EmbeddedZipData = r.ReadData();
-
-            if (Version >= 1)
+            r.ReadEncapsulated(r =>
             {
-                n.Textures = r.ReadListString();
-            }
+                n.ExpectedEmbeddedItemModels = r.ReadArrayIdent().ToImmutableList();
+
+                n.EmbeddedZipData = r.ReadData();
+
+                if (Version >= 1)
+                {
+                    n.Textures = r.ReadListString();
+                }
+            });
         }
 
         public override void Write(CGameCtnChallenge n, GbxWriter w)
         {
             w.Write(Version);
-            w.Write(U01);
 
-            using var ms = new MemoryStream();
-            using var wBuffer = new GbxWriter(ms);
-            using var _ = new Encapsulation(wBuffer);
-
-            if (n.EmbeddedZipData is null || n.EmbeddedZipData.Length == 0)
+            w.WriteEncapsulated(w =>
             {
-                wBuffer.Write(0);
-                wBuffer.Write(0);
-            }
-            else
-            {
-                using var embeddedMs = new MemoryStream(n.EmbeddedZipData);
-                using var zip = new ZipArchive(embeddedMs, ZipArchiveMode.Read);
-
-                var itemModelList = new List<Ident>();
-
-                foreach (var entry in zip.Entries)
+                if (n.EmbeddedZipData is null || n.EmbeddedZipData.Length == 0)
                 {
-                    const string itemsPrefix = "Items\\";
-                    const string blocksPrefix = "Blocks\\";
-                    const string clubItemsPrefix = "ClubItems\\";
+                    w.Write(0);
+                    w.Write(0);
+                }
+                else
+                {
+                    using var embeddedMs = new MemoryStream(n.EmbeddedZipData);
+                    using var zip = new ZipArchive(embeddedMs, ZipArchiveMode.Read);
 
-                    using var entryStream = entry.Open();
+                    var itemModelList = new List<Ident>();
 
-                    try
+                    foreach (var entry in zip.Entries)
                     {
-                        var nodeHeader = Gbx.ParseHeaderNode(entryStream);
+                        const string itemsPrefix = "Items\\";
+                        const string blocksPrefix = "Blocks\\";
+                        const string clubItemsPrefix = "ClubItems\\";
 
-                        if (nodeHeader is not CGameItemModel itemModel)
-                        {
-                            continue;
-                        }
+                        using var entryStream = entry.Open();
 
-                        if (itemModel.Ident is null)
+                        try
                         {
-                            continue;
-                        }
+                            var nodeHeader = Gbx.ParseHeaderNode(entryStream);
 
-                        var ident = itemModel.Ident;
-
-                        // sometimes, when the items are placed in incorrect or different folders, the ident won't match the file name
-                        // this will cause a popup on opening, but the items will still be loaded. needs more investigation if the ident
-                        // should come entirely from the file name or not
-                        var fullName = entry.FullName.Replace('/', '\\');
-                        if (fullName.StartsWith(itemsPrefix))
-                        {
-                            ident = ident with { Id = fullName.Substring(itemsPrefix.Length) };
-                        }
-                        else if (fullName.StartsWith(blocksPrefix))
-                        {
-                            ident = ident with { Id = fullName.Substring(blocksPrefix.Length) };
-                        }
-                        else if (fullName.StartsWith(clubItemsPrefix))
-                        {
-                            ident = ident with
+                            if (nodeHeader is not CGameItemModel itemModel)
                             {
+                                continue;
+                            }
+
+                            if (itemModel.Ident is null)
+                            {
+                                continue;
+                            }
+
+                            var ident = itemModel.Ident;
+
+                            // sometimes, when the items are placed in incorrect or different folders, the ident won't match the file name
+                            // this will cause a popup on opening, but the items will still be loaded. needs more investigation if the ident
+                            // should come entirely from the file name or not
+                            var fullName = entry.FullName.Replace('/', '\\');
+                            if (fullName.StartsWith(itemsPrefix))
+                            {
+                                ident = ident with { Id = fullName.Substring(itemsPrefix.Length) };
+                            }
+                            else if (fullName.StartsWith(blocksPrefix))
+                            {
+                                ident = ident with { Id = fullName.Substring(blocksPrefix.Length) };
+                            }
+                            else if (fullName.StartsWith(clubItemsPrefix))
+                            {
+                                ident = ident with
+                                {
 #if NET6_0_OR_GREATER
-                                Id = string.Concat("club:", fullName.AsSpan(clubItemsPrefix.Length))
+                                    Id = string.Concat("club:", fullName.AsSpan(clubItemsPrefix.Length))
 #else
-                                Id = "club:" + fullName.Substring(clubItemsPrefix.Length)
+                                    Id = "club:" + fullName.Substring(clubItemsPrefix.Length)
 #endif
-                            };
+                                };
+                            }
+
+                            itemModelList.Add(ident);
+
+                            // CGameItemModel.Ident is also often renamed inside the Gbx file
+                            // so if this is an issue to match the Ident, read the gbx fully, change Ident, and save
+                            // do so only if it doesn't match with entry file name, to optimize the process
                         }
-
-                        itemModelList.Add(ident);
-
-                        // CGameItemModel.Ident is also often renamed inside the Gbx file
-                        // so if this is an issue to match the Ident, read the gbx fully, change Ident, and save
-                        // do so only if it doesn't match with entry file name, to optimize the process
+                        catch
+                        {
+                            // TODO: log
+                        }
                     }
-                    catch
-                    {
-                        // TODO: log
-                    }
+
+                    w.WriteList(itemModelList);
+                    w.WriteData(n.EmbeddedZipData!);
                 }
 
-                wBuffer.WriteList(itemModelList);
-                wBuffer.WriteData(n.EmbeddedZipData!);
-            }
-
-            if (Version >= 1)
-            {
-                wBuffer.WriteList(n.Textures);
-            }
-
-            w.Write((int)ms.Length);
-            w.Write(ms.ToArray());
+                if (Version >= 1)
+                {
+                    w.WriteList(n.Textures);
+                }
+            });
         }
     }
 

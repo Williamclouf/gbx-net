@@ -1,4 +1,5 @@
 ﻿using GBX.NET.Inputs;
+using System.Buffers.Binary;
 using System.Collections.Immutable;
 
 namespace GBX.NET.Engines.Game;
@@ -57,11 +58,11 @@ public partial class CGameCtnGhost
     [AppliedWithChunk<Chunk03092025>]
     public string? Validate_RaceSettings { get => validate_RaceSettings; set => validate_RaceSettings = value; }
 
-    private ImmutableList<IInput>? inputs;
+    private ImmutableArray<IInput> inputs = [];
     [AppliedWithChunk<Chunk03092011>]
     [AppliedWithChunk<Chunk03092019>]
     [AppliedWithChunk<Chunk03092025>]
-    public ImmutableList<IInput>? Inputs { get => inputs; set => inputs = value; }
+    public ImmutableArray<IInput> Inputs { get => inputs; set => inputs = value; }
 
     private bool steeringWheelSensitivity;
     [AppliedWithChunk<Chunk03092025>]
@@ -86,11 +87,6 @@ public partial class CGameCtnGhost
     /// <returns>Displayable inputs as IEnumerable.</returns>
     public IEnumerable<IInput> GetDisplayableInputs()
     {
-        if (inputs is null)
-        {
-            yield break;
-        }
-
         uint version = 0;
 
         foreach (var input in inputs)
@@ -215,38 +211,41 @@ public partial class CGameCtnGhost
             var numEntries = r.ReadInt32();
             U02 = r.ReadInt32(); // CountLimit?
 
-            var inputs = ImmutableList.CreateBuilder<IInput>();
+            if (numEntries == 0)
+            {
+                return;
+            }
 
+            Span<IInput> inputs = new IInput[numEntries];
+
+            // 9 bytes per entry: 4 for time, 1 for name index, 4 for data
+            Span<byte> inputData = r.ReadBytes(numEntries * 9);
+            
             for (var i = 0; i < numEntries; i++)
             {
-                var time = TimeInt32.FromMilliseconds(r.ReadInt32() - 100000);
-                var inputNameIndex = r.ReadByte();
-                var data = r.ReadUInt32();
+                var time = TimeInt32.FromMilliseconds(BinaryPrimitives.ReadInt32LittleEndian(inputData.Slice(i * 9, 4)) - 100000);
+                var inputNameIndex = inputData[i * 9 + 4];
+                var data = BinaryPrimitives.ReadUInt32LittleEndian(inputData.Slice(i * 9 + 5, 4));
 
                 var name = inputNames[inputNameIndex];
 
-                inputs.Add(NET.Inputs.Input.Parse(time, name, data));
+                inputs[i] = NET.Inputs.Input.Parse(time, name, data);
             }
 
-            n.inputs = inputs.ToImmutable();
+            n.inputs = inputs.ToImmutableArray();
         }
 
         private void WriteInputs(CGameCtnGhost n, GbxWriter w)
         {
-            var inputNames = n.inputs?
+            var inputNames = n.inputs
                 .Select(NET.Inputs.Input.GetName)
                 .Distinct()
                 .ToImmutableList() ?? ImmutableList<string>.Empty;
 
             w.WriteListId(inputNames);
 
-            w.Write(n.inputs?.Count ?? 0);
+            w.Write(n.inputs.Length);
             w.Write(U02);
-
-            if (n.inputs is null)
-            {
-                return;
-            }
 
             foreach (var input in n.inputs)
             {

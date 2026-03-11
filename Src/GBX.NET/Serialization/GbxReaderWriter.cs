@@ -93,6 +93,8 @@ public partial interface IGbxReaderWriter : IDisposable
     ZlibData? ZlibData(ZlibData? value, IReadableWritable readableWritable, bool lazyLoad, int version = 0);
     void ZlibData([NotNullIfNotNull(nameof(value))] ref ZlibData? value, IReadableWritable readableWritable, bool lazyLoad, int version = 0);
 
+    void Encapsulated(Action<GbxReaderWriter> action);
+
     void Chunk<TNode, TChunk>(TNode node, TChunk? chunk)
         where TNode : IClass
         where TChunk : IReadableWritableChunk<TNode>, new();
@@ -573,4 +575,18 @@ public sealed partial class GbxReaderWriter : IGbxReaderWriter
 
     public void ZlibData([NotNullIfNotNull(nameof(value))] ref ZlibData? value, IReadableWritable readableWritable, bool lazyLoad, int version = 0)
         => value = ZlibData(value, readableWritable, lazyLoad, version);
+
+    public void Encapsulated(Action<GbxReaderWriter> action)
+    {
+        Reader?.ReadEncapsulated(r =>
+        {
+            using var rw = new GbxReaderWriter(r);
+            action(rw);
+        });
+        Writer?.WriteEncapsulated(w =>
+        {
+            using var rw = new GbxReaderWriter(w);
+            action(rw);
+        });
+    }
 }
