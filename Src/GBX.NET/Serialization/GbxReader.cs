@@ -146,7 +146,7 @@ public partial interface IGbxReader : IDisposable
     List<string> ReadListId();
     List<string> ReadListId_deprec();
 
-    [IgnoreForCodeGeneration] EncapsulatedData ReadEncapsulated();
+    [IgnoreForCodeGeneration] RawData ReadEncapsulated();
     [IgnoreForCodeGeneration] void ReadEncapsulated(Action<GbxReader> action);
 
     uint PeekUInt32();
@@ -1942,10 +1942,10 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         return ReadListId();
     }
 
-    public EncapsulatedData ReadEncapsulated()
+    public RawData ReadEncapsulated()
     {
         ReadInt32(); // always 0
-        return new EncapsulatedData(ReadData(), exception: null);
+        return new RawData(ReadData(), exception: null);
     }
 
     public void ReadEncapsulated(Action<GbxReader> action)
