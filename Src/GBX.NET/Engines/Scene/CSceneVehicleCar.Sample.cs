@@ -111,8 +111,12 @@ public partial class CSceneVehicleCar
 
         internal override void Read(MemoryStream ms, GbxReader r, int version)
         {
-            // CHmsDynaReplayItem::RestoreDynaItemState
+            if (version < 7)
+            {
+                throw new VersionNotSupportedException(version);
+            }
 
+            // CHmsDynaReplayItem::RestoreDynaItemState
 
             // HmsStateVersion == 0 (EHmsDynaItemSaveStateVersion_TmNetworkAfter260205)
             // Position 9-byte Vec3
@@ -164,17 +168,6 @@ public partial class CSceneVehicleCar
             AngularVelocity = r.ReadVec3_4();
 
             // CSceneVehicleVis_RestoreStaticState
-
-            if (version < 7)
-            {
-                throw new VersionNotSupportedException(version);
-            }
-
-            if (version == 13)
-            {
-                throw new Exception("Two bytes here");
-            }
-
             if (version >= 7)
             {
                 SpeedForward = (r.ReadUInt16() / 65535f * 11000 - 1000) * 3.6f;

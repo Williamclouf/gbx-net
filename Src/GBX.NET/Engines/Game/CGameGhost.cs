@@ -4,14 +4,13 @@ public partial class CGameGhost
 {
     private Data? sampleData;
 
-    public byte[]? RawData { get; set; }
-
+    public RawData? RawData { get; set; }
     public ZlibData? CompressedData { get; set; }
 
 #if NET9_0_OR_GREATER
-    private readonly Lock CompressedDataLock = new();
+    private readonly Lock SampleDataLock = new();
 #else
-    private readonly object CompressedDataLock = new();
+    private readonly object SampleDataLock = new();
 #endif
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
@@ -22,10 +21,36 @@ public partial class CGameGhost
     {
         get
         {
-            if (sampleData is not null) return sampleData;
+            // old format which precreated the sampleData instance
+            if (sampleData is not null)
+            {
+                if (RawData is null or { Parsed: true })
+                {
+                    return sampleData;
+                }
+
+                lock (SampleDataLock)
+                {
+                    if (RawData is null or { Parsed: true }) return sampleData;
+                    try
+                    {
+                        using var ms = new MemoryStream(RawData.Data);
+                        using var reader = new GbxReader(ms);
+                        sampleData.ParseOld(reader);
+                        RawData.Parsed = true;
+                        return sampleData;
+                    }
+                    catch (Exception ex)
+                    {
+                        RawData.Exception = ex;
+                        throw;
+                    }
+                }
+            }
+
             if (CompressedData is null) throw new InvalidOperationException("CompressedData not available");
 
-            lock (CompressedDataLock)
+            lock (SampleDataLock)
             {
                 if (sampleData is not null) return sampleData;
 
@@ -33,7 +58,7 @@ public partial class CGameGhost
                 {
                     using var reader = CompressedData.OpenDecompressedReader();
                     sampleData = new Data();
-                    sampleData.Read(reader);
+                    sampleData.Read(reader, v: 1);
                     CompressedData.Parsed = true;
                     return sampleData;
                 }
@@ -48,29 +73,16 @@ public partial class CGameGhost
 
     public partial class Chunk0303F003
     {
-        public int[]? Times;
-
         public override void Read(CGameGhost n, GbxReader r)
         {
-            n.RawData = r.ReadData();
-            n.sampleData = new Data()
-            {
-                Offsets = r.ReadArray<int>()
-            };
-            Times = r.ReadArray<int>();
-            n.sampleData.IsFixedTimeStep = r.ReadBoolean();
-            n.sampleData.SamplePeriod = r.ReadTimeInt32();
-            n.sampleData.Version = r.ReadInt32();
+            n.RawData = new RawData(r.ReadData(), exception: null);
+            n.sampleData = r.ReadReadable<Data>(version: 0);
         }
 
         public override void Write(CGameGhost n, GbxWriter w)
         {
-            w.Write(n.RawData);
-            w.WriteArray(n.sampleData?.Offsets);
-            w.WriteArray(Times);
-            w.Write(n.sampleData?.IsFixedTimeStep ?? false);
-            w.Write(n.sampleData?.SamplePeriod ?? TimeInt32.FromMilliseconds(100));
-            w.Write(n.sampleData?.Version ?? 0);
+            w.WriteData(n.RawData?.Data);
+            w.WriteWritable<Data>(n.sampleData, version: 0);
         }
     }
 
@@ -83,7 +95,7 @@ public partial class CGameGhost
 
         public override void Write(CGameGhost n, GbxWriter w)
         {
-            w.WriteZlibData(n.CompressedData, n.sampleData);
+            w.WriteZlibData(n.CompressedData, n.sampleData, version: 1);
         }
     }
 }

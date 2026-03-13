@@ -362,7 +362,7 @@ public partial class CGameCtnChallenge :
     private readonly object ZoneGenealogyDataLock = new();
 #endif
 
-    public EncapsulatedData? ZoneGenealogyData { get; set; }
+    public RawData? ZoneGenealogyData { get; set; }
 
     private List<CGameCtnZoneGenealogy>? zoneGenealogy;
     [AppliedWithChunk<Chunk03043043>]
@@ -1708,7 +1708,7 @@ public partial class CGameCtnChallenge :
         {
             w.WriteEncapsulated(n.ZoneGenealogyData, w =>
             {
-                w.WriteListNodeRef<CGameCtnZoneGenealogy>(n.zoneGenealogy!);
+                w.WriteListNodeRef<CGameCtnZoneGenealogy>(n.ZoneGenealogy!);
             });
         }
     }
@@ -1800,7 +1800,7 @@ public partial class CGameCtnChallenge :
     {
         public int Version { get; set; } = 3;
 
-        public EncapsulatedData? U02;
+        public RawData? U02;
         public byte U03;
 
         public override void Read(CGameCtnChallenge n, GbxReader r)

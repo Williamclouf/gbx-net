@@ -4,7 +4,7 @@ public partial class CGameGhost
 {
     public partial class Data : IReadable, IWritable
     {
-        //private readonly byte[]? rawGhostData;
+        private int[]? stateTimes;
 
         /// <summary>
         /// How much time is between each sample.
@@ -41,6 +41,49 @@ public partial class CGameGhost
         public int[]? Offsets { get; set; }
 
         public void Read(GbxReader r, int v = 0)
+        {
+            switch (v)
+            {
+                case 0: ReadOld(r); break;
+                case 1: ReadNew(r); break;
+                default: throw new NotSupportedException($"Version {v} is not supported.");
+            }
+        }
+
+        private void ReadOld(GbxReader r)
+        {
+            Offsets = r.ReadArray<int>();
+            stateTimes = r.ReadArray<int>();
+            IsFixedTimeStep = r.ReadBoolean();
+            SamplePeriod = r.ReadTimeInt32();
+            Version = r.ReadInt32();
+            SavedMobilClassId = 0x0A02B000;
+        }
+
+        internal void ParseOld(GbxReader r)
+        {
+            Samples = [];
+
+            if (Offsets is null)
+            {
+                throw new NotSupportedException("This type of ghost data is not supported.");
+            }
+
+            var prevOffset = Offsets[0];
+
+            for (int i = 1; i < Offsets.Length; i++)
+            {
+                var offset = Offsets[i - 1];
+
+                Samples.Add(ReadSample(new TimeInt32((i - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes(offset - prevOffset)));
+
+                prevOffset = offset;
+            }
+
+            Samples.Add(ReadSample(new TimeInt32((Offsets.Length - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes((int)r.BaseStream.Length - Offsets[Offsets.Length - 1])));
+        }
+
+        private void ReadNew(GbxReader r)
         {
             SavedMobilClassId = r.ReadUInt32(); // CSceneVehicleCar or CSceneMobilCharVis
 
@@ -79,11 +122,11 @@ public partial class CGameGhost
             //
 
             // CGameGhostTMData::ArchiveStateTimes
-            var sampleTimes = default(int[]);
+            stateTimes = null;
 
             if (!IsFixedTimeStep)
             {
-                sampleTimes = r.ReadArray<int>();
+                stateTimes = r.ReadArray<int>();
             }
             //
 
@@ -107,13 +150,13 @@ public partial class CGameGhost
                     _ => stateBufferR.ReadBytes(sizePerSample)
                 };
 
-                if (sampleTimes is null)
+                if (stateTimes is null)
                 {
                     currentTime = new TimeInt32(i * SamplePeriod.Milliseconds);
                 }
                 else
                 {
-                    currentTime += new TimeInt32(sampleTimes[i]);
+                    currentTime += new TimeInt32(stateTimes[i]);
                 }
 
                 Samples.Add(ReadSample(currentTime, sampleData));
@@ -124,52 +167,6 @@ public partial class CGameGhost
         {
             throw new NotSupportedException("Writing ghost data is not supported.");
         }
-
-        /*/// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
-        internal void Parse()
-        {
-            if (SamplesRequested)
-            {
-                return;
-            }
-
-            SamplesRequested = true;
-
-            if (compressedGhostData is not null)
-            {
-                Read(compressedGhostData);
-                return;
-            }
-
-            if (Offsets is null)
-            {
-                throw new NotSupportedException("This type of ghost data is not supported.");
-            }
-
-            SavedMobilClassId = 0x0A02B000;
-
-            if (rawGhostData is not null && Offsets.Length > 0)
-            {
-                Samples = [];
-
-                using var ms = new MemoryStream(rawGhostData);
-                using var r = new GbxReader(ms);
-
-                var prevOffset = Offsets[0];
-
-                for (int i = 1; i < Offsets.Length; i++)
-                {
-                    var offset = Offsets[i - 1];
-
-                    Samples.Add(ReadSample(new TimeInt32((i - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes(offset - prevOffset)));
-
-                    prevOffset = offset;
-                }
-
-
-                Samples.Add(ReadSample(new TimeInt32((Offsets.Length - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes((int)r.BaseStream.Length - Offsets[Offsets.Length - 1])));
-            }
-        }*/
 
         private Sample ReadSample(TimeInt32 time, byte[] sampleData)
         {
