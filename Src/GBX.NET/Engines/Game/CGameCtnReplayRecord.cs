@@ -1,4 +1,5 @@
 ﻿using GBX.NET.Inputs;
+using System.Buffers.Binary;
 using System.Collections.Immutable;
 
 namespace GBX.NET.Engines.Game;
@@ -116,9 +117,9 @@ public partial class CGameCtnReplayRecord
     public ImmutableList<InterfaceScriptInfo>? InterfaceScriptInfos { get; private set; }
 
     /// <summary>
-    /// Inputs (keyboard, pad, wheel) of the replay from TM1.0, TMO, Sunrise and ESWC. For inputs stored in TMU, TMUF, TMTurbo and TM2: see <see cref="CGameCtnGhost.Inputs"/> in <see cref="Ghosts"/>. TM2020 and Shootmania inputs are available in <see cref="Ghosts"/> in <see cref="CGameCtnGhost.PlayerInputs"/>. Can be null if <see cref="EventsDuration"/> is 0, which can happen when you save the replay in editor.
+    /// Inputs (keyboard, pad, wheel) of the replay ONLY from TM1.0 (2003). For inputs stored in other games: see <see cref="CGameCtnGhost.Inputs"/> in <see cref="Ghosts"/>. TM2020 and Shootmania inputs are available in <see cref="Ghosts"/> in <see cref="CGameCtnGhost.PlayerInputs"/>. Can be null if <see cref="EventsDuration"/> is 0, which can happen when you save the replay in editor.
     /// </summary>
-    public ImmutableList<IInput>? Inputs { get; private set; }
+    public ImmutableArray<IInput>? Inputs { get; private set; }
 
     public ImmutableList<EntDataSceneUIdsToGhost>? EntDataSceneUIdsToGhosts { get; private set; }
 
@@ -262,7 +263,7 @@ public partial class CGameCtnReplayRecord
             U01 = r.ReadInt32();
 
             // All control names available in the game
-            var inputNames = new string[r.ReadInt32()];
+            Span<string> inputNames = new string[r.ReadInt32()];
             
             for (var i = 0; i < inputNames.Length; i++)
             {
@@ -275,7 +276,7 @@ public partial class CGameCtnReplayRecord
 
             var numInputs = r.ReadInt32() - 1;
 
-            var inputs = ImmutableList.CreateBuilder<IInput>();
+            var inputs = ImmutableArray.CreateBuilder<IInput>(numInputs);
 
             for (var i = 0; i < numInputs; i++)
             {
@@ -297,7 +298,7 @@ public partial class CGameCtnReplayRecord
             }
 
             inputs.Reverse(); // Inputs are originally reversed
-            n.Inputs = inputs.ToImmutable(); // inputs are actually stored in the first ghost object
+            n.Inputs = inputs.ToImmutable(); // inputs are NOT stored in the first ghost object here
 
             U02 = r.ReadInt32();
         }
@@ -391,22 +392,31 @@ public partial class CGameCtnReplayRecord
             var inputNames = r.ReadArrayId();
 
             var numInputs = r.ReadInt32();
-            U02 = r.ReadInt32();
+            U02 = r.ReadInt32(); // CountLimit?
 
-            var inputs = ImmutableList.CreateBuilder<IInput>();
+            if (numInputs == 0)
+            {
+                return;
+            }
+
+            Span<IInput> inputs = new IInput[numInputs];
+
+            // 9 bytes per entry: 4 for time, 1 for name index, 4 for data
+            Span<byte> inputData = r.ReadBytes(numInputs * 9);
 
             for (var i = 0; i < numInputs; i++)
             {
-                var time = TimeInt32.FromMilliseconds(r.ReadInt32() - 100000);
-                var inputNameIndex = r.ReadByte();
-                var data = r.ReadUInt32();
+                var time = TimeInt32.FromMilliseconds(BinaryPrimitives.ReadInt32LittleEndian(inputData.Slice(i * 9, 4)) - 100000);
+                var inputNameIndex = inputData[i * 9 + 4];
+                var data = BinaryPrimitives.ReadUInt32LittleEndian(inputData.Slice(i * 9 + 5, 4));
 
                 var name = inputNames[inputNameIndex];
 
-                inputs.Add(NET.Inputs.Input.Parse(time, name, data));
+                inputs[i] = NET.Inputs.Input.Parse(time, name, data);
             }
 
-            n.Inputs = inputs.ToImmutable(); // inputs are actually stored in the first ghost object
+            // inputs are actually stored in the first ghost object
+            n.Ghosts?.FirstOrDefault()?.Inputs = inputs.ToImmutableArray();
         }
     }
 
