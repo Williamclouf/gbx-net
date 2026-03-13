@@ -14,8 +14,9 @@ public interface IChunkSet<TKind> : ICollection<TKind>, IEnumerable<TKind>, IEnu
     /// Creates a new chunk using the ID.
     /// </summary>
     /// <param name="chunkId">ID of the chunk.</param>
+    /// <param name="preferHeaderChunks">Whether to prefer creating header chunks if available.</param>
     /// <returns>A new chunk instance.</returns>
-    TKind Create(uint chunkId);
+    TKind Create(uint chunkId, bool preferHeaderChunks = false);
 
     /// <summary>
     /// Creates a new chunk using the chunk type.
@@ -70,9 +71,16 @@ internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
     public int Count => chunks.Count;
     public bool IsReadOnly => false;
 
-    protected virtual TKind New(uint chunkId)
+    protected virtual TKind New(uint chunkId, bool preferHeaderChunks)
     {
-        return (TKind)(ClassManager.NewChunk(chunkId) ?? ClassManager.NewHeaderChunk(chunkId) ?? throw new Exception($"Chunk 0x{chunkId:X8} is not supported."));
+        if (preferHeaderChunks)
+        {
+            return (TKind)(ClassManager.NewHeaderChunk(chunkId) ?? ClassManager.NewChunk(chunkId) ?? throw new Exception($"Chunk 0x{chunkId:X8} is not supported."));
+        }
+        else
+        {
+            return (TKind)(ClassManager.NewChunk(chunkId) ?? ClassManager.NewHeaderChunk(chunkId) ?? throw new Exception($"Chunk 0x{chunkId:X8} is not supported."));
+        }
     }
 
     public bool Add(TKind chunk)
@@ -101,9 +109,9 @@ internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
     /// </summary>
     /// <param name="chunk"></param>
     /// <exception cref="ArgumentNullException"></exception>
-    internal void AddInternal(TKind chunk)
+    internal void AddInternal(TKind? chunk)
     {
-        if (chunk is null) throw new ArgumentNullException(nameof(chunk));
+        if (chunk is null) return;
 
         chunksById[chunk.Id] = chunk;
         chunksByType[chunk.GetType()] = chunk;
@@ -111,14 +119,14 @@ internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
         chunks.Add(chunk);
     }
 
-    public TKind Create(uint chunkId)
+    public TKind Create(uint chunkId, bool preferHeaderChunks = false)
     {
         if (chunksById.TryGetValue(chunkId, out var chunk))
         {
             return chunk;
         }
 
-        chunk = New(chunkId);
+        chunk = New(chunkId, preferHeaderChunks);
 
         Add(chunk);
 

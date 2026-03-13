@@ -94,6 +94,8 @@ internal sealed class GbxHeaderReader(GbxReader reader)
 
         using var readerWriter = new GbxReaderWriter(reader, leaveOpen: true);
 
+        var chunkSet = node.Chunks as ChunkSet;
+
         Span<HeaderChunkInfo> headerChunkInfos = stackalloc HeaderChunkInfo[userDataNums.NumChunks];
 
         FillHeaderChunkInfo(headerChunkInfos, userDataNums);
@@ -102,7 +104,16 @@ internal sealed class GbxHeaderReader(GbxReader reader)
         {
             reader.Limit(desc.Size);
 
-            var chunk = node.CreateHeaderChunk(desc.Id);
+            var chunk = ClassManager.NewHeaderChunk(desc.Id);
+
+            if (chunkSet is not null)
+            {
+                chunkSet.AddInternal(chunk);
+            }
+            else if (chunk is not null)
+            {
+                node.Chunks.Add(chunk);
+            }
 
             if (chunk is null)
             {
@@ -152,7 +163,7 @@ internal sealed class GbxHeaderReader(GbxReader reader)
         {
             reader.Limit(desc.Size);
 
-            var chunk = node?.CreateHeaderChunk(desc.Id) ?? ClassManager.NewHeaderChunk(desc.Id);
+            var chunk = ClassManager.NewHeaderChunk(desc.Id);
 
             if (chunk is null)
             {
@@ -163,6 +174,15 @@ internal sealed class GbxHeaderReader(GbxReader reader)
                 // If the class is unknown but the chunk ID is known (chunk ID collision here is near impossible)
                 // Single node is shared for all chunks of the same class, except if it's abstract
                 node ??= GetOrCreateNodeFromHeaderChunkInfo(desc, ref nodeDict);
+
+                if (node.Chunks is ChunkSet chunkSet)
+                {
+                    chunkSet.AddInternal(chunk);
+                }
+                else
+                {
+                    node.Chunks.Add(chunk);
+                }
 
                 ReadKnownHeaderChunk(chunk, node, readerWriter, desc);
 
@@ -303,11 +323,25 @@ internal sealed class GbxHeaderReader(GbxReader reader)
 
         if (node is not null)
         {
-            node.Chunks.Add(chunk);
+            if (node.Chunks is ChunkSet chunkSet)
+            {
+                chunkSet.AddInternal(chunk);
+            }
+            else
+            {
+                node.Chunks.Add(chunk);
+            }
         }
         else if (unknownHeader is not null)
         {
-            unknownHeader.UserData.Add(chunk);
+            if (unknownHeader.UserData is HeaderChunkSet headerChunkSet)
+            {
+                headerChunkSet.AddInternal(chunk);
+            }
+            else
+            {
+                unknownHeader.UserData.Add(chunk);
+            }
         }
         else
         {

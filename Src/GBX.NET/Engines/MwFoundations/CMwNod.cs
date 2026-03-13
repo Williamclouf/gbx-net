@@ -16,8 +16,8 @@ public partial class CMwNod : IClass
     private const uint SKIP = 0x534B4950;
     private const uint FACADE = 0xFACADE01;
 
-    private IChunkSet? chunks;
-    public IChunkSet Chunks => chunks ??= new ChunkSet();
+    private ChunkSet? chunks;
+    public IChunkSet Chunks => chunks ??= [];
 
     internal virtual void Read(GbxReaderWriter rw)
     {
@@ -37,9 +37,12 @@ public partial class CMwNod : IClass
                 return;
             }
 
+            chunks ??= [];
+
             _ = TryRemapChunkId(r, rawChunkId, out var chunkId);
 
-            var chunk = CreateChunk(chunkId);
+            var chunk = ClassManager.NewChunk(chunkId);
+            chunks.AddInternal(chunk);
 
             var stopwatch = default(Stopwatch);
 
@@ -184,7 +187,7 @@ public partial class CMwNod : IClass
                                 Data = r.ReadBytes(chunkSize)
                             };
 
-                            Chunks.Add(skippableChunk); // as its an unknown chunk, its not implicitly added by CreateChunk
+                            Chunks.Add(skippableChunk);
 
                             break;
                     }
@@ -318,27 +321,6 @@ public partial class CMwNod : IClass
         {
             Write(rw);
         }
-    }
-
-    public virtual IHeaderChunk? CreateHeaderChunk(uint chunkId)
-    {
-        return null;
-    }
-
-    public virtual IChunk? CreateChunk(uint chunkId)
-    {
-        var chunk = chunkId switch
-        {
-            0x01001000 => new Chunk01001000(),
-            _ => null
-        };
-
-        if (chunk is not null)
-        {
-            Chunks.Add(chunk);
-        }
-
-        return chunk;
     }
 
 #if NET8_0_OR_GREATER

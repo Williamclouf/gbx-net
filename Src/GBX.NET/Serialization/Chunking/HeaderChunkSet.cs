@@ -13,7 +13,7 @@ internal sealed class HeaderChunkSet : ChunkSet<IHeaderChunk>, IHeaderChunkSet
 
     public HeaderChunkSet() : base() { }
 
-    protected override IHeaderChunk New(uint chunkId)
+    protected override IHeaderChunk New(uint chunkId, bool preferHeaderChunks)
     {
         return ClassManager.NewHeaderChunk(chunkId) ?? throw new Exception($"Chunk 0x{chunkId:X8} is not supported.");
     }
