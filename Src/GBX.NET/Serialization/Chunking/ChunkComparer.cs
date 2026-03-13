@@ -1,23 +1,36 @@
-﻿namespace GBX.NET.Serialization.Chunking;
+﻿using GBX.NET.Managers;
 
-public sealed class ChunkComparer : IComparer<IChunk>
+namespace GBX.NET.Serialization.Chunking;
+
+internal class ChunkComparer<TChunk> : IComparer<TChunk> where TChunk : IChunk
 {
-    public static readonly ChunkComparer Default = new();
+    public static readonly ChunkComparer<TChunk> Default = new();
 
-    public int Compare(IChunk? x, IChunk? y)
+    public virtual int Compare(TChunk? x, TChunk? y)
     {
-        // Both null or same instance
         if (ReferenceEquals(x, y)) return 0;
-
-        // null is considered less than any non-null
         if (x is null) return -1;
         if (y is null) return 1;
 
-        // Prioritize IHeaderChunk instances
-        if (x is IHeaderChunk && y is not IHeaderChunk) return -1;
-        if (x is not IHeaderChunk && y is IHeaderChunk) return 1;
+        // Header chunks at the top
+        var xIsHeader = x is IHeaderChunk;
+        var yIsHeader = y is IHeaderChunk;
+        if (xIsHeader && !yIsHeader) return -1;
+        if (!xIsHeader && yIsHeader) return 1;
 
-        // Compare by Id if none of the above conditions are met
+        // Base class chunks at the top
+        var xIsBase = IsBaseClassId(x.Id);
+        var yIsBase = IsBaseClassId(y.Id);
+        if (xIsBase && !yIsBase) return -1;
+        if (!xIsBase && yIsBase) return 1;
+
+        // Typical ordering by ID
         return x.Id.CompareTo(y.Id);
+    }
+
+    protected bool IsBaseClassId(uint chunkId)
+    {
+        var classId = chunkId & 0xFFFFF000;
+        return false;
     }
 }

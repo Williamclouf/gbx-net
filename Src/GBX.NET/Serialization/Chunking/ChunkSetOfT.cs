@@ -8,6 +8,8 @@ namespace GBX.NET.Serialization.Chunking;
 /// </summary>
 public interface IChunkSet<TKind> : ICollection<TKind>, IEnumerable<TKind>, IEnumerable where TKind : IChunk
 {
+    IComparer<TKind> Comparer { get; }
+
     /// <summary>
     /// Creates a new chunk using the ID.
     /// </summary>
@@ -53,21 +55,60 @@ public interface IChunkSet<TKind> : ICollection<TKind>, IEnumerable<TKind>, IEnu
 
 internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
 {
-    private readonly SortedDictionary<uint, TKind> chunksById;
-    private readonly Dictionary<Type, uint> idsByType;
+    private readonly List<TKind> chunks = [];
+    private readonly Dictionary<uint, TKind> chunksById = [];
+    private readonly Dictionary<Type, TKind> chunksByType = [];
 
-    public int Count => chunksById.Count;
+    public virtual IComparer<TKind> Comparer => ChunkComparer<TKind>.Default;
+
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
+    private readonly object _lock = new();
+#endif
+
+    public int Count => chunks.Count;
     public bool IsReadOnly => false;
-
-    public ChunkSet()
-    {
-        chunksById = new(new ChunkIdComparer());
-        idsByType = [];
-    }
 
     protected virtual TKind New(uint chunkId)
     {
         return (TKind)(ClassManager.NewChunk(chunkId) ?? ClassManager.NewHeaderChunk(chunkId) ?? throw new Exception($"Chunk 0x{chunkId:X8} is not supported."));
+    }
+
+    public bool Add(TKind chunk)
+    {
+        if (chunk is null) throw new ArgumentNullException(nameof(chunk));
+
+        var chunkType = chunk.GetType();
+
+        if (chunksByType.ContainsKey(chunkType))
+        {
+            return false;
+        }
+
+        chunksById[chunk.Id] = chunk; // overwriting IDs is intentional as some chunks share the same ID with header chunks
+        chunksByType[chunkType] = chunk;
+
+        var index = chunks.BinarySearch(chunk, Comparer);
+        if (index < 0) index = ~index; // Bitwise complement gets the exact insertion point
+
+        chunks.Insert(index, chunk);
+        return true;
+    }
+
+    /// <summary>
+    /// Add the chunk without checking for duplicates or maintaining order. This is used internally when creating chunks to avoid unnecessary overhead.
+    /// </summary>
+    /// <param name="chunk"></param>
+    /// <exception cref="ArgumentNullException"></exception>
+    internal void AddInternal(TKind chunk)
+    {
+        if (chunk is null) throw new ArgumentNullException(nameof(chunk));
+
+        chunksById[chunk.Id] = chunk;
+        chunksByType[chunk.GetType()] = chunk;
+
+        chunks.Add(chunk);
     }
 
     public TKind Create(uint chunkId)
@@ -86,16 +127,15 @@ internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
 
     public T Create<T>() where T : TKind, new()
     {
-        var chunk = new T();
-
-        if (chunksById.TryGetValue(chunk.Id, out var c))
+        if (chunksByType.TryGetValue(typeof(T), out var chunk))
         {
-            return (T)c;
+            return (T)chunk;
         }
 
-        Add(chunk);
+        var newChunk = new T();
+        Add(newChunk);
 
-        return chunk;
+        return newChunk;
     }
 
     public TKind? Get(uint chunkId)
@@ -103,9 +143,9 @@ internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
         return chunksById.TryGetValue(chunkId, out var chunk) ? chunk : default;
     }
 
-    private IChunk? Get(Type type)
+    public IChunk? Get(Type chunkType)
     {
-        return idsByType.TryGetValue(type, out var id) ? Get(id) : null;
+        return chunksByType.TryGetValue(chunkType, out var chunk) ? chunk : null;
     }
 
     public T? Get<T>() where T : TKind
@@ -115,49 +155,81 @@ internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
 
     public bool Remove(uint chunkId)
     {
-        return chunksById.Remove(chunkId);
+        if (!chunksById.TryGetValue(chunkId, out TKind? chunk))
+        {
+            return false;
+        }
+
+        chunksById.Remove(chunkId);
+        chunksByType.Remove(chunk.GetType());
+
+        chunks.Remove(chunk);
+        return true;
+    }
+
+    public bool Remove(Type chunkType)
+    {
+        if (!chunksByType.TryGetValue(chunkType, out var chunk))
+        {
+            return false;
+        }
+
+        chunksById.Remove(chunk.Id);
+        chunksByType.Remove(chunkType);
+
+        chunks.Remove(chunk);
+        return true;
     }
 
     public bool Remove<T>() where T : TKind
     {
-        return idsByType.TryGetValue(typeof(T), out var id) && Remove(id);
+        return Remove(typeof(T));
     }
 
-    public bool Remove(TKind item)
+    public bool Remove(TKind chunk)
     {
-        return chunksById.Remove(item.Id);
-    }
-
-    public bool Add(TKind item)
-    {
-#if NET6_0_OR_GREATER
-        return chunksById.TryAdd(item.Id, item);
-#else
-        try
-        {
-            chunksById.Add(item.Id, item);
-            return true;
-        }
-        catch (ArgumentException)
+        if (chunk is null || !chunksById.ContainsKey(chunk.Id))
         {
             return false;
         }
-#endif
+
+        chunksById.Remove(chunk.Id);
+        chunksByType.Remove(chunk.GetType());
+
+        chunks.Remove(chunk);
+        return true;
     }
 
     public void Clear()
     {
+        chunks.Clear();
         chunksById.Clear();
+        chunksByType.Clear();
     }
 
     public bool Contains(TKind item)
     {
-        return chunksById.ContainsKey(item.Id);
+        return chunks.Contains(item);
+    }
+
+    public bool Contains(uint chunkId)
+    {
+        return chunksById.ContainsKey(chunkId);
+    }
+
+    public bool Contains(Type chunkType)
+    {
+        return chunksByType.ContainsKey(chunkType);
+    }
+
+    public bool Contains<T>() where T : TKind
+    {
+        return Contains(typeof(T));
     }
 
     public void CopyTo(TKind[] array, int arrayIndex)
     {
-        chunksById.Values.CopyTo(array, arrayIndex);
+        chunks.CopyTo(array, arrayIndex);
     }
 
     public void ExceptWith(IEnumerable<TKind> other)
@@ -170,7 +242,7 @@ internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
 
     public IEnumerator<TKind> GetEnumerator()
     {
-        return chunksById.Values.GetEnumerator();
+        return chunks.GetEnumerator();
     }
 
     public bool Overlaps(IEnumerable<TKind> other)

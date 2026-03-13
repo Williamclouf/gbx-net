@@ -9,6 +9,8 @@ public interface IHeaderChunkSet : IChunkSet<IHeaderChunk>;
 
 internal sealed class HeaderChunkSet : ChunkSet<IHeaderChunk>, IHeaderChunkSet
 {
+    public override IComparer<IHeaderChunk> Comparer => HeaderChunkComparer.Default;
+
     public HeaderChunkSet() : base() { }
 
     protected override IHeaderChunk New(uint chunkId)
