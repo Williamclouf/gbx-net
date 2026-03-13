@@ -81,11 +81,25 @@ public partial class CMwNod : IClass
                 {
                     if (chunkId == rawChunkId)
                     {
-                        r.Logger.LogDebug("0x{ChunkId:X8} ({SkippableType}, size: {Size})", chunkId, chunk is null ? "unknown skippable" : "skippable", chunkSize);
+                        if (chunk is null)
+                        {
+                            r.Logger.LogWarning("0x{ChunkId:X8} (unknown skippable, size: {Size})", chunkId, chunkSize);
+                        }
+                        else
+                        {
+                            r.Logger.LogDebug("0x{ChunkId:X8} (skippable, size: {Size})", chunkId, chunkSize);
+                        }
                     }
                     else
                     {
-                        r.Logger.LogDebug("0x{ChunkId:X8} ({SkippableType}, size: {Size}, raw: 0x{RawChunkId:X8})", chunkId, chunk is null ? "unknown skippable" : "skippable", chunkSize, rawChunkId);
+                        if (chunk is null)
+                        {
+                            r.Logger.LogWarning("0x{ChunkId:X8} (unknown skippable, size: {Size}, raw: 0x{RawChunkId:X8})", chunkId, chunkSize, rawChunkId);
+                        }
+                        else
+                        {
+                            r.Logger.LogDebug("0x{ChunkId:X8} (skippable, size: {Size}, raw: 0x{RawChunkId:X8})", chunkId, chunkSize, rawChunkId);
+                        }
                     }
 
                     if (r.Logger.IsEnabled(LogLevel.Trace))
