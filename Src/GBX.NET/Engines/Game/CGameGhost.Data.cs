@@ -168,52 +168,6 @@ public partial class CGameGhost
             throw new NotSupportedException("Writing ghost data is not supported.");
         }
 
-        /*/// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
-        internal void Parse()
-        {
-            if (SamplesRequested)
-            {
-                return;
-            }
-
-            SamplesRequested = true;
-
-            if (compressedGhostData is not null)
-            {
-                Read(compressedGhostData);
-                return;
-            }
-
-            if (Offsets is null)
-            {
-                throw new NotSupportedException("This type of ghost data is not supported.");
-            }
-
-            SavedMobilClassId = 0x0A02B000;
-
-            if (rawGhostData is not null && Offsets.Length > 0)
-            {
-                Samples = [];
-
-                using var ms = new MemoryStream(rawGhostData);
-                using var r = new GbxReader(ms);
-
-                var prevOffset = Offsets[0];
-
-                for (int i = 1; i < Offsets.Length; i++)
-                {
-                    var offset = Offsets[i - 1];
-
-                    Samples.Add(ReadSample(new TimeInt32((i - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes(offset - prevOffset)));
-
-                    prevOffset = offset;
-                }
-
-
-                Samples.Add(ReadSample(new TimeInt32((Offsets.Length - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes((int)r.BaseStream.Length - Offsets[Offsets.Length - 1])));
-            }
-        }*/
-
         private Sample ReadSample(TimeInt32 time, byte[] sampleData)
         {
             Sample sample = SavedMobilClassId switch
