@@ -26,20 +26,6 @@ public interface IChunkSet<TKind> : ICollection<TKind>, IEnumerable<TKind>, IEnu
     T Create<T>() where T : TKind, new();
 
     /// <summary>
-    /// Removes a chunk using the ID.
-    /// </summary>
-    /// <param name="chunkId">ID of the chunk.</param>
-    /// <returns>True if the chunk was successfully removed, otherwise false.</returns>
-    bool Remove(uint chunkId);
-
-    /// <summary>
-    /// Removes a chunk using the chunk type.
-    /// </summary>
-    /// <typeparam name="T">Type of the chunk.</typeparam>
-    /// <returns>True if the chunk was successfully removed, otherwise false.</returns>
-    bool Remove<T>() where T : TKind;
-
-    /// <summary>
     /// Gets a chunk using the ID.
     /// </summary>
     /// <param name="chunkId">ID of the chunk.</param>
@@ -49,9 +35,41 @@ public interface IChunkSet<TKind> : ICollection<TKind>, IEnumerable<TKind>, IEnu
     /// <summary>
     /// Gets a chunk using the chunk type.
     /// </summary>
+    /// <param name="chunkType">Type of the chunk.</param>
+    /// <returns>A new chunk instance if available, otherwise null.</returns>
+    TKind? Get(Type chunkType);
+
+    /// <summary>
+    /// Gets a chunk using the chunk type.
+    /// </summary>
     /// <typeparam name="T">Type of the chunk.</typeparam>
     /// <returns>A new chunk instance if available, otherwise null.</returns>
     T? Get<T>() where T : TKind;
+
+    /// <summary>
+    /// Removes a chunk using the chunk ID.
+    /// </summary>
+    /// <param name="chunkId">ID of the chunk.</param>
+    /// <returns>True if the chunk was successfully removed, otherwise false.</returns>
+    bool Remove(uint chunkId);
+
+    /// <summary>
+    /// Removes a chunk using the chunk type.
+    /// </summary>
+    /// <param name="chunkType">Type of the chunk.</param>
+    /// <returns>True if the chunk was successfully removed, otherwise false.</returns>
+    bool Remove(Type chunkType);
+
+    /// <summary>
+    /// Removes a chunk using the chunk type.
+    /// </summary>
+    /// <typeparam name="T">Type of the chunk.</typeparam>
+    /// <returns>True if the chunk was successfully removed, otherwise false.</returns>
+    bool Remove<T>() where T : TKind;
+
+    bool Contains(uint chunkId);
+    bool Contains(Type chunkType);
+    bool Contains<T>() where T : TKind;
 }
 
 internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
@@ -151,9 +169,9 @@ internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
         return chunksById.TryGetValue(chunkId, out var chunk) ? chunk : default;
     }
 
-    public IChunk? Get(Type chunkType)
+    public TKind? Get(Type chunkType)
     {
-        return chunksByType.TryGetValue(chunkType, out var chunk) ? chunk : null;
+        return chunksByType.TryGetValue(chunkType, out var chunk) ? chunk : default;
     }
 
     public T? Get<T>() where T : TKind
@@ -240,35 +258,14 @@ internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
         chunks.CopyTo(array, arrayIndex);
     }
 
-    public void ExceptWith(IEnumerable<TKind> other)
-    {
-        foreach (var chunk in other)
-        {
-            Remove(chunk.Id);
-        }
-    }
-
     public IEnumerator<TKind> GetEnumerator()
     {
         return chunks.GetEnumerator();
     }
 
-    public bool Overlaps(IEnumerable<TKind> other)
-    {
-        foreach (var chunk in other)
-        {
-            if (Contains(chunk))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     void ICollection<TKind>.Add(TKind item)
     {
-        Add(item);
+        _ = Add(item);
     }
 
     IEnumerator IEnumerable.GetEnumerator()
