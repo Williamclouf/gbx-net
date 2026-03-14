@@ -452,6 +452,21 @@ public partial class CMwNod : IClass
         return Chunks.Create<T>();
     }
 
+    public T? GetChunk<T>() where T : IChunk
+    {
+        return Chunks.Get<T>();
+    }
+
+    public bool RemoveChunk<T>() where T : IChunk
+    {
+        return Chunks.Remove<T>();
+    }
+
+    public bool ContainsChunk<T>() where T : IChunk
+    {
+        return Chunks.Contains<T>();
+    }
+
     private static bool TryRemapChunkId(GbxReader reader, uint chunkId, out uint remappedChunkId)
     {
         if (!ClassManager.IsChunkIdRemapped(chunkId))

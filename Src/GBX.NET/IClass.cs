@@ -36,4 +36,9 @@ public interface IClass
 
     void Save(Stream stream, GbxWriteSettings settings = default);
     void Save(string fileName, GbxWriteSettings settings = default);
+
+    T CreateChunk<T>() where T : IChunk, new();
+    T? GetChunk<T>() where T : IChunk;
+    bool RemoveChunk<T>() where T : IChunk;
+    bool ContainsChunk<T>() where T : IChunk;
 }
