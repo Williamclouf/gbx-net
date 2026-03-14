@@ -1263,7 +1263,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
     {
         rw ??= new GbxReaderWriter(this);
 
-        using var _ = logger?.BeginScope("{ClassName} (aux)", ClassManager.GetName(node.GetType()));
+        using var _ = logger?.BeginScope("{ClassName}", ClassManager.GetName(node.GetType()));
 
         node.ReadWrite(rw);
 
@@ -1275,7 +1275,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
     {
         rw ??= new GbxReaderWriter(this);
 
-        using var _ = logger?.BeginScope("{ClassName} (aux)", ClassManager.GetName(node.GetType()));
+        using var _ = logger?.BeginScope("{ClassName}", ClassManager.GetName(node.GetType()));
 
         node.ReadWrite(rw);
 

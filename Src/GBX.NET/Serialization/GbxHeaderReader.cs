@@ -71,54 +71,6 @@ internal sealed class GbxHeaderReader(GbxReader reader)
         return classId;
     }
 
-    internal bool ReadUserData<T>(T node) where T : notnull, IClass
-    {
-        var userDataNums = ValidateUserDataNumbers();
-
-        if (userDataNums.Length == 0)
-        {
-            return false;
-        }
-
-        if (userDataNums.NumChunks == 0)
-        {
-            if (userDataNums.Length > sizeof(int))
-            {
-                // Corrupted header extract scenarios
-                logger?.LogWarning("UserData is zeroed, possibly corrupted header. (EXPLICIT)");
-                reader.SkipData(userDataNums.Length - sizeof(int));
-            }
-
-            return false;
-        }
-
-        using var readerWriter = new GbxReaderWriter(reader, leaveOpen: true);
-
-        Span<HeaderChunkInfo> headerChunkInfos = stackalloc HeaderChunkInfo[userDataNums.NumChunks];
-
-        FillHeaderChunkInfo(headerChunkInfos, userDataNums);
-
-        foreach (var desc in headerChunkInfos)
-        {
-            reader.Limit(desc.Size);
-
-            var chunk = node.CreateHeaderChunk(desc.Id);
-
-            if (chunk is null)
-            {
-                ReadAndAddUnknownHeaderChunk(node, unknownHeader: null, desc);
-            }
-            else
-            {
-                ReadKnownHeaderChunk(chunk, node, readerWriter, desc);
-            }
-
-            reader.Unlimit(skipToLimitWhenUnreached: Settings.SkipUnclearedHeaderChunkBuffers);
-        }
-
-        return true;
-    }
-
     internal bool ReadUserData(IClass? node, GbxHeaderUnknown? unknownHeader)
     {
         var userDataNums = ValidateUserDataNumbers();
@@ -152,10 +104,12 @@ internal sealed class GbxHeaderReader(GbxReader reader)
         {
             reader.Limit(desc.Size);
 
-            var chunk = node?.CreateHeaderChunk(desc.Id) ?? ClassManager.NewHeaderChunk(desc.Id);
+            var chunk = ClassManager.NewHeaderChunk(desc.Id);
 
             if (chunk is null)
             {
+                logger?.LogWarning("Unknown header chunk 0x{ChunkId:X8} ({ClassName})!", desc.Id, ClassManager.GetName(desc.Id & 0xFFFFF000) ?? "unknown class");
+
                 ReadAndAddUnknownHeaderChunk(node, unknownHeader, desc);
             }
             else
@@ -163,6 +117,15 @@ internal sealed class GbxHeaderReader(GbxReader reader)
                 // If the class is unknown but the chunk ID is known (chunk ID collision here is near impossible)
                 // Single node is shared for all chunks of the same class, except if it's abstract
                 node ??= GetOrCreateNodeFromHeaderChunkInfo(desc, ref nodeDict);
+
+                if (node.Chunks is ChunkSet chunkSet)
+                {
+                    chunkSet.AddInternal(chunk);
+                }
+                else
+                {
+                    node.Chunks.Add(chunk);
+                }
 
                 ReadKnownHeaderChunk(chunk, node, readerWriter, desc);
 
@@ -195,7 +158,7 @@ internal sealed class GbxHeaderReader(GbxReader reader)
 
         if (ClassManager.New(classId) is not CMwNod nod)
         {
-            throw new Exception($"Chunk 0x{desc.Id:X8} requires a non-abstract CMwNod to read into.");
+            throw new Exception($"Header chunk 0x{desc.Id:X8} requires a non-abstract CMwNod to read into.");
         }
 
         nodeDict.Add(classId, nod);
@@ -208,28 +171,47 @@ internal sealed class GbxHeaderReader(GbxReader reader)
 
         for (var i = 0; i < userDataNums.NumChunks; i++)
         {
-            var chunkId = reader.ReadHexUInt32();
+            var rawChunkId = reader.ReadHexUInt32();
             var chunkSize = reader.ReadInt32();
             var actualChunkSize = (int)(chunkSize & ~0x80000000);
             var isHeavy = (chunkSize & 0x80000000) != 0;
 
-            logger?.LogDebug("Chunk 0x{ChunkId:X8} (Size: {Size}, Heavy: {Heavy})", chunkId, actualChunkSize, isHeavy);
+            var chunkId = ClassManager.Wrap(rawChunkId);
+
+            if (logger is not null)
+            {
+                var rawClassId = rawChunkId & 0xFFFFF000;
+                var classId = chunkId & 0xFFFFF000;
+
+                if (rawClassId == classId)
+                {
+                    logger.LogDebug("Chunk 0x{ChunkId:X8} ({ClassName}) (size: {Size}, heavy: {Heavy})", chunkId, ClassManager.GetName(classId) ?? "unknown class", actualChunkSize, isHeavy);
+                }
+                else
+                {
+                    logger.LogDebug("Chunk 0x{ChunkId:X8} (raw: 0x{RawChunkId:X8}, {RawClassName} -> {ClassName}) (size: {Size}, heavy: {Heavy})", 
+                        chunkId, 
+                        rawChunkId, 
+                        ClassManager.GetName(rawClassId) ?? "unknown class", 
+                        ClassManager.GetName(classId) ?? "unknown class", 
+                        actualChunkSize, 
+                        isHeavy);
+                }
+            }
 
             if (actualChunkSize > GbxReader.MaxDataSize)
             {
                 throw new LengthLimitException($"Header chunk size {actualChunkSize} exceeds maximum data size {GbxReader.MaxDataSize}.");
             }
 
-            var mappedChunkId = ClassManager.Wrap(chunkId);
-
-            headerChunkDescs[i] = new HeaderChunkInfo(mappedChunkId, actualChunkSize, isHeavy);
+            headerChunkDescs[i] = new HeaderChunkInfo(chunkId, actualChunkSize, isHeavy);
 
             // sizeof(uint) + sizeof(int) + actualChunkSize
             totalSize += 8 + actualChunkSize;
 
             if (totalSize > userDataNums.Length)
             {
-                throw new InvalidDataException($"Header chunk 0x{mappedChunkId:X8} (size {actualChunkSize}) exceeds user data length ({totalSize} > {userDataNums.Length}).");
+                throw new InvalidDataException($"Header chunk 0x{chunkId:X8} (size {actualChunkSize}) exceeds user data length ({totalSize} > {userDataNums.Length}).");
             }
         }
 
@@ -303,15 +285,29 @@ internal sealed class GbxHeaderReader(GbxReader reader)
 
         if (node is not null)
         {
-            node.Chunks.Add(chunk);
+            if (node.Chunks is ChunkSet chunkSet)
+            {
+                chunkSet.AddInternal(chunk);
+            }
+            else
+            {
+                node.Chunks.Add(chunk);
+            }
         }
         else if (unknownHeader is not null)
         {
-            unknownHeader.UserData.Add(chunk);
+            if (unknownHeader.UserData is HeaderChunkSet headerChunkSet)
+            {
+                headerChunkSet.AddInternal(chunk);
+            }
+            else
+            {
+                unknownHeader.UserData.Add(chunk);
+            }
         }
         else
         {
-            throw new Exception($"Chunk 0x{desc.Id:X8} cannot be stored anywhere.");
+            throw new Exception($"Header chunk 0x{desc.Id:X8} cannot be stored anywhere.");
         }
     }
 

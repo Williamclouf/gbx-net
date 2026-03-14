@@ -143,28 +143,4 @@ public partial class CGameItemModel
             _ => 12
         };
     }
-
-    public override IHeaderChunk? CreateHeaderChunk(uint chunkId)
-    {
-        if (chunkId == 0x090F4000)
-        {
-            var chunk = new CPlugGameSkin.HeaderChunk090F4000 { Node = new() };
-            Chunks.Add(chunk);
-            return chunk;
-        }
-        else if (chunkId == 0x2E002000)
-        {
-            var chunk = new HeaderChunk2E002000();
-            Chunks.Add(chunk);
-            return chunk;
-        }
-        else if (chunkId == 0x2E002001)
-        {
-            var chunk = new HeaderChunk2E002001();
-            Chunks.Add(chunk);
-            return chunk;
-        }
-
-        return base.CreateHeaderChunk(chunkId);
-    }
 }

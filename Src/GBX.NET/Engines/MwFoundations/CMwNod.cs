@@ -16,8 +16,8 @@ public partial class CMwNod : IClass
     private const uint SKIP = 0x534B4950;
     private const uint FACADE = 0xFACADE01;
 
-    private IChunkSet? chunks;
-    public IChunkSet Chunks => chunks ??= new ChunkSet();
+    private ChunkSet? chunks;
+    public IChunkSet Chunks => chunks ??= [];
 
     internal virtual void Read(GbxReaderWriter rw)
     {
@@ -37,9 +37,12 @@ public partial class CMwNod : IClass
                 return;
             }
 
+            chunks ??= [];
+
             _ = TryRemapChunkId(r, rawChunkId, out var chunkId);
 
-            var chunk = CreateChunk(chunkId);
+            var chunk = ClassManager.NewChunk(chunkId);
+            chunks.AddInternal(chunk);
 
             var stopwatch = default(Stopwatch);
 
@@ -78,11 +81,25 @@ public partial class CMwNod : IClass
                 {
                     if (chunkId == rawChunkId)
                     {
-                        r.Logger.LogDebug("0x{ChunkId:X8} ({SkippableType}, size: {Size})", chunkId, chunk is null ? "unknown skippable" : "skippable", chunkSize);
+                        if (chunk is null)
+                        {
+                            r.Logger.LogWarning("0x{ChunkId:X8} (unknown skippable, size: {Size})", chunkId, chunkSize);
+                        }
+                        else
+                        {
+                            r.Logger.LogDebug("0x{ChunkId:X8} (skippable, size: {Size})", chunkId, chunkSize);
+                        }
                     }
                     else
                     {
-                        r.Logger.LogDebug("0x{ChunkId:X8} ({SkippableType}, size: {Size}, raw: 0x{RawChunkId:X8})", chunkId, chunk is null ? "unknown skippable" : "skippable", chunkSize, rawChunkId);
+                        if (chunk is null)
+                        {
+                            r.Logger.LogWarning("0x{ChunkId:X8} (unknown skippable, size: {Size}, raw: 0x{RawChunkId:X8})", chunkId, chunkSize, rawChunkId);
+                        }
+                        else
+                        {
+                            r.Logger.LogDebug("0x{ChunkId:X8} (skippable, size: {Size}, raw: 0x{RawChunkId:X8})", chunkId, chunkSize, rawChunkId);
+                        }
                     }
 
                     if (r.Logger.IsEnabled(LogLevel.Trace))
@@ -184,7 +201,7 @@ public partial class CMwNod : IClass
                                 Data = r.ReadBytes(chunkSize)
                             };
 
-                            Chunks.Add(skippableChunk); // as its an unknown chunk, its not implicitly added by CreateChunk
+                            Chunks.Add(skippableChunk);
 
                             break;
                     }
@@ -320,27 +337,6 @@ public partial class CMwNod : IClass
         }
     }
 
-    public virtual IHeaderChunk? CreateHeaderChunk(uint chunkId)
-    {
-        return null;
-    }
-
-    public virtual IChunk? CreateChunk(uint chunkId)
-    {
-        var chunk = chunkId switch
-        {
-            0x01001000 => new Chunk01001000(),
-            _ => null
-        };
-
-        if (chunk is not null)
-        {
-            Chunks.Add(chunk);
-        }
-
-        return chunk;
-    }
-
 #if NET8_0_OR_GREATER
     [Experimental("GBXNET10001")]
 #endif
@@ -454,6 +450,21 @@ public partial class CMwNod : IClass
     public T CreateChunk<T>() where T : IChunk, new()
     {
         return Chunks.Create<T>();
+    }
+
+    public T? GetChunk<T>() where T : IChunk
+    {
+        return Chunks.Get<T>();
+    }
+
+    public bool RemoveChunk<T>() where T : IChunk
+    {
+        return Chunks.Remove<T>();
+    }
+
+    public bool ContainsChunk<T>() where T : IChunk
+    {
+        return Chunks.Contains<T>();
     }
 
     private static bool TryRemapChunkId(GbxReader reader, uint chunkId, out uint remappedChunkId)

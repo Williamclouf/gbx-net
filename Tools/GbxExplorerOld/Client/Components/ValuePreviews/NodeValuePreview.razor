@@ -112,7 +112,7 @@
 
         if (bool.Parse(vals[1]))
         {
-            node.CreateHeaderChunk(chunkId);
+            node.Chunks.Create(chunkId, preferHeaderChunks: true);
         }
         else
         {
