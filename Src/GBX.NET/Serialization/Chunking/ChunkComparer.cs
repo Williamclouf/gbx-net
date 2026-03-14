@@ -28,9 +28,27 @@ internal class ChunkComparer<TChunk> : IComparer<TChunk> where TChunk : IChunk
         return x.Id.CompareTo(y.Id);
     }
 
-    protected bool IsBaseClassId(uint chunkId)
+    protected static bool IsBaseClassId(uint chunkId)
     {
         var classId = chunkId & 0xFFFFF000;
+
+        while (true)
+        {
+            var baseClassId = ClassManager.GetBaseClassId(classId);
+
+            if (baseClassId is null)
+            {
+                break;
+            }
+
+            if (baseClassId.Value == classId)
+            {
+                return true;
+            }
+
+            classId = baseClassId.Value;
+        }
+
         return false;
     }
 }
