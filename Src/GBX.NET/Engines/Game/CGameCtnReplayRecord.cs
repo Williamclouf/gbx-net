@@ -61,6 +61,12 @@ public partial class CGameCtnReplayRecord
 
     public string? AuthorExtraInfo { get; private set; }
 
+#if NET9_0_OR_GREATER
+    private readonly Lock ChallengeLock = new();
+#else
+    private readonly object ChallengeLock = new();
+#endif
+
     /// <summary>
     /// The map the replay orients in. Null if only the header was read.
     /// </summary>
@@ -78,8 +84,14 @@ public partial class CGameCtnReplayRecord
                 return challenge;
             }
 
-            using var ms = new MemoryStream(challengeData);
-            return challenge = Gbx.ParseNode<CGameCtnChallenge>(ms);
+            lock (ChallengeLock)
+            {
+                if (challenge is not null) return challenge;
+                {
+                    using var ms = new MemoryStream(challengeData);
+                    return challenge = Gbx.ParseNode<CGameCtnChallenge>(ms);
+                }
+            }
         }
     }
 
