@@ -1,0 +1,6 @@
+CGameCtnBlockInfoClipHorizontal 0x0335B000
+- inherits: CGameCtnBlockInfoClip
+
+0x000
+ version
+ id HorizontalClipGroupId
