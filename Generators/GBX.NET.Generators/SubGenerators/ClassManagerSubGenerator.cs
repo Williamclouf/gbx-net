@@ -133,14 +133,14 @@ internal static class ClassManagerSubGenerator
             {
                 var chunkInfo = pair.Value;
 
-                if (alreadyAddedIds.Contains(chunkInfo.Id))
+                builder.Append("        ");
+
+                if (!alreadyAddedIds.Add(chunkInfo.Id))
                 {
-                    continue;
+                    builder.Append("// ");
                 }
 
-                alreadyAddedIds.Add(chunkInfo.Id);
-
-                builder.Append("        0x");
+                builder.Append("0x");
                 builder.Append(chunkInfo.Id.ToString("X8"));
                 builder.Append(" => new ");
                 builder.Append(classInfo.Key);
