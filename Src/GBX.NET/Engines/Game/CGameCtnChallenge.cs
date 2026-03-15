@@ -1832,7 +1832,7 @@ public partial class CGameCtnChallenge :
 
             if (Version < 2)
             {
-                w.WriteEncapsulated(U02);
+                w.WriteEncapsulated(U02 ?? throw new InvalidOperationException("U02 must be set for version <2"));
                 return;
             }
 

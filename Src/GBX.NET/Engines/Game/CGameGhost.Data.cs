@@ -57,7 +57,6 @@ public partial class CGameGhost
             IsFixedTimeStep = r.ReadBoolean();
             SamplePeriod = r.ReadTimeInt32();
             Version = r.ReadInt32();
-            SavedMobilClassId = 0x0A02B000;
         }
 
         internal void ParseOld(GbxReader r)

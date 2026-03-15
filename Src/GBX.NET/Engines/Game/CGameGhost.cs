@@ -77,6 +77,7 @@ public partial class CGameGhost
         {
             n.RawData = new RawData(r.ReadData(), exception: null);
             n.sampleData = r.ReadReadable<Data>(version: 0);
+            n.sampleData.SavedMobilClassId = n.savedMobilClassId.GetValueOrDefault();
         }
 
         public override void Write(CGameGhost n, GbxWriter w)
