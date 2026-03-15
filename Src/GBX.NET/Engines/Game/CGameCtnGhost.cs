@@ -101,7 +101,7 @@ public partial class CGameCtnGhost
                     version = 1;
                 }
 
-                if (version > 2)
+                if (version > 3)
                 {
                     throw new VersionNotSupportedException((int)version);
                 }
@@ -118,13 +118,14 @@ public partial class CGameCtnGhost
                 if (input.Time.TotalMilliseconds % 10 == 0)
                 {
                     yield return input;
+                    break;
                 }
                 continue;
             }
 
             if (input is SteerLeft or SteerRight)
             {
-                if (input.Time.TotalMilliseconds % 10 == 1)
+                if (input.Time.TotalMilliseconds % 10 is 1 or 2 or 3)
                 {
                     var ceilingTime = TimeInt32.FromMilliseconds((input.Time.TotalMilliseconds + 9) / 10 * 10);
 
@@ -140,7 +141,7 @@ public partial class CGameCtnGhost
             
             if (input is Steer steer)
             {
-                if (input.Time.TotalMilliseconds % 10 is 2 or 9)
+                if (input.Time.TotalMilliseconds % 10 is 2 or 3 or 9)
                 {
                     yield return steer with { Time = new((input.Time.TotalMilliseconds + 9) / 10 * 10) };
                 }
