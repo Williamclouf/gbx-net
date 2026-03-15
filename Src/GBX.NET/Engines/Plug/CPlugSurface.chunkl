@@ -1,10 +1,9 @@
 CPlugSurface 0x0900C000
 - inherits: CPlug
 
-0x000 [TM10, TMSX, TMNESWC, TMF]
-
-0x001 [TM10, TMSX]
- bool
+0x000 [TMF]
+ CPlugSurfaceGeom Geom
+ SurfMaterial[] Materials
 
 0x003 [TMT.v2, MP4.v2]
 

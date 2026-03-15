@@ -3,13 +3,14 @@ namespace GBX.NET.Engines.Plug;
 
 public partial class CPlugSurfaceGeom
 {
-    public MaterialId? SurfaceId { get; set; }
+    public CPlugSurface.ISurf? Surf { get; set; }
+    public CPlugSurface.MaterialId? SurfaceId { get; set; }
 
     public partial class Chunk0900D002
     {
         public override void Read(CPlugSurfaceGeom n, GbxReader r)
         {
-            n.Surf = new Mesh();
+            n.Surf = new CPlugSurface.Mesh();
             n.Surf.Read(r);
         }
 
@@ -28,13 +29,13 @@ public partial class CPlugSurfaceGeom
     {
         public override void Read(CPlugSurfaceGeom n, GbxReader r)
         {
-            n.Surf = ReadSurf(r, version: 0);
-            n.SurfaceId = (MaterialId)r.ReadInt16();
+            n.Surf = CPlugSurface.ReadSurf(r, version: 0);
+            n.SurfaceId = (CPlugSurface.MaterialId)r.ReadInt16();
         }
 
         public override void Write(CPlugSurfaceGeom n, GbxWriter w)
         {
-            WriteSurf(n.Surf, w, version: 0);
+            CPlugSurface.WriteSurf(n.Surf, w, version: 0);
             w.Write((short)(n.SurfaceId ?? default));
         }
     }
@@ -53,13 +54,13 @@ public partial class CPlugSurfaceGeom
             {
                 rw.Reader.Settings.EncryptionInitializer?.Initialize(BitConverter.GetBytes(U02.X - U02.X2), 0, 4);
 
-                n.Surf = ReadSurf(rw.Reader, version: 0);
-                n.SurfaceId = (MaterialId)rw.Reader.ReadInt16();
+                n.Surf = CPlugSurface.ReadSurf(rw.Reader, version: 0);
+                n.SurfaceId = (CPlugSurface.MaterialId)rw.Reader.ReadInt16();
             }
             
             if (rw.Writer is not null)
             {
-                WriteSurf(n.Surf, rw.Writer, version: 0);
+                CPlugSurface.WriteSurf(n.Surf, rw.Writer, version: 0);
                 rw.Writer.Write((short)(n.SurfaceId ?? default));
             }
         }
