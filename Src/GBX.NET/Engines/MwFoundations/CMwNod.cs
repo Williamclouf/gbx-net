@@ -17,7 +17,7 @@ public partial class CMwNod : IClass
     private const uint FACADE = 0xFACADE01;
 
     private ChunkSet? chunks;
-    public IChunkSet Chunks => chunks ??= [];
+    public IChunkSet Chunks => chunks ??= new ChunkSet(this);
 
     internal virtual void Read(GbxReaderWriter rw)
     {
@@ -37,11 +37,11 @@ public partial class CMwNod : IClass
                 return;
             }
 
-            chunks ??= [];
+            chunks ??= new ChunkSet(this);
 
             _ = TryRemapChunkId(r, rawChunkId, out var chunkId);
 
-            var chunk = ClassManager.NewChunk(chunkId);
+            var chunk = NewChunk(chunkId) ?? ClassManager.NewChunk(chunkId);
             chunks.AddInternal(chunk);
 
             var stopwatch = default(Stopwatch);
@@ -445,6 +445,16 @@ public partial class CMwNod : IClass
     public void Save(string fileName, GbxWriteSettings settings = default)
     {
         ToGbx().Save(fileName, settings);
+    }
+
+    internal virtual IChunk? NewChunk(uint chunkId)
+    {
+        if (chunkId == 0x01001000)
+        {
+            return new Chunk01001000();
+        }
+
+        return null;
     }
 
     public T CreateChunk<T>() where T : IChunk, new()

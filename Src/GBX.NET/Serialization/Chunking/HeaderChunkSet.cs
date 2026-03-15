@@ -11,7 +11,7 @@ internal sealed class HeaderChunkSet : ChunkSet<IHeaderChunk>, IHeaderChunkSet
 {
     public override IComparer<IHeaderChunk> Comparer => HeaderChunkComparer.Default;
 
-    public HeaderChunkSet() : base() { }
+    public HeaderChunkSet() : base(node: null) { }
 
     protected override IHeaderChunk New(uint chunkId, bool preferHeaderChunks)
     {

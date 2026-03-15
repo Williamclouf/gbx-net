@@ -7,5 +7,5 @@ public interface IChunkSet : IChunkSet<IChunk>;
 
 internal sealed class ChunkSet : ChunkSet<IChunk>, IChunkSet
 {
-    public ChunkSet() : base() { }
+    public ChunkSet(CMwNod? node) : base(node) { }
 }

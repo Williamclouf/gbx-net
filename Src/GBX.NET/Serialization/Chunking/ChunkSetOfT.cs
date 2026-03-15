@@ -72,8 +72,9 @@ public interface IChunkSet<TKind> : ICollection<TKind>, IEnumerable<TKind>, IEnu
     bool Contains<T>() where T : TKind;
 }
 
-internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
+internal class ChunkSet<TKind>(CMwNod? node) : IChunkSet<TKind> where TKind : IChunk
 {
+    private readonly CMwNod? node = node;
     private readonly List<TKind> chunks = [];
     private readonly Dictionary<uint, TKind> chunksById = [];
     private readonly Dictionary<Type, TKind> chunksByType = [];
@@ -97,7 +98,7 @@ internal class ChunkSet<TKind> : IChunkSet<TKind> where TKind : IChunk
         }
         else
         {
-            return (TKind)(ClassManager.NewChunk(chunkId) ?? ClassManager.NewHeaderChunk(chunkId) ?? throw new Exception($"Chunk 0x{chunkId:X8} is not supported."));
+            return (TKind)(node?.NewChunk(chunkId) ?? ClassManager.NewChunk(chunkId) ?? ClassManager.NewHeaderChunk(chunkId) ?? throw new Exception($"Chunk 0x{chunkId:X8} is not supported."));
         }
     }
 
