@@ -2177,35 +2177,50 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return false;
         }
 
-        var baseType = node.GetType().BaseType ?? throw new ThisShouldNotHappenException();
-
-        var parentClassId = ClassManager.ClassIds[baseType];
-
-        if (parentClassId == 0x07031000)
-        {
-            parentClassId = 0x07001000;
-        }
-        else if (baseType == typeof(CGameCtnBlockInfo))
-        {
-            parentClassId = 0x24005000;
-        }
-        else if (baseType == typeof(CPlugVehiclePhyTuning))
-        {
-            parentClassId = 0x0A02E000;
-        }
-        else if (baseType == typeof(CFuncKeysReal)) // weird case of CPlugCurveSimpleNod
-        {
-            parentClassId = 0x01001000;
-        }
-        else if (baseType == typeof(CGameCtnZone))
-        {
-            parentClassId = 0x2401C000;
-        }
-
+        var parentClassId = GetParentClassId(node);
         var parentClassIDBytes = BitConverter.GetBytes(parentClassId);
 
         Settings.EncryptionInitializer.Initialize(parentClassIDBytes, 0, 4);
 
         return true;
+    }
+
+    private static uint GetParentClassId(IClass node)
+    {
+        var type = node.GetType();
+
+        if (type == typeof(CPlugSurfaceGeom)) // GBX.NET ease-of-use post-fix
+        {
+            return 0x0902B000;
+        }
+
+        var baseType = type.BaseType ?? throw new ThisShouldNotHappenException();
+
+        var parentClassId = ClassManager.ClassIds[baseType];
+
+        if (parentClassId == 0x07031000)
+        {
+            return 0x07001000;
+        }
+
+        if (baseType == typeof(CGameCtnBlockInfo))
+        {
+            return 0x24005000;
+        }
+
+        if (baseType == typeof(CPlugVehiclePhyTuning))
+        {
+            return 0x0A02E000;
+        }
+
+        if (baseType == typeof(CFuncKeysReal)) // weird case of CPlugCurveSimpleNod
+        {
+            return 0x01001000;
+        }
+
+        if (baseType == typeof(CGameCtnZone))
+        {
+            return 0x2401C000;
+        }
     }
 }
