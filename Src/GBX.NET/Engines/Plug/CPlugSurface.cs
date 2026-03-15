@@ -10,10 +10,31 @@ public partial class CPlugSurface
     private CPlugSkel? skel;
     public CPlugSkel? Skel { get => skel; set => skel = value; }
 
+    private CPlugSurfaceGeom? geom;
+    public CPlugSurfaceGeom? Geom { get => geom; set => geom = value; }
+
     private SurfMaterial[] materials = [];
     [AppliedWithChunk<Chunk0900C000>]
     [AppliedWithChunk<Chunk0900C003>]
     public SurfMaterial[] Materials { get => materials; set => materials = value; }
+
+    public partial class Chunk0900C000
+    {
+        public string? U01;
+
+        public override void ReadWrite(CPlugSurface n, GbxReaderWriter rw)
+        {
+            if (n is CPlugSurfaceGeom)
+            {
+                rw.Id(ref U01);
+            }
+            else
+            {
+                rw.NodeRef<CPlugSurfaceGeom>(ref n.geom);
+                rw.ArrayReadableWritable<SurfMaterial>(ref n.materials);
+            }
+        }
+    }
 
     public partial class Chunk0900C003 : IVersionable
     {
