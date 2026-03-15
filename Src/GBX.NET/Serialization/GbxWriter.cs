@@ -1834,7 +1834,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
     {
         if (value?.Parsed == false)
         {
-            WriteData(value.Data);
+            WriteEncapsulated(value);
             return;
         }
 
@@ -1843,6 +1843,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
     public void WriteEncapsulated(RawData value)
     {
+        Write(0);
         WriteData(value.Data);
     }
 }
