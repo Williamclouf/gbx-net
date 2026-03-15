@@ -19,36 +19,46 @@ internal class ChunkComparer<TChunk> : IComparer<TChunk> where TChunk : IChunk
         if (!xIsHeader && yIsHeader) return 1;
 
         // Base class chunks at the top
-        var xIsBase = IsBaseClassId(x.Id);
-        var yIsBase = IsBaseClassId(y.Id);
-        if (xIsBase && !yIsBase) return -1;
-        if (!xIsBase && yIsBase) return 1;
+        var classX = x.Id & 0xFFFFF000;
+        var classY = y.Id & 0xFFFFF000;
+        
+        if (classX != classY)
+        {
+            if (IsSubclassOf(classY, classX)) return -1;
+            if (IsSubclassOf(classX, classY)) return 1;
+        }
 
         // Typical ordering by ID
         return x.Id.CompareTo(y.Id);
     }
 
-    protected static bool IsBaseClassId(uint chunkId)
+    protected static bool IsSubclassOf(uint classId, uint parentClassId)
     {
-        var classId = chunkId & 0xFFFFF000;
+        var currentClassId = classId;
 
         while (true)
         {
-            var baseClassId = ClassManager.GetBaseClassId(classId);
+            var baseClassId = ClassManager.GetBaseClassId(currentClassId);
 
+            // Reached the top of the hierarchy without finding the parent
             if (baseClassId is null)
             {
-                break;
+                return false;
             }
 
-            if (baseClassId.Value == classId)
+            // Target parent found in the inheritance chain
+            if (baseClassId.Value == parentClassId)
             {
                 return true;
             }
 
-            classId = baseClassId.Value;
-        }
+            // Prevent infinite loops if a root class points to itself
+            if (baseClassId.Value == currentClassId)
+            {
+                return false;
+            }
 
-        return false;
+            currentClassId = baseClassId.Value;
+        }
     }
 }

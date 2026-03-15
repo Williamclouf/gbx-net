@@ -11,10 +11,14 @@ internal sealed class HeaderChunkComparer : ChunkComparer<IHeaderChunk>
         if (y is null) return 1;
 
         // Base class chunks at the top
-        var xIsBase = IsBaseClassId(x.Id);
-        var yIsBase = IsBaseClassId(y.Id);
-        if (xIsBase && !yIsBase) return -1;
-        if (!xIsBase && yIsBase) return 1;
+        var classX = x.Id & 0xFFFFF000;
+        var classY = y.Id & 0xFFFFF000;
+
+        if (classX != classY)
+        {
+            if (IsSubclassOf(classY, classX)) return -1;
+            if (IsSubclassOf(classX, classY)) return 1;
+        }
 
         // Typical ordering by ID
         return x.Id.CompareTo(y.Id);
