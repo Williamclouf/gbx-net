@@ -19,7 +19,7 @@
 
         if (selectedSaveMethod == 0)
         {
-            extensions = ClassManager.GetGbxExtensions(selectedGbx.Gbx.Header.ClassId);
+            extensions = ClassManager.GetFileExtensions(selectedGbx.Gbx.Header.ClassId);
         }
         else if (element is not null)
         {
@@ -31,7 +31,7 @@
 
                 if (classId.HasValue)
                 {
-                    extensions = ClassManager.GetGbxExtensions(classId.Value);
+                    extensions = ClassManager.GetFileExtensions(classId.Value);
                 }
             }
         }
@@ -75,9 +75,8 @@
                 else
                 {
                     <input type="text" style="min-width:0;" @bind="FileName" />
+                    <div>.Gbx</div>
                 }
-
-                <div>.Gbx</div>
             </div>
             <div style="text-align: center">
                 Export for TMS/TMNESWC/TM1.0?
@@ -185,12 +184,12 @@
             case 0:
                 fileName = selectedGbx.OfficialExtension is null
                     ? selectedGbx.FileNameWithoutExtension + ".Gbx"
-                    : selectedGbx.FileNameWithoutExtension + "." + selectedGbx.OfficialExtension + ".Gbx";
+                    : selectedGbx.FileNameWithoutExtension + "." + selectedGbx.OfficialExtension;
                 break;
             case 1:
                 fileName = string.IsNullOrEmpty(customExtension)
                     ? customFileName + ".Gbx"
-                    : customFileName + "." + customExtension + ".Gbx";
+                    : customFileName + "." + customExtension;
 
                 if (element is null) return;
 

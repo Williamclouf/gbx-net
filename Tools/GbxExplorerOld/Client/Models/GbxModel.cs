@@ -19,36 +19,23 @@ public class GbxModel : GbxModelBase
         Gbx = gbx;
         FileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
 
-        if (ClassManager.GetGbxExtensions(gbx.Header.ClassId).Any())
+        if (ClassManager.GetFileExtensions(gbx.Header.ClassId).Any())
         {
             FileNameWithoutExtension = Path.GetFileNameWithoutExtension(FileNameWithoutExtension);
-            OfficialExtension = GetNodeExtension(fileName);
+            var extension = GbxPath.GetExtension(fileName).TrimStart('.');
+
+            var matchingExtension = ClassManager.GetFileExtensions(gbx.Header.ClassId).FirstOrDefault(ext => string.Equals(ext, extension, StringComparison.OrdinalIgnoreCase));
+
+            if (matchingExtension is not null)
+            {
+                OfficialExtension = matchingExtension;
+            }
         }
 
         if (gbx.Node is not null)
         {
             Inheritance = GetInheritance(gbx.Node).Select(x => new TypeModel(x)).ToImmutableArray();
         }
-    }
-
-    private static string? GetNodeExtension(string fileName)
-    {
-        var extensionSplit = fileName.Split('.');
-
-        if (extensionSplit.Length < 3)
-        {
-            return null;
-        }
-
-        var extensionWithSpaces = extensionSplit[extensionSplit.Length - 2];
-        var indexOfFirstSpace = extensionWithSpaces.IndexOf(' ');
-
-        if (indexOfFirstSpace == -1)
-        {
-            return extensionWithSpaces;
-        }
-
-        return extensionWithSpaces.Substring(0, indexOfFirstSpace);
     }
 
     private static IEnumerable<Type> GetInheritance(CMwNod node)

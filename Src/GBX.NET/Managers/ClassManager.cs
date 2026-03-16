@@ -53,5 +53,5 @@ public static partial class ClassManager
 
     internal static partial uint? GetBaseClassId(uint classId);
 
-    public static IEnumerable<string> GetGbxExtensions(uint classId) => [];
+    public static partial IEnumerable<string> GetFileExtensions(uint classId);
 }
