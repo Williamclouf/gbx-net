@@ -47,21 +47,21 @@ else if (Value is byte[] byteArray)
     {
         <span class="element-box">1 B</span>
     }
-    else if (count == 1000)
+    else if (count == 1024)
     {
         <span class="element-box">1 kB</span>
     }
-    else if (count == 1_000_000)
+    else if (count == 1_048_576)
     {
         <span class="element-box">1 MB</span>
     }
-    else if (count > 1_000_000)
+    else if (count > 1_048_576)
     {
-        <span class="element-box">@(count / 1_000_000f) MB</span>
+        <span class="element-box">@(count / 1_048_576f) MB</span>
     }
-    else if (count > 1000)
+    else if (count > 1024)
     {
-        <span class="element-box">@(count / 1000f) kB</span>
+        <span class="element-box">@(count / 1024f) kB</span>
     }
     else
     {
