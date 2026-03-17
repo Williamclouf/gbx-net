@@ -21,7 +21,7 @@
 0303F000 CGameGhost Ghost.Gbx
 03041000 CGameControlCameraFirstPerson CtrlCamFirstPerson.Gbx
 03042000 CGameControlCameraThirdPerson CtrlCamThirdPerson.Gbx
-03043000 CGameCtnChallenge Map.Gbx Challenge.Gbx Challenge-decompressed.Gbx
+03043000 CGameCtnChallenge Map.Gbx Challenge.Gbx
 03046000 CGameCtnParticleParam ParticleParam.Gbx
 03048000 CGameCtnPainterSetting PainterSetting.Gbx
 0304B000 CGameCtnMediaBlockTriangles2D GameCtnMediaBlockTriangles2D.Gbx
@@ -87,7 +87,7 @@
 030E5000 CGameCtnMediaBlockGhost GameCtnMediaBlockGhost.Gbx
 030F3000 CGamePlaygroundControlScores Frame.Gbx
 0310C000 CGameCtnAnchorPoint AnchorPoint.Gbx
-0310D000 CGameCtnMacroBlockInfo MacroBlock.Gbx
+0310D000 CGameCtnMacroBlockInfo Macroblock.Gbx
 03114000 CGameCtnMacroDecals MacroDecals.Gbx
 0311D000 CGameCtnZoneGenealogy ZoneGenealogy.Gbx
 03126000 CGameCtnMediaBlockDOF GameCtnMediaBlockDOF.Gbx
@@ -344,7 +344,7 @@
 240D6000 CTrackManiaResource TrackManiaResource.Gbx
 2D000000 CShootMania TitleCore.Gbx
 2D020000 CSmArenaResource SmArenaResource.Gbx
-2E002000 CGameItemModel Item.Gbx ObjectInfo.Gbx TMVehicle.Gbx TrackManiaVehicle.Gbx ConstructionVehicle.Gbx
+2E002000 CGameItemModel Item.Gbx ObjectInfo.Gbx Block.Gbx TMVehicle.Gbx TrackManiaVehicle.Gbx ConstructionVehicle.Gbx
 2E003000 CGameModulePlaygroundAltimeterModel Module.Gbx
 2E004000 CGameModulePlaygroundThrottleModel Module.Gbx
 2E006000 CGameObjectPhyModel GameObjectPhyModel.Gbx
