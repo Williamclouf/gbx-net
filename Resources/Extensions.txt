@@ -84,6 +84,7 @@
 030D8000 CGameControlCardCtnChapter Frame.Gbx
 030DA000 CGameControlCardCtnGhostInfo Frame.Gbx
 030DD000 CGameControlCardCtnVehicle Frame.Gbx
+030E0000 CGameScriptDebuggerWorkspace ScriptWorkspace.Gbx
 030E5000 CGameCtnMediaBlockGhost GameCtnMediaBlockGhost.Gbx
 030F3000 CGamePlaygroundControlScores Frame.Gbx
 0310C000 CGameCtnAnchorPoint AnchorPoint.Gbx
@@ -112,6 +113,7 @@
 03196000 CGameCtnMediaBlockObject GameCtnMediaBlockObject.Gbx
 03199000 CGameCtnMediaBlockFog GameCtnMediaBlockFog.Gbx
 031AA000 CGameCtnMediaBlockDecal2d GameCtnMediaBlockDecal2d.Gbx
+031CC000 CGameUserProfile Profile.Gbx
 031CE000 CGameControlCameraTrackManiaRace3 CtrlCamTmRace3.Gbx
 031CF000 CGameControlCameraTrackManiaRace2 CtrlCamTmRace2.Gbx
 031D6000 CGameBadgeStickerSlots StickerSlots.Gbx
@@ -322,6 +324,7 @@
 0C031000 CVisPostFx_MotionBlur SceneFx.Gbx
 0C032000 CVisPostFx_BloomHdr SceneFx.Gbx
 10022000 COalDevice OpenALDevice.Gbx
+11001000 CScriptTraitsPersistent ScriptCache.Gbx
 1300D000 CInputReplay InputsReplay.Gbx InputReplay.Gbx
 24001000 CTrackMania ManiaPlanet.Gbx TrackMania.Gbx
 24013000 CTrackManiaCore TitleCore.Gbx
