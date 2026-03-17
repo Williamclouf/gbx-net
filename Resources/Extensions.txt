@@ -9,12 +9,12 @@
 03029000 CGameCtnMediaBlockTriangles GameCtnMediaBlockTriangles.Gbx
 0302D000 CGameResources GameResources.Gbx
 03032000 CGameMenuScaleEffect ScaleEffect.Gbx
-03033000 CGameCtnCollection Collection.Gbx
+03033000 CGameCtnCollection Collection.Gbx TMCollection.Gbx
 03035000 CGameVskObjectInfo ObjInfo.Gbx
-03038000 CGameCtnDecoration Decoration.Gbx
-03039000 CGameCtnDecorationAudio DecorationAudio.Gbx
-0303A000 CGameCtnDecorationMood DecorationMood.Gbx
-0303B000 CGameCtnDecorationSize DecorationSize.Gbx
+03038000 CGameCtnDecoration Decoration.Gbx TMDecoration.Gbx
+03039000 CGameCtnDecorationAudio DecorationAudio.Gbx TMDecorationAudio.Gbx
+0303A000 CGameCtnDecorationMood DecorationMood.Gbx TMDecorationMood.Gbx
+0303B000 CGameCtnDecorationSize DecorationSize.Gbx TMDecorationSize.Gbx
 0303C000 CGameCtnDecorationTerrainModifier TMTerrainModifier.Gbx
 0303D000 CGameAdvertising GameAdvertisement.Gbx
 0303F000 CGameGhost Ghost.Gbx
@@ -25,16 +25,16 @@
 03048000 CGameCtnPainterSetting PainterSetting.Gbx
 0304B000 CGameCtnMediaBlockTriangles2D GameCtnMediaBlockTriangles2D.Gbx
 0304C000 CGameCtnMediaBlockTriangles3D GameCtnMediaBlockTriangles3D.Gbx
-0304F000 CGameCtnBlockInfoFlat EDFlat.Gbx
-03050000 CGameCtnBlockInfoFrontier EDFrontier.Gbx
-03051000 CGameCtnBlockInfoClassic EDClassic.Gbx
-03052000 CGameCtnBlockInfoRoad EDRoad.Gbx
-03053000 CGameCtnBlockInfoClip EDClip.Gbx
-03054000 CGameCtnBlockInfoSlope EDSlope.Gbx
-03055000 CGameCtnBlockInfoPylon EDPylon.Gbx
-03056000 CGameCtnBlockInfoRectAsym EDRectAsym.Gbx
+0304F000 CGameCtnBlockInfoFlat EDFlat.Gbx TMEDFlat.Gbx
+03050000 CGameCtnBlockInfoFrontier EDFrontier.Gbx TMEDFrontier.Gbx
+03051000 CGameCtnBlockInfoClassic EDClassic.Gbx TMEDClassic.Gbx
+03052000 CGameCtnBlockInfoRoad EDRoad.Gbx TMEDRoad.Gbx
+03053000 CGameCtnBlockInfoClip EDClip.Gbx TMEDClip.Gbx
+03054000 CGameCtnBlockInfoSlope EDSlope.Gbx TMEDSlope.Gbx
+03055000 CGameCtnBlockInfoPylon EDPylon.Gbx TMEDPylon.Gbx
+03056000 CGameCtnBlockInfoRectAsym EDRectAsym.Gbx TMEDRectAsym.Gbx
 0305C000 CGameCtnZone TMZone.Gbx
-0305D000 CGameCtnZoneFlat ZoneFlat.Gbx
+0305D000 CGameCtnZoneFlat ZoneFlat.Gbx TMZoneFlat.Gbx
 0305E000 CGameCtnZoneFrontier ZoneFrontier.Gbx
 0305F000 CGameSkinnedNod GameSkinnedNod.Gbx
 0306B000 CGameControlCamera CtrlCam.Gbx
@@ -145,6 +145,7 @@
 0802B000 CMotionShader MotionTrackShader.Gbx
 0802D000 CMotionCmdBaseParams MotionBase.Gbx
 09003000 CPlugCrystal Crystal.Gbx
+09005000 CPlugSolid Solid.Gbx
 09006000 CPlugVisual Visual.Gbx
 0900E000 CPlugModelShading PlugModelShading.Gbx
 09011000 CPlugBitmap Texture.Gbx
@@ -204,6 +205,7 @@
 090CD000 CPlugBulletModel Bullet.Gbx
 090ED000 CPlugVehicleCarPhyTuning VehicleTuning.Gbx
 090EF000 CPlugVehicleCameraRace3Model VehicleCameraRace3Model.Gbx
+090F4000 CPlugGameSkin GameSkin.Gbx
 090F6000 CPlugVehicleCameraRace2Model VehicleCameraRace2Model.Gbx
 090F7000 CPlugVehicleCameraInternalModel VehicleCameraInternalModel.Gbx
 090F8000 CPlugAnimLocSimple AnimLocSimple.Gbx
