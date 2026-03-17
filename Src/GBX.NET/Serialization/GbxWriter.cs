@@ -83,8 +83,8 @@ public partial interface IGbxWriter : IDisposable
     void Write(TimeSingle value);
     void WriteTimeSingleNullable(TimeSingle? value);
     void WriteTimeOfDay(TimeSpan? value);
-    void WriteFileTime(DateTime value);
-    void WriteSystemTime(DateTime value);
+    void WriteFileTime(DateTime? value);
+    void WriteSystemTime(DateTime? value);
     void WriteUnixTime(DateTimeOffset value);
     void WriteSmallLen(int value);
     void WriteSmallString(string? value);
@@ -981,27 +981,35 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         Write(Convert.ToInt32(secs / maxSecs * ushort.MaxValue));
     }
 
-    public void WriteFileTime(DateTime value)
+    public void WriteFileTime(DateTime? value)
     {
-        Write(value.ToFileTimeUtc());
+        if (value is null)
+        {
+            Write(0L);
+            return;
+        }
+
+        Write(value.Value.ToFileTimeUtc());
     }
 
-    public void WriteSystemTime(DateTime value)
+    public void WriteSystemTime(DateTime? value)
     {
-        if (value == DateTime.MinValue)
+        if (value is null || value == DateTime.MinValue)
         {
             Write(0UL);
             return;
         }
 
-        var year = (ulong)value.Year;
-        var month = (ulong)value.Month;
-        var dayOfWeek = (ulong)value.DayOfWeek;
-        var day = (ulong)value.Day;
-        var hour = (ulong)value.Hour;
-        var minute = (ulong)value.Minute;
-        var second = (ulong)value.Second;
-        var millisecond = (ulong)value.Millisecond;
+        var v = value.Value;
+
+        var year = (ulong)v.Year;
+        var month = (ulong)v.Month;
+        var dayOfWeek = (ulong)v.DayOfWeek;
+        var day = (ulong)v.Day;
+        var hour = (ulong)v.Hour;
+        var minute = (ulong)v.Minute;
+        var second = (ulong)v.Second;
+        var millisecond = (ulong)v.Millisecond;
 
         var data = year |
             (month << 16) |

@@ -38,8 +38,8 @@ public partial class CGamePlayerProfileChunk_AccountSettings
         set => flags2 = BitHelper.SetBit(flags2, 1, value);
     }
 
-    private DateTime receivedMessagesAt;
-    public DateTime ReceivedMessagesAt { get => receivedMessagesAt; set => receivedMessagesAt = value; }
+    private DateTime? receivedMessagesAt;
+    public DateTime? ReceivedMessagesAt { get => receivedMessagesAt; set => receivedMessagesAt = value; }
 
     public partial class Chunk0312C005 : IVersionable
     {

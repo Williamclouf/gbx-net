@@ -5,7 +5,7 @@ archive
  if Version == 0
   string Login
   int U03
-  filetime U04
+  filetime? U04
  if Version >= 1
   string Login
   string NickName

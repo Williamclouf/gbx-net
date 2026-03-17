@@ -10,7 +10,7 @@ CHmsLightMapCache 0x06022000
 0x013 (skippable)
  bool
  bool
- filetime TimeWrite
+ filetime? TimeWrite
 
 0x015 (skippable)
  version

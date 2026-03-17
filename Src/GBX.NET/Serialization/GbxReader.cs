@@ -89,8 +89,8 @@ public partial interface IGbxReader : IDisposable
     TimeSingle ReadTimeSingle();
     TimeSingle? ReadTimeSingleNullable();
     TimeSpan? ReadTimeOfDay();
-    DateTime ReadFileTime();
-    DateTime ReadSystemTime();
+    DateTime? ReadFileTime();
+    DateTime? ReadSystemTime();
     DateTimeOffset ReadUnixTime();
     int ReadSmallLen();
     string ReadSmallString();
@@ -1347,12 +1347,19 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         return TimeSpan.FromSeconds(Convert.ToInt32(dayTime / (float)ushort.MaxValue * maxSecs));
     }
 
-    public DateTime ReadFileTime()
+    public DateTime? ReadFileTime()
     {
-        return DateTime.FromFileTime(ReadInt64());
+        var value = ReadInt64();
+
+        if (value == 0)
+        {
+            return null;
+        }
+
+        return DateTime.FromFileTime(value);
     }
 
-    public DateTime ReadSystemTime()
+    public DateTime? ReadSystemTime()
     {
         var data = ReadUInt64();
 
@@ -1361,7 +1368,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
         if (year == 0 || month == 0)
         {
-            return DateTime.MinValue;
+            return null;
         }
 
         var day = (int)((data >> 23) & 0x1F);
@@ -1377,7 +1384,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         }
         catch
         {
-            return DateTime.MinValue;
+            return null;
         }
     }
 
