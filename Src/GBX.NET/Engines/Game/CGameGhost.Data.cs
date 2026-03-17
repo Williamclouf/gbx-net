@@ -1,4 +1,6 @@
-﻿namespace GBX.NET.Engines.Game;
+﻿using GBX.NET.Managers;
+
+namespace GBX.NET.Engines.Game;
 
 public partial class CGameGhost
 {
@@ -234,6 +236,11 @@ public partial class CGameGhost
                 Rotation = AdditionalMath.Lerp(a.Rotation, b.Rotation, t),
                 Velocity = AdditionalMath.Lerp(a.Velocity, b.Velocity, t)
             };
+        }
+
+        public override string ToString()
+        {
+            return $"CGameGhost.Data ({ClassManager.GetName(SavedMobilClassId)} 0x{SavedMobilClassId:X8}, {Samples.Count} samples)";
         }
     }
 }

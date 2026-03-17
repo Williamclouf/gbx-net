@@ -30,4 +30,9 @@ public sealed class ZlibData(int uncompressedSize, byte[] data, Exception? excep
     {
         return OpenDecompressedReader(UncompressedSize, Data);
     }
+
+    public override string ToString()
+    {
+        return $"ZlibData ({ByteHelper.ToByteSize(Data.Length)} / {ByteHelper.ToByteSize(UncompressedSize)}, ratio: {(double)Data.Length / UncompressedSize:P2}, parsed: {Parsed})";
+    }
 }

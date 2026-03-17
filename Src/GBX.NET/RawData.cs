@@ -6,4 +6,9 @@ public sealed class RawData(byte[] data, Exception? exception)
     public Exception? Exception { get; set; } = exception;
 
     public bool Parsed { get; set; }
+
+    public override string ToString()
+    {
+        return $"RawData ({ByteHelper.ToByteSize(Data.Length)}, parsed: {Parsed})";
+    }
 }
