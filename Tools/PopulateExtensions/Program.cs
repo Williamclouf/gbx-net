@@ -7,7 +7,7 @@ var extensions = File.ReadLines("../../../../../Resources/Extensions.txt")
     parts => uint.Parse(parts[0], System.Globalization.NumberStyles.HexNumber), 
     parts => (parts[1], parts.Skip(2).ToList()));
 
-foreach (var filePath in Directory.EnumerateFiles(args[0], "*.*", SearchOption.AllDirectories))
+foreach (var filePath in Directory.GetFiles(args[0], "*.*", SearchOption.AllDirectories))
 {
     if (!Gbx.IsGbx(filePath))
     {
@@ -29,7 +29,7 @@ foreach (var filePath in Directory.EnumerateFiles(args[0], "*.*", SearchOption.A
 
     var ext = GbxPath.GetExtension(filePath).TrimStart('.');
 
-    if (string.IsNullOrEmpty(ext) || string.Equals(ext, "gbx", StringComparison.OrdinalIgnoreCase))
+    if (string.IsNullOrEmpty(ext) || string.Equals(ext, "gbx", StringComparison.OrdinalIgnoreCase) || ext.Contains(' '))
     {
         continue;
     }
