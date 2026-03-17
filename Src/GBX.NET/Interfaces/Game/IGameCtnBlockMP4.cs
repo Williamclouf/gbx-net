@@ -2,7 +2,6 @@
 
 public interface IGameCtnBlockMP4 : IGameCtnBlock
 {
-    bool HasFlags { get; }
     byte Variant { get; set; }
     byte SubVariant { get; set; }
     bool IsClip { get; set; }
