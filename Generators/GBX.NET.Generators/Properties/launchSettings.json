@@ -2,7 +2,7 @@
   "profiles": {
     "GBX.NET.Generators": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "..\\..\\Tools\\ParseRepeater\\ParseRepeater.csproj"
+      "targetProject": "..\\..\\Src\\GBX.NET\\GBX.NET.csproj"
     }
   }
 }
