@@ -6,7 +6,6 @@ using System.Runtime.InteropServices;
 using GBX.NET.Components;
 using System.Collections.Immutable;
 
-
 #if NET6_0_OR_GREATER
 using System.Buffers;
 #endif
@@ -879,7 +878,19 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             throw new ClassWriteNotSupportedException(classId);
         }
 
-        Write(classId);
+        if (ClassIdRemapMode == ClassIdRemapMode.Latest)
+        {
+            WriteHexUInt32(classId);
+        }
+        else if (ClassIdRemapMode == ClassIdRemapMode.Id2008 && classId == 0x2E001000)
+        {
+            WriteHexUInt32(0x0301A000);
+        }
+        else
+        {
+            var unwrappedClassId = ClassManager.Unwrap(classId);
+            WriteHexUInt32(unwrappedClassId);
+        }
 
         rw ??= new GbxReaderWriter(this);
 
