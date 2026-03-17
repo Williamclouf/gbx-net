@@ -1,5 +1,12 @@
 CGamePlayerScore 0x0308D000 // Note: The class ID has been replaced with CGameScriptDebugger.
 
+0x003
+ string PlayerName
+ string NickName
+ id
+ int ScoresVersion
+ Score[] Scores (version: n.ScoresVersion)
+
 0x004
  string PlayerName
  string NickName
