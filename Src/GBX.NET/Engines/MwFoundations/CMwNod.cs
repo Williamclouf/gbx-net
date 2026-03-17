@@ -457,6 +457,11 @@ public partial class CMwNod : IClass
         return null;
     }
 
+    internal virtual IHeaderChunk? NewHeaderChunk(uint chunkId)
+    {
+        return null;
+    }
+
     public T CreateChunk<T>() where T : IChunk, new()
     {
         return Chunks.Create<T>();

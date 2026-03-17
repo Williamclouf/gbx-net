@@ -104,7 +104,7 @@ internal sealed class GbxHeaderReader(GbxReader reader)
         {
             reader.Limit(desc.Size);
 
-            var chunk = ClassManager.NewHeaderChunk(desc.Id);
+            var chunk = (node as CMwNod)?.NewHeaderChunk(desc.Id) ?? ClassManager.NewHeaderChunk(desc.Id);
 
             if (chunk is null)
             {

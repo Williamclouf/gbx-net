@@ -94,7 +94,7 @@ internal class ChunkSet<TKind>(CMwNod? node) : IChunkSet<TKind> where TKind : IC
     {
         if (preferHeaderChunks)
         {
-            return (TKind)(ClassManager.NewHeaderChunk(chunkId) ?? ClassManager.NewChunk(chunkId) ?? throw new Exception($"Chunk 0x{chunkId:X8} is not supported."));
+            return (TKind)(node?.NewHeaderChunk(chunkId) ?? ClassManager.NewHeaderChunk(chunkId) ?? ClassManager.NewChunk(chunkId) ?? throw new Exception($"Chunk 0x{chunkId:X8} is not supported."));
         }
         else
         {
