@@ -1,12 +1,23 @@
 CGameCampaignPlayerScores 0x030EA000
 
 0x001
+ id CampaignId
+ boolbyte U01
+ if U01
+  systemtime U02
+  byte U03
+ systemtime U04
+ TransactionalNatural U05
+ SGameModeScores[] GameModeScores
 
-archive GameModeScores
- int U01
- boolbyte U02
- if U02
+archive SGameModeScores
+ int
+ TransactionalNatural
+
+archive TransactionalNatural
+ boolbyte U01
+ if U01
+  int U02
+  int Value
   int U03
-  int U04
-  int U05
-  bool U06
+  bool U04
