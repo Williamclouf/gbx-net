@@ -274,7 +274,7 @@ public partial class CMwNod : IClass
                 continue;
             }
 
-            WriteChunkId(w, chunk.Id);
+            w.WriteChunkId(chunk.Id);
 
             var chunkW = w;
             var chunkRw = rw;
@@ -506,23 +506,5 @@ public partial class CMwNod : IClass
         }
 
         return true;
-    }
-
-    private static void WriteChunkId(GbxWriter writer, uint chunkId)
-    {
-        if (writer.ClassIdRemapMode == ClassIdRemapMode.Latest)
-        {
-            writer.WriteHexUInt32(chunkId);
-            return;
-        }
-
-        if (writer.ClassIdRemapMode == ClassIdRemapMode.Id2008 && (chunkId & 0xFFFFF000) == 0x2E001000)
-        {
-            writer.WriteHexUInt32(0x0301A000 | (chunkId & 0xFFF));
-            return;
-        }
-
-        var unwrappedChunkId = ClassManager.Unwrap(chunkId);
-        writer.WriteHexUInt32(unwrappedChunkId);
     }
 }

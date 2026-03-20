@@ -878,19 +878,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             throw new ClassWriteNotSupportedException(classId);
         }
 
-        if (ClassIdRemapMode == ClassIdRemapMode.Latest)
-        {
-            WriteHexUInt32(classId);
-        }
-        else if (ClassIdRemapMode == ClassIdRemapMode.Id2008 && classId == 0x2E001000)
-        {
-            WriteHexUInt32(0x0301A000);
-        }
-        else
-        {
-            var unwrappedClassId = ClassManager.Unwrap(classId);
-            WriteHexUInt32(unwrappedClassId);
-        }
+        WriteClassId(classId);
 
         rw ??= new GbxReaderWriter(this);
 
@@ -1864,5 +1852,41 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
     {
         Write(0);
         WriteData(value.Data);
+    }
+
+    internal void WriteChunkId(uint chunkId)
+    {
+        if (ClassIdRemapMode == ClassIdRemapMode.Latest)
+        {
+            WriteHexUInt32(chunkId);
+            return;
+        }
+
+        if (ClassIdRemapMode == ClassIdRemapMode.Id2008 && (chunkId & 0xFFFFF000) == 0x2E001000)
+        {
+            WriteHexUInt32(0x0301A000 | (chunkId & 0xFFF));
+            return;
+        }
+
+        var unwrappedChunkId = ClassManager.Unwrap(chunkId);
+        WriteHexUInt32(unwrappedChunkId);
+    }
+
+    internal void WriteClassId(uint classId)
+    {
+        if (ClassIdRemapMode == ClassIdRemapMode.Latest)
+        {
+            WriteHexUInt32(classId);
+            return;
+        }
+        
+        if (ClassIdRemapMode == ClassIdRemapMode.Id2008 && classId == 0x2E001000)
+        {
+            WriteHexUInt32(0x0301A000);
+            return;
+        }
+
+        var unwrappedClassId = ClassManager.Unwrap(classId);
+        WriteHexUInt32(unwrappedClassId);
     }
 }
