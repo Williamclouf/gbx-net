@@ -6,6 +6,7 @@ var game = PakListGame.TM;
 var pakFilePaths = new List<string>();
 var keys = new Dictionary<string, byte[]?>(StringComparer.OrdinalIgnoreCase);
 var hashes = new Dictionary<string, string?>();
+var fileNameEnd = default(string);
 
 var keysTxtPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "keys.txt");
 
@@ -75,6 +76,17 @@ while (argsEnumerator.MoveNext())
             hashes[hash] = fileName;
         }
 
+        continue;
+    }
+
+    if (argLower == "-f")
+    {
+        if (!argsEnumerator.MoveNext())
+        {
+            throw new Exception("Missing file name.");
+        }
+
+        fileNameEnd = argsEnumerator.Current;
         continue;
     }
 
@@ -148,6 +160,11 @@ foreach (var pakFilePath in pakFilePaths)
     {
         var fileName = hashes.GetValueOrDefault(file.Name)?.Replace('\\', Path.DirectorySeparatorChar) ?? file.Name;
         var fullPath = Path.Combine(extractFolderPath, file.FolderPath, fileName);
+
+        if (fileNameEnd is not null && !fullPath.EndsWith(fileNameEnd, StringComparison.OrdinalIgnoreCase))
+        {
+            continue;
+        }
 
         Console.WriteLine(fullPath);
 
