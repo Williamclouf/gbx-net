@@ -1,5 +1,5 @@
 ﻿#if NETSTANDARD2_0
-namespace GBX.NET;
+namespace GBX.NET.Serialization;
 
 internal static partial class StreamExtensions
 {
