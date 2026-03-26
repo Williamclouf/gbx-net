@@ -36,6 +36,7 @@ public partial class CGameGhost
                     {
                         using var ms = new MemoryStream(RawData.Data);
                         using var reader = new GbxReader(ms);
+                        sampleData.SavedMobilClassId = savedMobilClassId.GetValueOrDefault();
                         sampleData.ParseOld(reader);
                         RawData.Parsed = true;
                         return sampleData;
@@ -77,7 +78,6 @@ public partial class CGameGhost
         {
             n.RawData = new RawData(r.ReadData(), exception: null);
             n.sampleData = r.ReadReadable<Data>(version: 0);
-            n.sampleData.SavedMobilClassId = n.savedMobilClassId.GetValueOrDefault();
         }
 
         public override void Write(CGameGhost n, GbxWriter w)

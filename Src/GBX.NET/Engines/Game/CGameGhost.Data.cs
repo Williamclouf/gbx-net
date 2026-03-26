@@ -173,7 +173,7 @@ public partial class CGameGhost
         {
             Sample sample = SavedMobilClassId switch
             {
-                0x0A02B000 => new CSceneVehicleCar.Sample(time, sampleData),
+                0x0A02B000 or 0x0A103000 => new CSceneVehicleCar.Sample(time, sampleData),
                 0x0A401000 => new CSceneMobilCharVis.Sample(time, sampleData),
                 _ => throw new NotSupportedException($"Class ID 0x{SavedMobilClassId:X8} is not supported.")
             };
