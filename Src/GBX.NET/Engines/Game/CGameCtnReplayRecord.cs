@@ -66,7 +66,7 @@ public partial class CGameCtnReplayRecord
     private readonly object ChallengeLock = new();
 #endif
 
-    public RawData? ChallengeData { get; private set; }
+    public RawData? ChallengeGbxData { get; private set; }
 
     /// <summary>
     /// The map the replay orients in. Null if only the header was read.
@@ -75,22 +75,22 @@ public partial class CGameCtnReplayRecord
     {
         get
         {
-            if (ChallengeData is null || ChallengeData.Parsed) return challenge;
+            if (ChallengeGbxData is null || ChallengeGbxData.Parsed) return challenge;
 
             lock (ChallengeLock)
             {
-                if (ChallengeData is null || ChallengeData.Parsed) return challenge;
+                if (ChallengeGbxData is null || ChallengeGbxData.Parsed) return challenge;
 
-                using var ms = new MemoryStream(ChallengeData.Data);
+                using var ms = new MemoryStream(ChallengeGbxData.Data);
 
                 try
                 {
                     challenge = Gbx.ParseNode<CGameCtnChallenge>(ms);
-                    ChallengeData.Parsed = true;
+                    ChallengeGbxData.Parsed = true;
                 }
                 catch (Exception ex)
                 {
-                    ChallengeData.Exception = ex;
+                    ChallengeGbxData.Exception = ex;
                     throw;
                 }
 
@@ -163,15 +163,15 @@ public partial class CGameCtnReplayRecord
     [Zomp.SyncMethodGenerator.CreateSyncVersion]
     public async ValueTask<Gbx<CGameCtnChallenge>?> GetChallengeAsync(GbxReadSettings settings = default, CancellationToken cancellationToken = default)
     {
-        if (ChallengeData is null)
+        if (ChallengeGbxData is null)
         {
             return null;
         }
 
 #if NETSTANDARD2_0
-        using var ms = new MemoryStream(ChallengeData.Data);
+        using var ms = new MemoryStream(ChallengeGbxData.Data);
 #else
-        await using var ms = new MemoryStream(ChallengeData.Data);
+        await using var ms = new MemoryStream(ChallengeGbxData.Data);
 #endif
         return await Gbx.ParseAsync<CGameCtnChallenge>(ms, settings, cancellationToken);
     }
@@ -184,12 +184,12 @@ public partial class CGameCtnReplayRecord
 
     public Gbx<CGameCtnChallenge>? GetChallengeHeader(GbxReadSettings settings = default)
     {
-        if (ChallengeData is null)
+        if (ChallengeGbxData is null)
         {
             return null;
         }
 
-        using var ms = new MemoryStream(ChallengeData.Data);
+        using var ms = new MemoryStream(ChallengeGbxData.Data);
         return Gbx.ParseHeader<CGameCtnChallenge>(ms, settings);
     }
 
@@ -258,7 +258,7 @@ public partial class CGameCtnReplayRecord
     {
         public override void Read(CGameCtnReplayRecord n, GbxReader r)
         {
-            n.ChallengeData = new RawData(r.ReadData(), exception: null);
+            n.ChallengeGbxData = new RawData(r.ReadData(), exception: null);
         }
     }
 
