@@ -2,6 +2,9 @@
 @using GBX.NET.Attributes
 @using System.Collections
 
+@inject IDownloadStreamService DownloadService
+@inject ILogger Logger
+
 @inherits ValueRenderer
 @attribute [AppliesForType(typeof(byte[]))]
 
@@ -67,10 +70,18 @@ else if (Value is byte[] byteArray)
     {
         <span class="element-box">@count B</span>
     }
+
+    <span class="element-box hoverable utility" data-title="Download this byte array into a file" @onclick="Blob">Blob</span>
 }
 
 @code {
     private bool iconHovered;
 
     public override bool ShowPropertyInTree(PropertyInfo prop) => false;
+
+    private async Task Blob()
+    {
+        Logger.LogInformation("Downloading the file...");
+        await DownloadService.DownloadAsync((Property?.Name ?? "Data") + ".bin", (byte[])Value!);
+    }
 }
