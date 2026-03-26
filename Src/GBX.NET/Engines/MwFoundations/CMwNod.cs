@@ -432,7 +432,7 @@ public partial class CMwNod : IClass
         return ClassManager.NewGbx(header, new GbxBody(), this) ?? throw new Exception("Gbx cannot be created.");
     }
 
-    public Gbx ToGbx()
+    public virtual Gbx ToGbx()
     {
         return ToGbx(GbxHeaderBasic.Default);
     }

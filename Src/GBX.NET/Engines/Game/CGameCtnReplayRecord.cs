@@ -1,4 +1,5 @@
-﻿using GBX.NET.Inputs;
+﻿using GBX.NET.Components;
+using GBX.NET.Inputs;
 using System.Buffers.Binary;
 using System.Collections.Immutable;
 
@@ -9,6 +10,7 @@ public partial class CGameCtnReplayRecord
 {
     private byte[]? challengeData;
     private CGameCtnChallenge? challenge;
+    private byte? packDescVersion;
 
     /// <summary>
     /// Map UID, environment, and author login of the map the replay orients in.
@@ -89,7 +91,9 @@ public partial class CGameCtnReplayRecord
                 if (challenge is not null) return challenge;
                 {
                     using var ms = new MemoryStream(challengeData);
-                    return challenge = Gbx.ParseNode<CGameCtnChallenge>(ms);
+                    var gbx = Gbx.Parse<CGameCtnChallenge>(ms);
+                    packDescVersion = gbx.PackDescVersion;
+                    return challenge = gbx.Node;
                 }
             }
         }
@@ -192,6 +196,13 @@ public partial class CGameCtnReplayRecord
     public CGameCtnChallenge? GetChallengeHeaderNode(GbxReadSettings settings = default)
     {
         return GetChallengeHeader(settings)?.Node;
+    }
+
+    public override Gbx ToGbx()
+    {
+        var gbx = ToGbx(GbxHeaderBasic.Default);
+        gbx.PackDescVersion = packDescVersion;
+        return gbx;
     }
 
     public partial class HeaderChunk03093000 : IVersionable
