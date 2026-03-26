@@ -1,5 +1,4 @@
-﻿using GBX.NET.Components;
-using GBX.NET.Inputs;
+﻿using GBX.NET.Inputs;
 using System.Buffers.Binary;
 using System.Collections.Immutable;
 
@@ -8,9 +7,7 @@ namespace GBX.NET.Engines.Game;
 [WriteNotSupported]
 public partial class CGameCtnReplayRecord
 {
-    private byte[]? challengeData;
     private CGameCtnChallenge? challenge;
-    private byte? packDescVersion;
 
     /// <summary>
     /// Map UID, environment, and author login of the map the replay orients in.
@@ -69,6 +66,8 @@ public partial class CGameCtnReplayRecord
     private readonly object ChallengeLock = new();
 #endif
 
+    public RawData? ChallengeData { get; private set; }
+
     /// <summary>
     /// The map the replay orients in. Null if only the header was read.
     /// </summary>
@@ -76,25 +75,26 @@ public partial class CGameCtnReplayRecord
     {
         get
         {
-            if (challengeData is null)
-            {
-                return null;
-            }
-
-            if (challenge is not null)
-            {
-                return challenge;
-            }
+            if (ChallengeData is null || ChallengeData.Parsed) return challenge;
 
             lock (ChallengeLock)
             {
-                if (challenge is not null) return challenge;
+                if (ChallengeData is null || ChallengeData.Parsed) return challenge;
+
+                using var ms = new MemoryStream(ChallengeData.Data);
+
+                try
                 {
-                    using var ms = new MemoryStream(challengeData);
-                    var gbx = Gbx.Parse<CGameCtnChallenge>(ms);
-                    packDescVersion = gbx.PackDescVersion;
-                    return challenge = gbx.Node;
+                    challenge = Gbx.ParseNode<CGameCtnChallenge>(ms);
+                    ChallengeData.Parsed = true;
                 }
+                catch (Exception ex)
+                {
+                    ChallengeData.Exception = ex;
+                    throw;
+                }
+
+                return challenge;
             }
         }
     }
@@ -163,15 +163,15 @@ public partial class CGameCtnReplayRecord
     [Zomp.SyncMethodGenerator.CreateSyncVersion]
     public async ValueTask<Gbx<CGameCtnChallenge>?> GetChallengeAsync(GbxReadSettings settings = default, CancellationToken cancellationToken = default)
     {
-        if (challengeData is null)
+        if (ChallengeData is null)
         {
             return null;
         }
 
 #if NETSTANDARD2_0
-        using var ms = new MemoryStream(challengeData);
+        using var ms = new MemoryStream(ChallengeData.Data);
 #else
-        await using var ms = new MemoryStream(challengeData);
+        await using var ms = new MemoryStream(ChallengeData.Data);
 #endif
         return await Gbx.ParseAsync<CGameCtnChallenge>(ms, settings, cancellationToken);
     }
@@ -184,25 +184,18 @@ public partial class CGameCtnReplayRecord
 
     public Gbx<CGameCtnChallenge>? GetChallengeHeader(GbxReadSettings settings = default)
     {
-        if (challengeData is null)
+        if (ChallengeData is null)
         {
             return null;
         }
 
-        using var ms = new MemoryStream(challengeData);
+        using var ms = new MemoryStream(ChallengeData.Data);
         return Gbx.ParseHeader<CGameCtnChallenge>(ms, settings);
     }
 
     public CGameCtnChallenge? GetChallengeHeaderNode(GbxReadSettings settings = default)
     {
         return GetChallengeHeader(settings)?.Node;
-    }
-
-    public override Gbx ToGbx()
-    {
-        var gbx = ToGbx(GbxHeaderBasic.Default);
-        gbx.PackDescVersion = packDescVersion;
-        return gbx;
     }
 
     public partial class HeaderChunk03093000 : IVersionable
@@ -265,7 +258,7 @@ public partial class CGameCtnReplayRecord
     {
         public override void Read(CGameCtnReplayRecord n, GbxReader r)
         {
-            n.challengeData = r.ReadData();
+            n.ChallengeData = new RawData(r.ReadData(), exception: null);
         }
     }
 
