@@ -39,12 +39,9 @@ internal static partial class GbxCompressionUtils
         {
             var uncompressedSize = r.ReadInt32();
             uncompressedData = new byte[uncompressedSize];
-#if NET6_0_OR_GREATER
-            var prevCompressedData = new byte[r.ReadInt32()];
-            await input.ReadExactlyAsync(prevCompressedData, cancellationToken);
-#else
-            var prevCompressedData = await r.ReadDataAsync(cancellationToken); // this can still break on network streams 
-#endif
+
+            var prevCompressedData = await r.ReadDataAsync(cancellationToken);
+
             Gbx.LZO.Decompress(prevCompressedData, uncompressedData);
         }
         else
@@ -96,13 +93,7 @@ internal static partial class GbxCompressionUtils
         await CopyRestOfTheHeaderAsync(version, r, w, cancellationToken);
 
         var uncompressedSize = r.ReadInt32();
-        var compressedSize = r.ReadInt32();
-#if NET6_0_OR_GREATER
-        var compressedData = new byte[compressedSize];
-        await input.ReadExactlyAsync(compressedData, cancellationToken);
-#else
-        var compressedData = await r.ReadBytesAsync(compressedSize, cancellationToken); // this can still break on network streams 
-#endif
+        var compressedData = await r.ReadDataAsync(cancellationToken);
 
         var buffer = new byte[uncompressedSize];
         Gbx.LZO.Decompress(compressedData, buffer);
@@ -160,13 +151,7 @@ internal static partial class GbxCompressionUtils
                 return GbxCompression.Compressed;
             case (byte)'C':
                 var uncompressedSize = r.ReadInt32();
-                var compressedSize = r.ReadInt32();
-#if NET6_0_OR_GREATER
-                compressedData = new byte[compressedSize];
-                await input.ReadExactlyAsync(compressedData, cancellationToken);
-#else
-                compressedData = await r.ReadBytesAsync(compressedSize, cancellationToken); // this can still break on network streams 
-#endif
+                compressedData = await r.ReadDataAsync(cancellationToken);
                 var buffer = new byte[uncompressedSize];
                 Gbx.LZO.Decompress(compressedData, buffer);
                 await w.WriteAsync(buffer, cancellationToken);
@@ -223,12 +208,7 @@ internal static partial class GbxCompressionUtils
 
         if (version >= 6)
         {
-#if NET6_0_OR_GREATER
-            var userData = new byte[r.ReadInt32()];
-            await r.BaseStream.ReadExactlyAsync(userData, cancellationToken);
-#else
-            var userData = await r.ReadDataAsync(cancellationToken); // this can still break on network streams 
-#endif
+            var userData = await r.ReadDataAsync(cancellationToken);
             await w.WriteDataAsync(userData, cancellationToken); // User data
         }
 

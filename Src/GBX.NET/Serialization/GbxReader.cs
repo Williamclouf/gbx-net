@@ -1002,13 +1002,13 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
         limiter?.ThrowIfLimitExceeded(count);
 
-        var buffer = new byte[count];
-
-        _ = Mode switch
+        if (Mode is not SerializationMode.Gbx)
         {
-            SerializationMode.Gbx => await BaseStream.ReadAsync(buffer, 0, count, cancellationToken),
-            _ => throw new SerializationModeNotSupportedException(Mode),
-        };
+            throw new SerializationModeNotSupportedException(Mode);
+        }
+
+        var buffer = new byte[count];
+        await BaseStream.ReadExactlyAsync(buffer, cancellationToken);
 
         return buffer;
     }
@@ -1413,38 +1413,27 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public void ReadMarker(string value)
     {
-#if NET8_0_OR_GREATER
-        Span<byte> expected = stackalloc byte[value.Length * 4];
-        encoding.TryGetBytes(value, expected, out var bytesWritten);
-        limiter?.ThrowIfLimitExceeded(bytesWritten);
-        Span<byte> actual = stackalloc byte[bytesWritten];
-        Read(actual);
+        var byteCount = encoding.GetByteCount(value);
+        
+        limiter?.ThrowIfLimitExceeded(byteCount);
 
-        for (var i = 0; i < bytesWritten; i++)
-        {
-            if (expected[i] != actual[i])
-            {
-                throw new Exception($"Invalid marker: {value} != {encoding.GetString(actual)}");
-            }
-        }
+        var useStack = byteCount <= 256;
+
+#if NET5_0_OR_GREATER
+        Span<byte> expected = useStack ? stackalloc byte[byteCount] : new byte[byteCount];
+        Span<byte> actual = useStack ? stackalloc byte[byteCount] : new byte[byteCount];
+
+        encoding.GetBytes(value, expected);
 #else
-
-#if NET6_0_OR_GREATER
-        var count = encoding.GetByteCount(value);
-        limiter?.ThrowIfLimitExceeded(count);
-        Span<byte> actual = stackalloc byte[count];
-        Read(actual);
-#else
-        var count = encoding.GetByteCount(value);
-        var actual = ReadBytes(count);
+        var expected = encoding.GetBytes(value);
+        var actual = new byte[expected.Length];
 #endif
+        BaseStream.ReadExactly(actual);
 
-        if (!encoding.GetString(actual).Equals(value, StringComparison.Ordinal))
+        if (!actual.SequenceEqual(expected))
         {
-            throw new Exception($"Invalid marker: {value} != {encoding.GetString(actual)}");
+            throw new Exception($"Invalid marker: expected '{value}', got '{encoding.GetString(actual)}'");
         }
-
-#endif
     }
 
     public ZlibData ReadZlibData()
@@ -2079,11 +2068,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         if (BaseStream.CanSeek)
         {
             var buffer = new byte[BaseStream.Length - BaseStream.Position];
-#if NET6_0_OR_GREATER
             await BaseStream.ReadExactlyAsync(buffer, cancellationToken);
-#else
-            _ = await BaseStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken); // this can still break on network streams 
-#endif
             return buffer;
         }
 
