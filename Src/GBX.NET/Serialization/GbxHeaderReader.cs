@@ -175,7 +175,10 @@ internal sealed class GbxHeaderReader(GbxReader reader)
             }
         }
 
-        boundedStream.EnsureFullyRead();
+        if (boundedStream.Remaining > 0)
+        {
+            throw new Exception($"Not all data was read from user data. {boundedStream.Remaining} bytes remaining.");
+        }
 
         return true;
     }
@@ -319,6 +322,9 @@ internal sealed class GbxHeaderReader(GbxReader reader)
                 break;
         }
 
-        boundedStream.EnsureFullyRead();
+        if (boundedStream.Remaining > 0)
+        {
+            throw new Exception($"Not all data was read from header chunk 0x{chunk.Id:X8} ({ClassManager.GetName(chunk.Id)}). {boundedStream.Remaining} bytes remaining.");
+        }
     }
 }

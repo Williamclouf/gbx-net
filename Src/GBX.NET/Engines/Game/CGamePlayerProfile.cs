@@ -247,7 +247,10 @@ public partial class CGamePlayerProfile
 
                     chunk.ReadWrite(chunkRw);
 
-                    boundedStream.EnsureFullyRead();
+                    if (boundedStream.Remaining > 0)
+                    {
+                        throw new Exception($"Not all data was read from profile chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId)}). {boundedStream.Remaining} bytes remaining.");
+                    }
                 }
             }
 

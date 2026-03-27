@@ -167,7 +167,12 @@ public partial class CMwNod : IClass
                             {
                                 rChunk.LoadFrom(r);
                                 readableWritable.ReadWrite(this, rwChunk);
-                                boundedStream.EnsureFullyRead();
+
+                                if (boundedStream.Remaining > 0)
+                                {
+                                    throw new Exception($"Not all data was read from skippable chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId)}). {boundedStream.Remaining} bytes remaining.");
+                                }
+
                                 r.LoadFrom(rChunk);
                             }
 
@@ -209,7 +214,12 @@ public partial class CMwNod : IClass
                             {
                                 rChunk.LoadFrom(r);
                                 readable.Read(this, rChunk);
-                                boundedStream.EnsureFullyRead();
+
+                                if (boundedStream.Remaining > 0)
+                                {
+                                    throw new Exception($"Not all data was read from skippable chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId)}). {boundedStream.Remaining} bytes remaining.");
+                                }
+
                                 r.LoadFrom(rChunk);
                             }
 

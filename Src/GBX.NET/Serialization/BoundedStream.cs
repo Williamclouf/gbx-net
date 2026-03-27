@@ -5,6 +5,7 @@ internal sealed partial class BoundedStream : Stream
     private readonly Stream baseStream;
     private readonly long length;
     private readonly long startPosition;
+
     private long remaining;
     private MemoryStream? memoryStream;
 
@@ -18,6 +19,8 @@ internal sealed partial class BoundedStream : Stream
         get => length - remaining;
         set => Seek(value, SeekOrigin.Begin);
     }
+
+    public long Remaining => remaining;
 
     public BoundedStream(Stream baseStream, long length)
     {
@@ -158,11 +161,11 @@ internal sealed partial class BoundedStream : Stream
         throw new NotSupportedException();
     }
 
-    public void EnsureFullyRead()
+    public void EnsureFullyRead(string context = "the bounded stream")
     {
         if (remaining > 0)
         {
-            throw new InvalidOperationException($"Not all data was read from the bounded stream. {remaining} bytes remaining.");
+            throw new InvalidOperationException($"Not all data was read from {context}. {remaining} bytes remaining.");
         }
     }
 
