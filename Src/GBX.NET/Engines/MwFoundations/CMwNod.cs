@@ -13,6 +13,8 @@ namespace GBX.NET.Engines.MwFoundations;
 [Class(0x01001000)]
 public partial class CMwNod : IClass
 {
+    internal const int MaxSkippableChunkSize = 0x1000000; // ~16MB
+
     private const uint SKIP = 0x534B4950;
     private const uint FACADE = 0xFACADE01;
 
@@ -26,6 +28,7 @@ public partial class CMwNod : IClass
         r.TryInitializeDecryption(this);
 
         var prevChunkId = default(uint?);
+        var maxSkippableChunkSize = r.Settings.MaxSkippableChunkSize ?? MaxSkippableChunkSize;
 
         while (true)
         {
@@ -108,6 +111,16 @@ public partial class CMwNod : IClass
                     }
                 }
 
+                if (chunkSize < 0)
+                {
+                    throw new Exception($"Chunk size cannot be negative ({chunkSize})");
+                }
+
+                if (chunkSize > maxSkippableChunkSize)
+                {
+                    throw new LengthLimitException(chunkSize);
+                }
+
                 if (r.Settings.SkipChunkIds?.Contains(chunkId) == true)
                 {
                     r.SkipData(chunkSize);
@@ -148,8 +161,15 @@ public partial class CMwNod : IClass
                                 break;
                             }
 
-                            readableWritable.ReadWrite(this, rw);
-                            // TODO: validate chunk size
+                            using (var boundedStream = new BoundedStream(r.BaseStream, chunkSize))
+                            using (var rChunk = new GbxReader(boundedStream, r.Settings))
+                            using (var rwChunk = new GbxReaderWriter(rChunk))
+                            {
+                                rChunk.LoadFrom(r);
+                                readableWritable.ReadWrite(this, rwChunk);
+                                boundedStream.EnsureFullyRead();
+                                r.LoadFrom(rChunk);
+                            }
 
                             break;
 
@@ -184,8 +204,14 @@ public partial class CMwNod : IClass
                                 break;
                             }
 
-                            readable.Read(this, r);
-                            // TODO: validate chunk size
+                            using (var boundedStream = new BoundedStream(r.BaseStream, chunkSize))
+                            using (var rChunk = new GbxReader(boundedStream, r.Settings))
+                            {
+                                rChunk.LoadFrom(r);
+                                readable.Read(this, rChunk);
+                                boundedStream.EnsureFullyRead();
+                                r.LoadFrom(rChunk);
+                            }
 
                             break;
 

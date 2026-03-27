@@ -24,6 +24,11 @@ public readonly record struct GbxReadSettings
     /// </summary>
     public int? MaxCompressedBodySize { get; init; }
 
+    /// <summary>
+    /// Maximum allowed size for skippable chunks. Default is 16 MB, but for backend it is recommended to set it to a lower value, like 4 MB, to prevent potential DoS attacks with maliciously crafted Gbx files.
+    /// </summary>
+    public int? MaxSkippableChunkSize { get; init; }
+
     public bool SkipUserData { get; init; }
     public SerializationMode DeserializationMode { get; init; }
 

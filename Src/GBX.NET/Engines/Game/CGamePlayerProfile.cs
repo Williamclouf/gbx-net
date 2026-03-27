@@ -235,6 +235,8 @@ public partial class CGamePlayerProfile
                     var chunk = (CGamePlayerProfileChunk)(ClassManager.New(chunkId)
                         ?? throw new NotImplementedException($"Profile chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId)}) is not implemented."));
 
+                    n.profileChunks[i] = chunk;
+
                     chunk.ChunkName = chunkName;
                     chunk.GameName = gameName;
                     chunk.Checksum = checksum;
@@ -244,7 +246,8 @@ public partial class CGamePlayerProfile
                     chunk.ArchiveVersion = archiveVersion;
 
                     chunk.ReadWrite(chunkRw);
-                    n.profileChunks[i] = chunk;
+
+                    boundedStream.EnsureFullyRead();
                 }
             }
 

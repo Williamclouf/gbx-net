@@ -25,7 +25,7 @@ internal sealed partial class GbxBodyReader(GbxReaderWriter readerWriter, GbxCom
         {
             case GbxCompression.Compressed:
 
-                var uncompressedSize = reader.ReadInt32();
+                var uncompressedSize = reader.ReadUInt32();
 
                 if (logger is not null)
                 {
@@ -34,7 +34,7 @@ internal sealed partial class GbxBodyReader(GbxReaderWriter readerWriter, GbxCom
 
                 EnsureValidUncompressedSize(uncompressedSize, settings);
 
-                var compressedSize = reader.ReadInt32();
+                var compressedSize = reader.ReadUInt32();
 
                 if (logger is not null)
                 {
@@ -46,16 +46,16 @@ internal sealed partial class GbxBodyReader(GbxReaderWriter readerWriter, GbxCom
                     }
                 }
 
-                EnsureValidCompressedSize(compressedSize, uncompressedSize, settings);
+                EnsureValidCompressedSize(compressedSize, settings);
 
                 var rawData = settings.ReadRawBody
-                    ? ImmutableArray.Create(await reader.ReadBytesAsync(compressedSize, cancellationToken))
+                    ? ImmutableArray.Create(await reader.ReadBytesAsync((int)compressedSize, cancellationToken))
                     : ImmutableArray<byte>.Empty;
 
                 return new GbxBody
                 {
-                    UncompressedSize = uncompressedSize,
-                    CompressedSize = compressedSize,
+                    UncompressedSize = (int)uncompressedSize,
+                    CompressedSize = (int)compressedSize,
                     RawData = rawData
                 };
 
@@ -83,7 +83,7 @@ internal sealed partial class GbxBodyReader(GbxReaderWriter readerWriter, GbxCom
         }
     }
 
-    private static void EnsureValidUncompressedSize(int uncompressedSize, GbxReadSettings settings)
+    private static void EnsureValidUncompressedSize(uint uncompressedSize, GbxReadSettings settings)
     {
         var maxUncompressedSize = settings.MaxUncompressedBodySize ?? GbxReader.MaxDataSize;
         if (uncompressedSize > maxUncompressedSize)
@@ -92,18 +92,13 @@ internal sealed partial class GbxBodyReader(GbxReaderWriter readerWriter, GbxCom
         }
     }
 
-    private static void EnsureValidCompressedSize(int compressedSize, int uncompressedSize, GbxReadSettings settings)
+    private static void EnsureValidCompressedSize(uint compressedSize, GbxReadSettings settings)
     {
         var maxCompressedSize = settings.MaxCompressedBodySize ?? GbxReader.MaxDataSize;
 
         if (compressedSize > maxCompressedSize)
         {
             throw new Exception($"Compressed body size {compressedSize} exceeds maximum allowed size {maxCompressedSize}.");
-        }
-
-        if (compressedSize > uncompressedSize)
-        {
-            throw new Exception($"Compressed body size {compressedSize} cannot be greater than uncompressed size {uncompressedSize}.");
         }
     }
 

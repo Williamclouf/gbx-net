@@ -175,6 +175,8 @@ internal sealed class GbxHeaderReader(GbxReader reader)
             }
         }
 
+        boundedStream.EnsureFullyRead();
+
         return true;
     }
 
@@ -316,5 +318,7 @@ internal sealed class GbxHeaderReader(GbxReader reader)
                 r.SkipData(desc.Size); // maybe let know?
                 break;
         }
+
+        boundedStream.EnsureFullyRead();
     }
 }

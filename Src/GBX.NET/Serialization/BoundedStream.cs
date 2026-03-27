@@ -158,16 +158,19 @@ internal sealed partial class BoundedStream : Stream
         throw new NotSupportedException();
     }
 
+    public void EnsureFullyRead()
+    {
+        if (remaining > 0)
+        {
+            throw new InvalidOperationException($"Not all data was read from the bounded stream. {remaining} bytes remaining.");
+        }
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
             memoryStream?.Dispose();
-
-            if (remaining > 0)
-            {
-                throw new InvalidOperationException($"Not all data was read from the bounded stream. {remaining} bytes remaining.");
-            }
         }
         base.Dispose(disposing);
     }
