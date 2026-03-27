@@ -183,11 +183,6 @@ internal sealed partial class BoundedStream : Stream
             await memoryStream.DisposeAsync().ConfigureAwait(false);
         }
 
-        if (remaining > 0)
-        {
-            throw new InvalidOperationException($"Not all data was read from the bounded stream. {remaining} bytes remaining.");
-        }
-
         await base.DisposeAsync().ConfigureAwait(false);
     }
 #endif
