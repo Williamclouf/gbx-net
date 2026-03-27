@@ -71,7 +71,7 @@ else if (Value is byte[] byteArray)
         <span class="element-box">@count B</span>
     }
 
-    <span class="element-box hoverable utility" data-title="Download this byte array into a file" @onclick="Blob">Blob</span>
+    <span class="element-box hoverable utility" data-title="Export this data into a file" @onclick="Export">Export</span>
 }
 
 @code {
@@ -79,9 +79,9 @@ else if (Value is byte[] byteArray)
 
     public override bool ShowPropertyInTree(PropertyInfo prop) => false;
 
-    private async Task Blob()
+    private async Task Export()
     {
-        Logger.LogInformation("Downloading the file...");
+        Logger.LogInformation("Exporting the data...");
         await DownloadService.DownloadAsync((Property?.Name ?? "Data") + ".bin", (byte[])Value!);
     }
 }
