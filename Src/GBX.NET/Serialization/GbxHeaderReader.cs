@@ -39,7 +39,7 @@ internal sealed class GbxHeaderReader(GbxReader reader)
 
         if (basic.Version >= 6)
         {
-            ReadUserData(reader, node, header as GbxHeaderUnknown);
+            ReadUserData(node, header as GbxHeaderUnknown);
         }
 
         header.NumNodes = reader.ReadInt32();
@@ -72,7 +72,7 @@ internal sealed class GbxHeaderReader(GbxReader reader)
         return classId;
     }
 
-    internal bool ReadUserData(GbxReader reader, IClass? node, GbxHeaderUnknown? unknownHeader)
+    internal bool ReadUserData(IClass? node, GbxHeaderUnknown? unknownHeader)
     {
         var userDataLength = reader.ReadInt32();
 

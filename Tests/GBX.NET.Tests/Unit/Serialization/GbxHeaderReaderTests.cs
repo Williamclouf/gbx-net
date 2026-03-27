@@ -17,7 +17,7 @@ public class GbxHeaderReaderTests
         var parser = new GbxHeaderReader(r);
 
         // Act
-        var result = parser.ReadUserData(r, node: null, unknownHeader: null);
+        var result = parser.ReadUserData(node: null, unknownHeader: null);
 
         // Assert
         Assert.False(result);
@@ -36,7 +36,7 @@ public class GbxHeaderReaderTests
         var parser = new GbxHeaderReader(r);
 
         // Act
-        var result = parser.ReadUserData(r, node: null, unknownHeader: null);
+        var result = parser.ReadUserData(node: null, unknownHeader: null);
 
         // Assert
         Assert.False(result);
@@ -58,7 +58,7 @@ public class GbxHeaderReaderTests
         var parser = new GbxHeaderReader(r);
 
         // Act & Assert
-        Assert.Throws<Exception>(() => parser.ReadUserData(r, node: null, unknownHeader: null));
+        Assert.Throws<Exception>(() => parser.ReadUserData(node: null, unknownHeader: null));
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public class GbxHeaderReaderTests
         var unknownHeader = new GbxHeaderUnknown(GbxHeaderBasic.Default, 0x03043000);
 
         // Act
-        var result = parser.ReadUserData(r, node: null, unknownHeader);
+        var result = parser.ReadUserData(node: null, unknownHeader);
 
         // Assert
         Assert.True(result);
@@ -108,7 +108,7 @@ public class GbxHeaderReaderTests
         var node = new CGameCtnChallenge();
 
         // Act
-        var result = parser.ReadUserData(r, node, unknownHeader: null);
+        var result = parser.ReadUserData(node, unknownHeader: null);
 
         // Assert
         Assert.True(result);
@@ -138,7 +138,7 @@ public class GbxHeaderReaderTests
         var node = new CGameCtnChallenge();
 
         // Act
-        var result = parser.ReadUserData(r, node, unknownHeader: null);
+        var result = parser.ReadUserData(node, unknownHeader: null);
 
         // Assert
         Assert.True(result);
