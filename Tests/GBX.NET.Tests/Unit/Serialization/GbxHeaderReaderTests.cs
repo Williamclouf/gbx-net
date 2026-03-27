@@ -1,6 +1,5 @@
 ﻿using GBX.NET.Components;
 using GBX.NET.Engines.Game;
-using GBX.NET.Exceptions;
 using GBX.NET.Serialization;
 using GBX.NET.Serialization.Chunking;
 
@@ -8,184 +7,6 @@ namespace GBX.NET.Tests.Unit.Serialization;
 
 public class GbxHeaderReaderTests
 {
-    [Fact]
-    public void ValidateUserDataNumbers_ZeroLength_ReturnsZeros()
-    {
-        // Arrange
-        using var ms = new MemoryStream([0, 0, 0, 0, 69]);
-        using var r = new GbxReader(ms);
-
-        var parser = new GbxHeaderReader(r);
-
-        // Act
-        var result = parser.ValidateUserDataNumbers();
-
-        // Assert
-        Assert.Equal(0, result.Length);
-        Assert.Equal(0, result.NumChunks);
-        Assert.Equal(4, ms.Position);
-    }
-
-    [Fact]
-    public void ValidateUserDataNumbers_ExceedsMaxSize_Throws()
-    {
-        // Arrange
-        using var ms = new MemoryStream(
-            BitConverter.GetBytes(GbxReader.MaxDataSize + 1)
-                .Append((byte)69)
-                .ToArray());
-        using var r = new GbxReader(ms);
-
-        var parser = new GbxHeaderReader(r);
-
-        // Act & Assert
-        Assert.Throws<LengthLimitException>(() => parser.ValidateUserDataNumbers());
-        Assert.Equal(4, ms.Position);
-    }
-
-    [Fact]
-    public void ValidateUserDataNumbers_NormalCase_ReturnsCorrectNumbers()
-    {
-        // Arrange
-        var expectedLength = 100; // Example length
-        var expectedNumChunks = 5; // Example number of chunks
-
-        using var ms = new MemoryStream(
-            BitConverter.GetBytes(expectedLength)
-                .Concat(BitConverter.GetBytes(expectedNumChunks))
-                .Append((byte)69)
-                .ToArray());
-        using var r = new GbxReader(ms);
-
-        var parser = new GbxHeaderReader(r);
-
-        // Act
-        var result = parser.ValidateUserDataNumbers();
-
-        // Assert
-        Assert.Equal(expectedLength, result.Length);
-        Assert.Equal(expectedNumChunks, result.NumChunks);
-        Assert.Equal(8, ms.Position);
-    }
-
-    [Fact]
-    public void ValidateUserDataNumbers_SkipUserData_ReturnsUserDataInfoWithZeroChunks()
-    {
-        // Arrange
-        var expectedLength = 100; // Example length
-
-        using var ms = new MemoryStream(
-            BitConverter.GetBytes(expectedLength)
-                .Concat(new byte[expectedLength])
-                .Append((byte)69)
-                .ToArray());
-        using var r = new GbxReader(ms, new GbxReadSettings { SkipUserData = true });
-
-        var parser = new GbxHeaderReader(r);
-
-        // Act
-        var result = parser.ValidateUserDataNumbers();
-
-        // Assert
-        Assert.Equal(expectedLength, result.Length);
-        Assert.Equal(0, result.NumChunks);
-        Assert.Equal(104, ms.Position);
-    }
-
-    [Fact]
-    public void FillHeaderChunkInfo_CorrectlyFillsChunkInfo()
-    {
-        // Arrange
-        var numChunks = 3;
-        var userDataInfo = new UserDataNumbers(Length: 963, numChunks);
-
-        using var ms = new MemoryStream(
-                    BitConverter.GetBytes(0x03043003)
-            .Concat(BitConverter.GetBytes(238))
-            .Concat(BitConverter.GetBytes(0x03043004))
-            .Concat(BitConverter.GetBytes(4))
-            .Concat(BitConverter.GetBytes(0x03043005))
-            .Concat(BitConverter.GetBytes(693 + 0x80000000))
-                .Append((byte)69)
-                .ToArray());
-        using var reader = new GbxReader(ms);
-
-        var parser = new GbxHeaderReader(reader);
-
-        Span<HeaderChunkInfo> headerChunkDescs = stackalloc HeaderChunkInfo[numChunks];
-
-        // Act
-        parser.FillHeaderChunkInfo(headerChunkDescs, userDataInfo);
-
-        // Assert
-        Assert.Equal(expected: (uint)0x03043003, actual: headerChunkDescs[0].Id);
-        Assert.Equal(expected: 238, actual: headerChunkDescs[0].Size);
-        Assert.False(headerChunkDescs[0].IsHeavy);
-
-        Assert.Equal(expected: (uint)0x03043004, actual: headerChunkDescs[1].Id);
-        Assert.Equal(expected: 4, actual: headerChunkDescs[1].Size);
-        Assert.False(headerChunkDescs[1].IsHeavy);
-
-        Assert.Equal(expected: (uint)0x03043005, actual: headerChunkDescs[2].Id);
-        Assert.Equal(expected: 693, actual: headerChunkDescs[2].Size);
-        Assert.True(headerChunkDescs[2].IsHeavy);
-
-        Assert.Equal(expected: 24, actual: ms.Position);
-    }
-
-    [Fact]
-    public void FillHeaderChunkInfo_ExceedsMaxSize_Throws()
-    {
-        // Arrange
-        var numChunks = 1;
-        var userDataInfo = new UserDataNumbers(Length: 128, numChunks);
-
-        using var ms = new MemoryStream(
-                    BitConverter.GetBytes(0x03043003)
-            .Concat(BitConverter.GetBytes(GbxReader.MaxDataSize + 1))
-                .Append((byte)69)
-                .ToArray());
-        using var reader = new GbxReader(ms);
-
-        var parser = new GbxHeaderReader(reader);
-
-        var headerChunkDescs = new HeaderChunkInfo[numChunks];
-
-        // Act & Assert
-        Assert.Throws<LengthLimitException>(() => parser.FillHeaderChunkInfo(headerChunkDescs, userDataInfo));
-        Assert.Equal(expected: 8, actual: ms.Position);
-    }
-
-    [Theory]
-    [InlineData(420, 24)]
-    [InlineData(210, 8)]
-    public void FillHeaderChunkInfo_TotalSizeMismatch_Throws(int length, int streamPos)
-    {
-        // Arrange
-        var numChunks = 3;
-        var userDataInfo = new UserDataNumbers(length, numChunks);
-
-        using var ms = new MemoryStream(
-                    BitConverter.GetBytes(0x03043003)
-            .Concat(BitConverter.GetBytes(238))
-            .Concat(BitConverter.GetBytes(0x03043004))
-            .Concat(BitConverter.GetBytes(4))
-            .Concat(BitConverter.GetBytes(0x03043005))
-            .Concat(BitConverter.GetBytes(693 + 0x80000000))
-                .Append((byte)69)
-                .ToArray());
-        using var reader = new GbxReader(ms);
-
-        var parser = new GbxHeaderReader(reader);
-
-        var headerChunkDescs = new HeaderChunkInfo[numChunks];
-
-        // Act & Assert
-        Assert.Throws<InvalidDataException>(() => parser.FillHeaderChunkInfo(headerChunkDescs, userDataInfo));
-
-        Assert.Equal(expected: streamPos, actual: ms.Position);
-    }
-
     [Fact]
     public void ReadUserData_EmptyUserData_ReturnsFalse()
     {
@@ -196,7 +17,7 @@ public class GbxHeaderReaderTests
         var parser = new GbxHeaderReader(r);
 
         // Act
-        var result = parser.ReadUserData(node: null, unknownHeader: null);
+        var result = parser.ReadUserData(r, node: null, unknownHeader: null);
 
         // Assert
         Assert.False(result);
@@ -215,7 +36,7 @@ public class GbxHeaderReaderTests
         var parser = new GbxHeaderReader(r);
 
         // Act
-        var result = parser.ReadUserData(node: null, unknownHeader: null);
+        var result = parser.ReadUserData(r, node: null, unknownHeader: null);
 
         // Assert
         Assert.False(result);
@@ -237,7 +58,7 @@ public class GbxHeaderReaderTests
         var parser = new GbxHeaderReader(r);
 
         // Act & Assert
-        Assert.Throws<Exception>(() => parser.ReadUserData(node: null, unknownHeader: null));
+        Assert.Throws<Exception>(() => parser.ReadUserData(r, node: null, unknownHeader: null));
     }
 
     [Fact]
@@ -258,7 +79,7 @@ public class GbxHeaderReaderTests
         var unknownHeader = new GbxHeaderUnknown(GbxHeaderBasic.Default, 0x03043000);
 
         // Act
-        var result = parser.ReadUserData(node: null, unknownHeader);
+        var result = parser.ReadUserData(r, node: null, unknownHeader);
 
         // Assert
         Assert.True(result);
@@ -287,7 +108,7 @@ public class GbxHeaderReaderTests
         var node = new CGameCtnChallenge();
 
         // Act
-        var result = parser.ReadUserData(node, unknownHeader: null);
+        var result = parser.ReadUserData(r, node, unknownHeader: null);
 
         // Assert
         Assert.True(result);
@@ -317,7 +138,7 @@ public class GbxHeaderReaderTests
         var node = new CGameCtnChallenge();
 
         // Act
-        var result = parser.ReadUserData(node, unknownHeader: null);
+        var result = parser.ReadUserData(r, node, unknownHeader: null);
 
         // Assert
         Assert.True(result);

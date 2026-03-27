@@ -4,6 +4,16 @@ namespace GBX.NET;
 
 public readonly record struct GbxReadSettings
 {
+    /// <summary>
+    /// Maximum allowed size for arrays, lists, and other data structures. Default is 256 MB, but for backend it is recommended to set it to a lower value, like 16 MB, to prevent potential DoS attacks with maliciously crafted Gbx files.
+    /// </summary>
+    public int? MaxDataSize { get; init; }
+    
+    /// <summary>
+    /// Maximum allowed size for user data. Default is 16 MB, but for backend it is recommended to set it to a lower value, like 2 MB, to prevent potential DoS attacks with maliciously crafted Gbx files.
+    /// </summary>
+    public int? MaxUserDataSize { get; init; }
+
     public bool SkipUserData { get; init; }
     public SerializationMode DeserializationMode { get; init; }
 
@@ -19,7 +29,6 @@ public readonly record struct GbxReadSettings
     public bool CloseStream { get; init; }
 
     public int? MaxUncompressedBodySize { get; init; }
-    public int? MaxUserDataSize { get; init; }
     public ILogger? Logger { get; init; }
 
     /// <summary>

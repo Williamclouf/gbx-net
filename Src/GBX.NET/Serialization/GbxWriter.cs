@@ -1687,14 +1687,16 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         WriteListWritable(value, byteLengthPrefix, version);
     }
 
-    private static void EnsureValidLength(int length)
+    private void EnsureValidLength(int length)
     {
-        switch (length)
+        if (length < 0)
         {
-            case < 0:
-                throw new ArgumentOutOfRangeException(nameof(length), "Length cannot be negative.");
-            case > MaxDataSize:
-                throw new LengthLimitException(length);
+            throw new ArgumentOutOfRangeException(nameof(length), "Length cannot be negative.");
+        }
+
+        if (length > (Settings.MaxDataSize ?? MaxDataSize))
+        {
+            throw new LengthLimitException(length);
         }
     }
 

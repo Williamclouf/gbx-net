@@ -378,10 +378,14 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             _ => throw new SerializationModeNotSupportedException(Mode),
         };
     }
-
+    
     public BigInteger ReadBigInt(int byteLength)
     {
-        if (byteLength < 0) throw new ArgumentOutOfRangeException(nameof(byteLength));
+        if (byteLength == 0)
+        {
+            throw new ArgumentException("Byte length must be greater than 0.", nameof(byteLength));
+        }
+
         EnsureValidLength(byteLength);
 
         return new BigInteger(ReadBytes(byteLength));
@@ -1834,7 +1838,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
     }
 
     /// <summary>
-    /// If can seek, position moves past the <paramref name="length"/>. If seeking is NOT supported, data is read with no allocation using <see cref="BinaryReader.Read(Span{byte})"/>. If .NET Standard 2.0, unavoidable byte array allocation happens with <see cref="BinaryReader.ReadBytes(int)"/>.
+    /// If can seek, position moves past the <paramref name="length"/>. If seeking is not supported, data is read with no allocation if possible, otherwise with a temporary buffer.
     /// </summary>
     /// <param name="length">Length in bytes to skip.</param>
     /// <exception cref="EndOfStreamException"></exception>
@@ -1946,14 +1950,16 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
     /// <param name="length">The length to validate.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if the length is negative.</exception>
     /// <exception cref="LengthLimitException">Thrown if the length exceeds the maximum allowed size.</exception>
-    private static void EnsureValidLength(int length)
+    private void EnsureValidLength(int length)
     {
-        switch (length)
+        if (length < 0)
         {
-            case < 0:
-                throw new ArgumentOutOfRangeException(nameof(length), "Length cannot be negative.");
-            case > MaxDataSize:
-                throw new LengthLimitException(length);
+            throw new ArgumentOutOfRangeException(nameof(length), "Length cannot be negative.");
+        }
+
+        if (length > (Settings.MaxDataSize ?? MaxDataSize))
+        {
+            throw new LengthLimitException(length);
         }
     }
 
