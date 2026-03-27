@@ -67,13 +67,6 @@ public sealed partial class GbxBody
         return await new GbxBodyReader(rw, compression).ParseAsync(node, cancellationToken);
     }
 
-    [Zomp.SyncMethodGenerator.CreateSyncVersion]
-    internal static async Task<GbxBody> ParseAsync<T>(T node, GbxReader reader, GbxCompression compression, CancellationToken cancellationToken) where T : IClass
-    {
-        using var rw = new GbxReaderWriter(reader);
-        return await new GbxBodyReader(rw, compression).ParseAsync(node, cancellationToken);
-    }
-
     internal void WriteUncompressed(IClass node, GbxWriter writer)
     {
         new GbxBodyWriter(this, writer).WriteUncompressed(node);
