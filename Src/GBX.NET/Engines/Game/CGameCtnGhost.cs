@@ -209,20 +209,27 @@ public partial class CGameCtnGhost
         {
             var inputNames = r.ReadArrayId();
 
-            var numEntries = r.ReadInt32();
+            var numInputs = r.ReadInt32();
             U02 = r.ReadInt32(); // CountLimit?
 
-            if (numEntries == 0)
+            if (numInputs == 0)
             {
                 return;
             }
 
-            Span<IInput> inputs = new IInput[numEntries];
+            Span<IInput> inputs = new IInput[numInputs];
 
             // 9 bytes per entry: 4 for time, 1 for name index, 4 for data
-            Span<byte> inputData = r.ReadBytes(numEntries * 9);
-            
-            for (var i = 0; i < numEntries; i++)
+            var inputDataLength = numInputs * 9;
+
+#if NET5_0_OR_GREATER
+            Span<byte> inputData = inputDataLength > 8192 ? new byte[inputDataLength] : stackalloc byte[inputDataLength];
+            r.BaseStream.ReadExactly(inputData);
+#else
+            Span<byte> inputData = r.ReadBytes(inputDataLength);
+#endif
+
+            for (var i = 0; i < numInputs; i++)
             {
                 var time = TimeInt32.FromMilliseconds(BinaryPrimitives.ReadInt32LittleEndian(inputData.Slice(i * 9, 4)) - 100000);
                 var inputNameIndex = inputData[i * 9 + 4];

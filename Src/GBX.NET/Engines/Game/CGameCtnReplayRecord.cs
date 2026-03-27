@@ -418,7 +418,14 @@ public partial class CGameCtnReplayRecord
             Span<IInput> inputs = new IInput[numInputs];
 
             // 9 bytes per entry: 4 for time, 1 for name index, 4 for data
-            Span<byte> inputData = r.ReadBytes(numInputs * 9);
+            var inputDataLength = numInputs * 9;
+
+#if NET5_0_OR_GREATER
+            Span<byte> inputData = inputDataLength > 8192 ? new byte[inputDataLength] : stackalloc byte[inputDataLength];
+            r.BaseStream.ReadExactly(inputData);
+#else
+            Span<byte> inputData = r.ReadBytes(inputDataLength);
+#endif
 
             for (var i = 0; i < numInputs; i++)
             {
