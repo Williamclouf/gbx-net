@@ -224,9 +224,9 @@ public partial class CGamePlayerProfile
                     var createdAt = Version >= 2 ? r.ReadUnixTime() : default(DateTimeOffset?);
                     if (createdAt == DateTimeOffset.FromUnixTimeSeconds(0)) createdAt = null;
 
-                    var chunkData = r.ReadData();
-                    using var ms = new MemoryStream(chunkData);
-                    using var chunkReader = new GbxReader(ms, r.Settings);
+                    var chunkDataSize = r.ReadInt32();
+                    using var boundedStream = new BoundedStream(r.BaseStream, chunkDataSize);
+                    using var chunkReader = new GbxReader(boundedStream, r.Settings);
                     using var chunkRw = new GbxReaderWriter(chunkReader);
 
                     var skipArchiveVersion = chunkReader.ReadInt32();
