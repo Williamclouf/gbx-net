@@ -159,6 +159,8 @@ public partial interface IGbxWriter : IDisposable
 /// </summary>
 public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 {
+    internal const int MaxDataSize = 0x10000000; // ~268MB
+
     private static readonly Encoding encoding = Encoding.UTF8;
 
     private readonly XmlWriter? xmlWriter;
@@ -1166,7 +1168,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        ValidateCollectionLength(value.Length);
+        EnsureValidLength(value.Length);
 
         if (hasLengthPrefix)
         {
@@ -1208,7 +1210,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        ValidateCollectionLength(value.Length);
+        EnsureValidLength(value.Length);
 
         if (hasLengthPrefix)
         {
@@ -1231,7 +1233,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
     public void WriteArrayVec3_10b(Vec3[]? value, int length)
     {
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         if (value is not null)
         {
@@ -1258,7 +1260,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        ValidateCollectionLength(value.Length);
+        EnsureValidLength(value.Length);
 
         Write(value.Length);
 
@@ -1410,7 +1412,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        ValidateCollectionLength(value.Length);
+        EnsureValidLength(value.Length);
 
         Write(value.Length);
 #if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
@@ -1427,7 +1429,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         if (value.Length == length)
         {
@@ -1477,7 +1479,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        ValidateCollectionLength(value.Count);
+        EnsureValidLength(value.Count);
 
         Write(value.Count);
 #if NET6_0_OR_GREATER
@@ -1685,16 +1687,14 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         WriteListWritable(value, byteLengthPrefix, version);
     }
 
-    private static void ValidateCollectionLength(int length)
+    private static void EnsureValidLength(int length)
     {
-        if (length < 0)
+        switch (length)
         {
-            throw new ArgumentOutOfRangeException(nameof(length), "Length is not valid.");
-        }
-
-        if (length < 0 || length > 0x10000000) // ~268MB
-        {
-            throw new Exception($"Length is too big to handle ({length}).");
+            case < 0:
+                throw new ArgumentOutOfRangeException(nameof(length), "Length cannot be negative.");
+            case > MaxDataSize:
+                throw new LengthLimitException(length);
         }
     }
 

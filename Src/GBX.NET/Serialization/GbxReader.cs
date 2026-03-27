@@ -2,6 +2,7 @@
 using GBX.NET.Managers;
 using Microsoft.Extensions.Logging;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Xml;
@@ -223,8 +224,6 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     internal ClassIdRemapMode ClassIdRemapMode { get; set; }
 
-    private GbxReaderLimiter? limiter;
-
     public GbxReader(Stream input, GbxReadSettings settings = default) : base(input, encoding, !settings.CloseStream)
     {
         Settings = settings;
@@ -266,90 +265,46 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public bool ReadGbxMagic()
     {
-#if NETSTANDARD2_0
-        return base.ReadByte() == 'G' && base.ReadByte() == 'B' && base.ReadByte() == 'X';
-#else
+#if NET5_0_OR_GREATER
         Span<byte> buffer = stackalloc byte[3];
-
-        if (BaseStream.Read(buffer) != 3)
-        {
-            throw new EndOfStreamException("Failed to read GBX magic bytes.");
-        }
+#else
+        var buffer = new byte[3];
+#endif
+        BaseStream.ReadExactly(buffer);
 
         return buffer[0] == 'G' && buffer[1] == 'B' && buffer[2] == 'X';
-#endif
-    }
-
-    public override byte ReadByte()
-    {
-        limiter?.ThrowIfLimitExceeded(sizeof(byte));
-
-        return Mode switch
-        {
-            SerializationMode.Gbx => base.ReadByte(),
-            _ => throw new SerializationModeNotSupportedException(Mode),
-        };
-    }
-
-    public override sbyte ReadSByte()
-    {
-        limiter?.ThrowIfLimitExceeded(sizeof(sbyte));
-
-        return Mode switch
-        {
-            SerializationMode.Gbx => base.ReadSByte(),
-            _ => throw new SerializationModeNotSupportedException(Mode),
-        };
     }
 
     public override short ReadInt16()
     {
-        limiter?.ThrowIfLimitExceeded(sizeof(short));
-
         return Mode switch
         {
             SerializationMode.Gbx => Format switch
             {
                 GbxFormat.Binary => base.ReadInt16(),
-                GbxFormat.Text => GbxText(),
+                GbxFormat.Text => (short)ushort.Parse(ReadToCRLF()),
                 _ => throw new FormatNotSupportedException(Format)
             },
             _ => throw new SerializationModeNotSupportedException(Mode),
         };
-
-        short GbxText()
-        {
-            var value = ReadToCRLF();
-            return value == "4294967295" ? (short)-1 : short.Parse(value);
-        }
     }
 
     public override int ReadInt32()
     {
-        limiter?.ThrowIfLimitExceeded(sizeof(int));
-
         return Mode switch
         {
             SerializationMode.Gbx => Format switch
             {
                 GbxFormat.Binary => base.ReadInt32(),
-                GbxFormat.Text => GbxText(),
+                GbxFormat.Text => (int)uint.Parse(ReadToCRLF()),
                 _ => throw new FormatNotSupportedException(Format)
             },
             _ => throw new SerializationModeNotSupportedException(Mode),
         };
-
-        int GbxText()
-        {
-            var value = ReadToCRLF();
-            return value == "4294967295" ? -1 : int.Parse(value);
-        }
     }
 
     public int ReadHexInt32()
     {
-        limiter?.ThrowIfLimitExceeded(sizeof(int));
-
         return Mode switch
         {
             SerializationMode.Gbx => Format switch
@@ -364,8 +319,6 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public override uint ReadUInt32()
     {
-        limiter?.ThrowIfLimitExceeded(sizeof(uint));
-
         return Mode switch
         {
             SerializationMode.Gbx => Format switch
@@ -380,8 +333,6 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public uint ReadHexUInt32()
     {
-        limiter?.ThrowIfLimitExceeded(sizeof(uint));
-
         return Mode switch
         {
             SerializationMode.Gbx => Format switch
@@ -396,94 +347,26 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public int ReadDataInt32()
     {
-        limiter?.ThrowIfLimitExceeded(sizeof(int));
-
-        return Mode switch
-        {
-            SerializationMode.Gbx => Format switch
-            {
-                GbxFormat.Binary => ReadInt32(),
-                GbxFormat.Text => base.ReadInt32(),
-                _ => throw new FormatNotSupportedException(Format)
-            },
-            _ => throw new SerializationModeNotSupportedException(Mode),
-        };
+        return base.ReadInt32();
     }
 
     public uint ReadDataUInt32()
     {
-        limiter?.ThrowIfLimitExceeded(sizeof(uint));
-
-        return Mode switch
-        {
-            SerializationMode.Gbx => Format switch
-            {
-                GbxFormat.Binary => ReadUInt32(),
-                GbxFormat.Text => base.ReadUInt32(),
-                _ => throw new FormatNotSupportedException(Format)
-            },
-            _ => throw new SerializationModeNotSupportedException(Mode),
-        };
+        return base.ReadUInt32();
     }
 
     public long ReadDataInt64()
     {
-        limiter?.ThrowIfLimitExceeded(sizeof(long));
-
-        return Mode switch
-        {
-            SerializationMode.Gbx => Format switch
-            {
-                GbxFormat.Binary => ReadInt64(),
-                GbxFormat.Text => base.ReadInt64(),
-                _ => throw new FormatNotSupportedException(Format)
-            },
-            _ => throw new SerializationModeNotSupportedException(Mode),
-        };
+        return base.ReadInt64();
     }
 
     public ulong ReadDataUInt64()
     {
-        limiter?.ThrowIfLimitExceeded(sizeof(ulong));
-
-        return Mode switch
-        {
-            SerializationMode.Gbx => Format switch
-            {
-                GbxFormat.Binary => ReadUInt64(),
-                GbxFormat.Text => base.ReadUInt64(),
-                _ => throw new FormatNotSupportedException(Format)
-            },
-            _ => throw new SerializationModeNotSupportedException(Mode),
-        };
-    }
-
-    public override long ReadInt64()
-    {
-        limiter?.ThrowIfLimitExceeded(sizeof(long));
-
-        return Mode switch
-        {
-            SerializationMode.Gbx => base.ReadInt64(),
-            _ => throw new SerializationModeNotSupportedException(Mode),
-        };
-    }
-
-    public override ulong ReadUInt64()
-    {
-        limiter?.ThrowIfLimitExceeded(sizeof(ulong));
-
-        return Mode switch
-        {
-            SerializationMode.Gbx => base.ReadUInt64(),
-            _ => throw new SerializationModeNotSupportedException(Mode),
-        };
+        return base.ReadUInt64();
     }
 
     public override float ReadSingle()
     {
-        limiter?.ThrowIfLimitExceeded(sizeof(float));
-
         return Mode switch
         {
             SerializationMode.Gbx => Format switch
@@ -498,6 +381,9 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public BigInteger ReadBigInt(int byteLength)
     {
+        if (byteLength < 0) throw new ArgumentOutOfRangeException(nameof(byteLength));
+        EnsureValidLength(byteLength);
+
         return new BigInteger(ReadBytes(byteLength));
     }
 
@@ -791,8 +677,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public GbxFormat ReadFormatByte()
     {
-        Format = (GbxFormat)ReadByte();
-        return Format;
+        return Format = (GbxFormat)ReadByte();
     }
 
     /// <summary>
@@ -803,8 +688,6 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
     /// <exception cref="SerializationModeNotSupportedException"></exception>
     public override bool ReadBoolean()
     {
-        limiter?.ThrowIfLimitExceeded(4);
-
         return Mode switch
         {
             SerializationMode.Gbx => Format switch
@@ -855,7 +738,6 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             case BoolType.Byte:
                 return ReadBoolean(asByte: true);
             case BoolType.Text:
-                var bytes = ReadString(20);
                 return bool.Parse(ReadToCRLF());
             default:
                 throw new ArgumentException("Invalid boolean type.", nameof(type));
@@ -864,8 +746,6 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public override string ReadString()
     {
-        limiter?.ThrowIfLimitExceeded(sizeof(int));
-
         return Mode switch
         {
             SerializationMode.Gbx => Format switch
@@ -884,21 +764,12 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         {
             case SerializationMode.Gbx:
                 // Length of the string in bytes, not chars
-                int length;
-                switch (readPrefix)
+                var length = readPrefix switch
                 {
-                    case StringLengthPrefix.Byte:
-                        limiter?.ThrowIfLimitExceeded(sizeof(byte));
-                        length = base.ReadByte();
-                        break;
-                    case StringLengthPrefix.Int32:
-                        limiter?.ThrowIfLimitExceeded(sizeof(int));
-                        length = base.ReadInt32();
-                        break;
-                    default:
-                        throw new ArgumentException("Can't read string without knowing its length.", nameof(readPrefix));
-                }
-
+                    StringLengthPrefix.Byte => base.ReadByte(),
+                    StringLengthPrefix.Int32 => base.ReadInt32(),
+                    _ => throw new ArgumentException("Can't read string without knowing its length.", nameof(readPrefix)),
+                };
                 return ReadString(length);
             default:
                 throw new SerializationModeNotSupportedException(Mode);
@@ -907,23 +778,15 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public string ReadString(int length)
     {
+        if (length == 0)
+        {
+            return string.Empty;
+        }
+
         switch (Mode)
         {
             case SerializationMode.Gbx:
-                if (length == 0)
-                {
-                    return string.Empty;
-                }
-
-                if (length < 0)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(length), "Length cannot be negative.");
-                }
-
-                if (length > MaxDataSize) // ~268MB
-                {
-                    throw new LengthLimitException(length);
-                }
+                EnsureValidLength(length);
 
 #if NET6_0_OR_GREATER
                 if (length > 2048)
@@ -932,8 +795,6 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
                     return encoding.GetString(ReadBytes(length));
 #if NET6_0_OR_GREATER
                 }
-
-                limiter?.ThrowIfLimitExceeded(length);
 
                 Span<byte> bytes = stackalloc byte[length];
 
@@ -979,28 +840,25 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
 
     public override byte[] ReadBytes(int count)
     {
-        if (count > MaxDataSize)
-        {
-            throw new LengthLimitException(count);
-        }
+        EnsureValidLength(count);
 
-        limiter?.ThrowIfLimitExceeded(count);
-
-        return Mode switch
+        var bytes = Mode switch
         {
             SerializationMode.Gbx => base.ReadBytes(count),
             _ => throw new SerializationModeNotSupportedException(Mode),
         };
+
+        if (bytes.Length != count)
+        {
+            throw new EndOfStreamException($"Expected to read {count} bytes but only read {bytes.Length} bytes.");
+        }
+
+        return bytes;
     }
 
     public async Task<byte[]> ReadBytesAsync(int count, CancellationToken cancellationToken = default)
     {
-        if (count > MaxDataSize)
-        {
-            throw new LengthLimitException(count);
-        }
-
-        limiter?.ThrowIfLimitExceeded(count);
+        EnsureValidLength(count);
 
         if (Mode is not SerializationMode.Gbx)
         {
@@ -1414,8 +1272,6 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
     public void ReadMarker(string value)
     {
         var byteCount = encoding.GetByteCount(value);
-        
-        limiter?.ThrowIfLimitExceeded(byteCount);
 
         var useStack = byteCount <= 256;
 
@@ -1520,7 +1376,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
 
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         return (uint)determineFrom.GetValueOrDefault(length) switch
         {
@@ -1539,7 +1395,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
 
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         return (uint)determineFrom.GetValueOrDefault(length) switch
         {
@@ -1558,7 +1414,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
         
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
         
         var array = new Vec3[length];
         
@@ -1598,7 +1454,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
 
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         var array = new T[length];
 
@@ -1626,7 +1482,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
 
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         var list = new List<T>(length);
 
@@ -1647,40 +1503,6 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         return ReadListReadable<T>(byteLengthPrefix, version);
     }
 
-    private void ValidateCollectionLength(int length)
-    {
-        if (length < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(length), "Length is not valid.");
-        }
-
-        if (length < 0 || length > 0x10000000) // ~268MB
-        {
-            throw new Exception($"Length is too big to handle ({length}).");
-        }
-
-        limiter?.ThrowIfLimitExceeded(length);
-    }
-
-    private int ValidateCollectionLength<T>(int length, bool lengthInBytes) where T : struct
-    {
-        if (length < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(length), "Length is not valid (-1).");
-        }
-
-        var l = lengthInBytes ? length : Marshal.SizeOf<T>() * length;
-
-        if (l is < 0 or > 0x10000000) // ~268MB
-        {
-            throw new Exception($"Length is too big to handle ({(l < 0 ? length : l)}).");
-        }
-
-        limiter?.ThrowIfLimitExceeded(l);
-
-        return l;
-    }
-
     public void ReadDeprecVersion()
     {
         var version = ReadInt32();
@@ -1699,7 +1521,9 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
 
-        var l = ValidateCollectionLength<T>(length, lengthInBytes);
+        var l = lengthInBytes ? length : length * Unsafe.SizeOf<T>();
+
+        EnsureValidLength(l);
 
         if (l > 1_000_000)
         {
@@ -1733,7 +1557,8 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
 
-        var l = ValidateCollectionLength<T>(length, lengthInBytes);
+        var l = lengthInBytes ? length : length * Unsafe.SizeOf<T>();
+        EnsureValidLength(l);
 
         var list = new List<T>(l);
 
@@ -1781,7 +1606,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
 
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         var array = new T?[length];
 
@@ -1808,7 +1633,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
 
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         var list = new List<T?>(length);
 
@@ -1835,7 +1660,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
 
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         var array = new External<T>[length];
 
@@ -1863,7 +1688,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
 
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         var list = new List<External<T>>(length);
 
@@ -1891,7 +1716,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
 
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         var array = new string[length];
 
@@ -1918,7 +1743,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return [];
         }
 
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         var list = new List<string>(length);
 
@@ -2020,34 +1845,32 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             return;
         }
 
-        if (length < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(length), "Length is not valid.");
-        }
-
-        limiter?.ThrowIfLimitExceeded(length);
+        EnsureValidLength(length);
 
         if (BaseStream.CanSeek)
         {
             _ = BaseStream.Seek(length, SeekOrigin.Current);
-
             return;
         }
 
 #if NET6_0_OR_GREATER
-        if ((length > 1_000_000 && ReadBytes(length).Length != length) || Read(stackalloc byte[length]) != length)
+        Span<byte> buffer = length <= 256 ? stackalloc byte[length] : new byte[length];
 #else
-        if (ReadBytes(length).Length != length)
+        var buffer = new byte[length];
 #endif
-        {
-            // Should be silent?
-        }
+        BaseStream.ReadExactly(buffer);
     }
 
     public uint PeekUInt32()
     {
+        if (!BaseStream.CanSeek)
+        {
+            throw new NotSupportedException("Base stream does not support seeking.");
+        }
+
         var result = ReadUInt32();
         BaseStream.Seek(-sizeof(uint), SeekOrigin.Current);
+
         return result;
     }
 
@@ -2117,29 +1940,21 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         base.Dispose(disposing);
     }
 
-    internal void Limit(int limit)
+    /// <summary>
+    /// Ensures that the specified length is valid.
+    /// </summary>
+    /// <param name="length">The length to validate.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if the length is negative.</exception>
+    /// <exception cref="LengthLimitException">Thrown if the length exceeds the maximum allowed size.</exception>
+    private static void EnsureValidLength(int length)
     {
-        limiter ??= new();
-        limiter.Limit(limit);
-    }
-
-    internal void Unlimit(bool skipToLimitWhenUnreached = false)
-    {
-        if (limiter is null)
+        switch (length)
         {
-            return;
+            case < 0:
+                throw new ArgumentOutOfRangeException(nameof(length), "Length cannot be negative.");
+            case > MaxDataSize:
+                throw new LengthLimitException(length);
         }
-
-        if (skipToLimitWhenUnreached)
-        {
-            SkipData(limiter.Remaining);
-        }
-        else if (limiter.Remaining > 0)
-        {
-            throw new Exception($"Data limit not reached ({limiter.Remaining} bytes remaining).");
-        }
-
-        limiter.Unlimit();
     }
 
     internal BinaryScope ForceBinary() => new(this);

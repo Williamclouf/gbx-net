@@ -98,7 +98,7 @@ public class GbxReaderAndWriterArrayGenerator : IIncrementalGenerator
             sb.AppendLine("            return [];");
             sb.AppendLine("        }");
             sb.AppendLine();
-            sb.AppendLine("        ValidateCollectionLength(length);");
+            sb.AppendLine("        EnsureValidLength(length);");
             sb.AppendLine();
             sb.Append("        var array = new ");
             sb.Append(symbol.ReturnType);
@@ -153,7 +153,7 @@ public class GbxReaderAndWriterArrayGenerator : IIncrementalGenerator
             sb.AppendLine(">();");
             sb.AppendLine("        }");
             sb.AppendLine();
-            sb.AppendLine("        ValidateCollectionLength(length);");
+            sb.AppendLine("        EnsureValidLength(length);");
             sb.AppendLine();
             sb.Append("        var list = new List<");
             sb.Append(symbol.ReturnType);

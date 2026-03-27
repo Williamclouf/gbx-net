@@ -102,8 +102,6 @@ internal sealed class GbxHeaderReader(GbxReader reader)
 
         foreach (var desc in headerChunkInfos)
         {
-            reader.Limit(desc.Size);
-
             var chunk = (node as CMwNod)?.NewHeaderChunk(desc.Id) ?? ClassManager.NewHeaderChunk(desc.Id);
 
             if (chunk is null)
@@ -138,8 +136,6 @@ internal sealed class GbxHeaderReader(GbxReader reader)
                     node = null;
                 }
             }
-
-            reader.Unlimit(skipToLimitWhenUnreached: Settings.SkipUnclearedHeaderChunkBuffers);
         }
 
         return true;
