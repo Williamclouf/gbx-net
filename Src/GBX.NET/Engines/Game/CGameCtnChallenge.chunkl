@@ -1,6 +1,6 @@
 CGameCtnChallenge 0x03043000 // A map.
 
-0x002 (header, struct: SHeaderTMDesc) [TM10.v3, TMPU.v4, TMS.v7, TMO.v7, TMSX.v10, TMNESWC.v10, TMU.v10, TMF.v11, MP3.v13, TMT.v13, MP4.v13, TM2020.v13] // map info
+0x002 (header, struct: SHeaderTMDesc) [TM10.v3, TMPU.v4, TMS.v7, TMO.v7, TMSX.v10, TMNESWC.v10, TMU.v10, TMF.v11, MP3.v13, TMT.v13, MP4.v13, TM2020.v13] // description
  versionb
  v2-
   ident MapInfo = empty
