@@ -32,10 +32,7 @@ internal sealed partial class GbxBodyReader(GbxReaderWriter readerWriter, GbxCom
                     logger.LogInformation("Uncompressed body size: {UncompressedSize}", uncompressedSize);
                 }
 
-                if (IsValidUncompressedSize(uncompressedSize, settings))
-                {
-                    throw new Exception($"Uncompressed body size {uncompressedSize} exceeds maximum allowed size {settings.MaxUncompressedBodySize}.");
-                }
+                EnsureValidUncompressedSize(uncompressedSize, settings);
 
                 var compressedSize = reader.ReadInt32();
 
@@ -48,6 +45,8 @@ internal sealed partial class GbxBodyReader(GbxReaderWriter readerWriter, GbxCom
                         logger.LogInformation("RawBody mode: reading {CompressedSize} bytes directly...", compressedSize);
                     }
                 }
+
+                EnsureValidCompressedSize(compressedSize, uncompressedSize, settings);
 
                 var rawData = settings.ReadRawBody
                     ? ImmutableArray.Create(await reader.ReadBytesAsync(compressedSize, cancellationToken))
@@ -84,10 +83,28 @@ internal sealed partial class GbxBodyReader(GbxReaderWriter readerWriter, GbxCom
         }
     }
 
-    private static bool IsValidUncompressedSize(int uncompressedSize, GbxReadSettings settings)
+    private static void EnsureValidUncompressedSize(int uncompressedSize, GbxReadSettings settings)
     {
-        return uncompressedSize > GbxReader.MaxDataSize
-            || (settings.MaxUncompressedBodySize.HasValue && uncompressedSize > settings.MaxUncompressedBodySize.Value);
+        var maxUncompressedSize = settings.MaxUncompressedBodySize ?? GbxReader.MaxDataSize;
+        if (uncompressedSize > maxUncompressedSize)
+        {
+            throw new Exception($"Uncompressed body size {uncompressedSize} exceeds maximum allowed size {maxUncompressedSize}.");
+        }
+    }
+
+    private static void EnsureValidCompressedSize(int compressedSize, int uncompressedSize, GbxReadSettings settings)
+    {
+        var maxCompressedSize = settings.MaxCompressedBodySize ?? GbxReader.MaxDataSize;
+
+        if (compressedSize > maxCompressedSize)
+        {
+            throw new Exception($"Compressed body size {compressedSize} exceeds maximum allowed size {maxCompressedSize}.");
+        }
+
+        if (compressedSize > uncompressedSize)
+        {
+            throw new Exception($"Compressed body size {compressedSize} cannot be greater than uncompressed size {uncompressedSize}.");
+        }
     }
 
     [Zomp.SyncMethodGenerator.CreateSyncVersion]
@@ -164,7 +181,7 @@ internal sealed partial class GbxBodyReader(GbxReaderWriter readerWriter, GbxCom
         Span<byte> compressedData = stackalloc byte[compressedSize];
         reader.BaseStream.ReadExactly(compressedData);
 #else
-        var compressedData = reader.ReadBytes(compressedSize); // this can still break on network streams 
+        var compressedData = reader.ReadBytes(compressedSize);
 #endif
         var decompressedData = new byte[uncompressedSize];
 
