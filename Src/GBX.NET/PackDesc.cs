@@ -21,7 +21,7 @@ public sealed record PackDesc(string FilePath = "", UInt256? Checksum = null, st
 
     public override string ToString()
     {
-        if (string.IsNullOrEmpty(FilePath))
+        if (string.IsNullOrEmpty(FilePath) && string.IsNullOrEmpty(LocatorUrl))
         {
             return "PackDesc: (empty)";
         }
