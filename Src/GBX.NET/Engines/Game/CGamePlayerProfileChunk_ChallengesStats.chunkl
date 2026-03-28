@@ -1,6 +1,6 @@
 CGamePlayerProfileChunk_ChallengesStats 0x03148000
 - inherits: CGamePlayerProfileChunk
 
-0x000
+0x000 (skippable)
  version
  int
