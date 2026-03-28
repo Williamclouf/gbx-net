@@ -26,6 +26,11 @@ public sealed record PackDesc(string FilePath = "", UInt256? Checksum = null, st
             return "PackDesc: (empty)";
         }
 
+        if (string.IsNullOrEmpty(LocatorUrl))
+        {
+            return $"PackDesc: \"{FilePath}\"";
+        }
+
         return $"PackDesc: \"{FilePath}\" ({LocatorUrl})";
     }
 }
