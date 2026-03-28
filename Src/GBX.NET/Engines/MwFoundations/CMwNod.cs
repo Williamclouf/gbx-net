@@ -170,7 +170,7 @@ public partial class CMwNod : IClass
 
                                 if (boundedStream.Remaining > 0)
                                 {
-                                    throw new Exception($"Not all data was read from skippable chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId)}). {boundedStream.Remaining} bytes remaining.");
+                                    throw new Exception($"Not all data was read from skippable chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId & 0xFFFFF000) ?? "unknown class name"}). {boundedStream.Remaining} bytes remaining.");
                                 }
 
                                 r.LoadFrom(rChunk);
@@ -217,7 +217,7 @@ public partial class CMwNod : IClass
 
                                 if (boundedStream.Remaining > 0)
                                 {
-                                    throw new Exception($"Not all data was read from skippable chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId)}). {boundedStream.Remaining} bytes remaining.");
+                                    throw new Exception($"Not all data was read from skippable chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId & 0xFFFFF000) ?? "unknown class name"}). {boundedStream.Remaining} bytes remaining.");
                                 }
 
                                 r.LoadFrom(rChunk);
@@ -343,7 +343,7 @@ public partial class CMwNod : IClass
                     writable.Write(this, chunkW);
                     break;
                 default:
-                    throw new Exception($"Chunk (ID 0x{chunk.Id:X8}, {ClassManager.GetName(chunk.Id & 0xFFFFF000)}) cannot be processed");
+                    throw new Exception($"Chunk (ID 0x{chunk.Id:X8}, {ClassManager.GetName(chunk.Id & 0xFFFFF000) ?? "unknown class name"}) cannot be processed");
             }
 
             // Memory stream is not null only if chunk is skippable and not ignored
