@@ -13,6 +13,8 @@ CGamePlayerProfileChunk_TrackManiaSettings 0x240D5000
  version
  byte[]
 
+0x003 (skippable, ignore)
+
 0x004 (skippable)
  version
  int
