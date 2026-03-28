@@ -118,9 +118,41 @@ CGamePlayerProfileChunk_GameSettings 0x0312D000
  version
  float
 
+0x00B (skippable)
+ version
+ int
+ Unknown[]
+
+0x00C (skippable)
+ version
+ float
+ float
+ float
+ float
+ float
+ float
+ float
+ float
+ float
+ float
+ float
+ float
+ float
+ float
+ float
+
+0x00D (skippable)
+ uint
+ int
+ string
+
 archive SChallengeOpponents
  ident
  v0=
   id[]
  int
  string
+
+archive Unknown
+ id
+ int
