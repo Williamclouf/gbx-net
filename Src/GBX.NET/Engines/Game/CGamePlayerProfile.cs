@@ -216,7 +216,7 @@ public partial class CGamePlayerProfile
 
                 for (var i = 0; i < n.profileChunks.Length; i++)
                 {
-                    var chunkId = r.ReadUInt32();
+                    var chunkClassId = r.ReadUInt32();
                     var chunkName = r.ReadString();
                     var gameName = r.ReadString();
                     var checksum = r.ReadString();
@@ -229,11 +229,13 @@ public partial class CGamePlayerProfile
                     using var chunkReader = new GbxReader(boundedStream, r.Settings);
                     using var chunkRw = new GbxReaderWriter(chunkReader);
 
+                    using var _ = r.Logger?.BeginScope(ClassManager.GetName(chunkClassId) ?? $"0x{chunkClassId:X8}");
+
                     var skipArchiveVersion = chunkReader.ReadInt32();
                     var archiveVersion = chunkReader.ReadInt32();
 
-                    var chunk = (CGamePlayerProfileChunk)(ClassManager.New(chunkId)
-                        ?? throw new NotImplementedException($"Profile chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId)}) is not implemented."));
+                    var chunk = (CGamePlayerProfileChunk)(ClassManager.New(chunkClassId)
+                        ?? throw new NotImplementedException($"Profile chunk 0x{chunkClassId:X8} ({ClassManager.GetName(chunkClassId)}) is not implemented."));
 
                     n.profileChunks[i] = chunk;
 
@@ -249,7 +251,7 @@ public partial class CGamePlayerProfile
 
                     if (boundedStream.Remaining > 0)
                     {
-                        throw new Exception($"Not all data was read from profile chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId)}). {boundedStream.Remaining} bytes remaining.");
+                        throw new Exception($"Not all data was read from profile chunk 0x{chunkClassId:X8} ({ClassManager.GetName(chunkClassId)}). {boundedStream.Remaining} bytes remaining.");
                     }
                 }
             }
