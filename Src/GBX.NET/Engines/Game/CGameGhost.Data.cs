@@ -318,20 +318,35 @@ public partial class CGameGhost
             return reader.ReadBytes(sizesPerSample[i]);
         }
 
+        /// <summary>
+        /// Linearly interpolates <see cref="Sample.Position"/>, <see cref="Sample.Rotation"/>,
+        /// <see cref="Sample.VelocitySpeed"/> and <see cref="Sample.Velocity"/> between two samples. Unknown data is taken from sample A.
+        /// </summary>
+        /// <param name="timestamp">Any timestamp between the range of samples.</param>
+        /// <returns>A new instance of <see cref="Sample"/> that has been linearly interpolated (<see cref="Sample.Time"/> will be null)
+        /// or a reference to an existing sample if <paramref name="timestamp"/> matches an existing sample timestamp.
+        /// Also returns null if there are no samples, or if <paramref name="timestamp"/> is outside of the sample range,
+        /// or <see cref="SamplePeriod"/> is lower or equal to 0.</returns>
         public Sample? GetSampleLerp(TimeSingle timestamp)
         {
             if (Samples is null || Samples.Count == 0 || SamplePeriod.Ticks <= 0)
+            {
                 return null;
+            }
 
             var sampleKey = timestamp.TotalMilliseconds / SamplePeriod.TotalMilliseconds;
             var a = Samples.ElementAtOrDefault((int)Math.Floor(sampleKey));
             var b = Samples.ElementAtOrDefault((int)Math.Ceiling(sampleKey));
 
-            if (a == null)
+            if (a is null) // Timestamp is outside of the range
+            {
                 return null;
+            }
 
-            if (b == null || a == b)
+            if (b is null || a == b) // There's no second sample to interpolate with
+            {
                 return a;
+            }
 
             var t = (float)(sampleKey - Math.Floor(sampleKey));
 
