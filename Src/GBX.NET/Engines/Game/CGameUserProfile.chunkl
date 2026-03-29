@@ -1,1 +1,129 @@
 CGameUserProfile 0x031CC000
+
+0x000 (skippable)
+ version
+ float
+ float
+ float
+ v0=
+  float
+ v3-
+  int
+  string
+ v2-
+  string
+  v2=
+   string
+ v3+
+  Sticker[] Stickers
+  string[] Layers
+  v4+
+   bool
+   string
+  v5+
+   string
+   string
+  v6+
+   byte
+  v7+
+   string
+  v8+
+   string
+   string
+   float
+   string
+   string
+   float
+   int
+   int
+  v10+
+   int
+  v11+
+   int
+  v12+
+   byte
+  v13+
+   float
+   float
+  v14+
+   int
+  v15+
+   int
+  v16+
+   string
+
+0x001 (skippable)
+
+0x002 (skippable)
+ version
+ data
+
+0x003 (skippable)
+ version
+ data
+
+0x004 (skippable)
+ version
+ ContextTime[] ContextTimes
+
+0x005 (skippable)
+ version
+ string
+
+0x006 (skippable)
+ version
+ ContextMapRecordForProfile[] ContextMapRecordsForProfile (version: Version)
+
+0x007 (skippable)
+ version
+ v1=
+  CInputBindingsConfig
+ v2+
+  CInputBindingsConfig[]
+ float
+ float
+ bool
+ int
+ bool
+ float
+ float
+ float
+ bool
+ float
+ float
+ v2-
+  Unknown[]
+
+0x008 (skippable)
+ version
+ int
+
+0x009 (skippable)
+ version
+ id
+
+archive Sticker
+ string
+ string
+
+archive ContextTime
+ string
+ int
+ int
+
+archive ContextMapRecordForProfile
+ v2-
+  id
+ id
+ int
+ v2+
+  int
+  int
+  v3+
+   string
+
+archive Unknown
+ id
+ float
+ float
+ bool
