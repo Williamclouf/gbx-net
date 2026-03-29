@@ -237,7 +237,7 @@ public partial class CMwNod : IClass
                                 Data = r.ReadBytes(chunkSize)
                             };
 
-                            Chunks.Add(skippableChunk);
+                            chunks.AddInternal(skippableChunk);
 
                             break;
                     }

@@ -108,7 +108,7 @@ internal class ChunkSet<TKind>(CMwNod? node) : IChunkSet<TKind> where TKind : IC
 
         var chunkType = chunk.GetType();
 
-        if (chunksByType.ContainsKey(chunkType))
+        if (chunkType != typeof(SkippableChunk) && chunksByType.ContainsKey(chunkType))
         {
             return false;
         }
