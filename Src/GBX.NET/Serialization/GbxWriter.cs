@@ -89,7 +89,6 @@ public partial interface IGbxWriter : IDisposable
     void WriteSmallLen(int value);
     void WriteSmallString(string? value);
     void WriteMarker(string value);
-    void WriteTransform(Vec3 position, Quat rotation, float speed, Vec3 velocity);
     void WriteZlibData(ZlibData? value, IReadableWritable? readableWritable, int version = 0);
     void WriteZlibData(ZlibData? value, IWritable? writable, int version = 0);
     void WriteZlibData(ZlibData? value, Action<GbxWriter> action);
@@ -1048,7 +1047,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         Write(value, StringLengthPrefix.None);
     }
 
-    public void WriteTransform(Vec3 pos, Quat rotation, float speed, Vec3 velocity)
+    internal void WriteTransform(Vec3 pos, Quat rotation, float speed, Vec3 velocity)
     {
         Write(pos);
 
