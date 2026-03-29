@@ -801,11 +801,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
                 }
 
                 Span<byte> bytes = stackalloc byte[length];
-
-                if (Read(bytes) != length)
-                {
-                    throw new EndOfStreamException();
-                }
+                BaseStream.ReadExactly(bytes);
 
                 if (!enablePreviousStringCache)
                 {
