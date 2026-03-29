@@ -555,10 +555,6 @@ public partial class CSceneVehicleVis
 
     public interface IEntRecordDeltaRawData
     {
-        Vec3 Position { get; set; }
-        Quat Rotation { get; set; }
-        float Speed { get; set; }
-        Vec3 Velocity { get; set; }
         ushort SideSpeed { get; set; }
         byte Rpm { get; set; }
         byte FlWheelRot { get; set; }
