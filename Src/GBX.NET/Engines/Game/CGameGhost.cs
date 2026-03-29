@@ -37,7 +37,7 @@ public partial class CGameGhost
                         using var ms = new MemoryStream(RawData.Data);
                         using var reader = new GbxReader(ms);
                         sampleData.SavedMobilClassId = savedMobilClassId.GetValueOrDefault();
-                        sampleData.ParseOld(reader);
+                        sampleData.ReadSamplesOld(reader);
                         RawData.Parsed = true;
                         return sampleData;
                     }

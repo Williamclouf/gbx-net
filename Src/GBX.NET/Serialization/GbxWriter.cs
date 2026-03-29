@@ -55,9 +55,13 @@ public partial interface IGbxWriter : IDisposable
     void Write(Byte3 value);
     void Write(Vec2 value);
     void Write(Vec3 value);
+    void WriteVec3Unit2(Vec3 value);
+    void WriteVec3_4(Vec3 value);
     void WriteVec3_6(Vec3 value);
+    void WriteVec3_9(Vec3 value);
     void WriteVec3_10b(Vec3 value);
     void WriteVec3Unit4(Vec3 value);
+    void WriteQuat6(Quat value);
     void Write(Vec4 value);
     void Write(BoxAligned value);
     void Write(BoxInt3 value);
@@ -569,6 +573,65 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         Write(value.Z);
     }
 
+    public void WriteVec3Unit2(Vec3 value)
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        // Ensure Z is clamped to [-1, 1] to avoid NaN from Asin
+        var pitch = MathF.Asin(Math.Clamp(value.Z, -1f, 1f));
+        var heading = MathF.Atan2(value.Y, value.X);
+
+        // Map radians back to the 8-bit scale and clamp to sbyte boundaries.
+        var headingEncoded = (sbyte)Math.Clamp(MathF.Round(heading / MathF.PI * sbyte.MaxValue), sbyte.MinValue, sbyte.MaxValue);
+        var pitchEncoded = (sbyte)Math.Clamp(MathF.Round(pitch / (MathF.PI / 2) * sbyte.MaxValue), sbyte.MinValue, sbyte.MaxValue);
+
+        // Write as byte to match the ReadByte() signature used in ReadVec3Unit2
+        Write(unchecked((byte)headingEncoded));
+        Write(unchecked((byte)pitchEncoded));
+#else
+        var pitch = Math.Asin(Math.Max(-1.0, Math.Min(1.0, value.Z)));
+        var heading = Math.Atan2(value.Y, value.X);
+
+        var headingEncoded = (sbyte)Math.Max(sbyte.MinValue, Math.Min(sbyte.MaxValue, Math.Round(heading / Math.PI * sbyte.MaxValue)));
+        var pitchEncoded = (sbyte)Math.Max(sbyte.MinValue, Math.Min(sbyte.MaxValue, Math.Round(pitch / (Math.PI / 2) * sbyte.MaxValue)));
+
+        Write(unchecked((byte)headingEncoded));
+        Write(unchecked((byte)pitchEncoded));
+#endif
+    }
+
+    public void WriteVec3_4(Vec3 value)
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        var mag = MathF.Sqrt(value.X * value.X + value.Y * value.Y + value.Z * value.Z);
+
+        if (mag < 1e-5f)
+        {
+            Write(short.MinValue);
+            WriteVec3Unit2(new Vec3(1, 0, 0)); // Default unit vector to prevent undefined behavior
+        }
+        else
+        {
+            var mag16 = (short)Math.Clamp(MathF.Round(MathF.Log(mag) * 1000f), short.MinValue, short.MaxValue);
+            Write(mag16);
+            WriteVec3Unit2(new Vec3(value.X / mag, value.Y / mag, value.Z / mag));
+        }
+#else
+        var mag = Math.Sqrt(value.X * value.X + value.Y * value.Y + value.Z * value.Z);
+
+        if (mag < 1e-5)
+        {
+            Write(short.MinValue);
+            WriteVec3Unit2(new Vec3(1, 0, 0)); 
+        }
+        else
+        {
+            var mag16 = (short)Math.Max(short.MinValue, Math.Min(short.MaxValue, Math.Round(Math.Log(mag) * 1000.0)));
+            Write(mag16);
+            WriteVec3Unit2(new Vec3((float)(value.X / mag), (float)(value.Y / mag), (float)(value.Z / mag)));
+        }
+#endif
+    }
+
     public void WriteVec3_6(Vec3 value)
     {
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -593,6 +656,42 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         buffer[5] = (byte)(z >> 8);
 
         BaseStream.Write(buffer, 0, 6);
+#endif
+    }
+
+    public void WriteVec3_9(Vec3 value)
+    {
+        // Reverse: val = ((encoded - 0x800000) * 0.002f)
+        // encoded = (val / 0.002f) + 0x800000
+        static int Encode(float v) => (int)AdditionalMath.Clamp((int)Math.Round(v / 0.002f) + 0x800000, 0, 0xFFFFFF);
+
+        var ix = Encode(value.X);
+        var iy = Encode(value.Y);
+        var iz = Encode(value.Z);
+
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        Span<byte> buffer = stackalloc byte[9];
+#else
+        var buffer = new byte[9];
+#endif
+
+        // Note: The byte order is specifically unaligned: [16-23], [0-7], [8-15]
+        buffer[0] = (byte)(ix >> 16);
+        buffer[1] = (byte)(ix);
+        buffer[2] = (byte)(ix >> 8);
+
+        buffer[3] = (byte)(iy >> 16);
+        buffer[4] = (byte)(iy);
+        buffer[5] = (byte)(iy >> 8);
+
+        buffer[6] = (byte)(iz >> 16);
+        buffer[7] = (byte)(iz);
+        buffer[8] = (byte)(iz >> 8);
+
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        BaseStream.Write(buffer);
+#else
+        Write(buffer);
 #endif
     }
 
@@ -623,6 +722,34 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 #else
         Write((short)(Math.Atan2(value.Y, value.X) * short.MaxValue / Math.PI));
         Write((short)(Math.Asin(value.Z) * short.MaxValue / (Math.PI / 2)));
+#endif
+    }
+
+    public void WriteQuat6(Quat value)
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        var w = Math.Clamp(value.W, -1f, 1f);
+        var angle = MathF.Acos(w);
+        var sinAngle = MathF.Sin(angle);
+
+        // Avoid division by zero if there is no rotation
+        var axis = MathF.Abs(sinAngle) > 1e-5f
+            ? new Vec3(value.X / sinAngle, value.Y / sinAngle, value.Z / sinAngle)
+            : new Vec3(1, 0, 0);
+
+        Write((ushort)Math.Clamp(MathF.Round(angle / MathF.PI * ushort.MaxValue), 0, ushort.MaxValue));
+        WriteVec3Unit4(axis);
+#else
+        var w = Math.Max(-1.0, Math.Min(1.0, value.W));
+        var angle = Math.Acos(w);
+        var sinAngle = Math.Sin(angle);
+
+        var axis = Math.Abs(sinAngle) > 1e-5
+            ? new Vec3((float)(value.X / sinAngle), (float)(value.Y / sinAngle), (float)(value.Z / sinAngle))
+            : new Vec3(1, 0, 0);
+
+        Write((ushort)Math.Max(0, Math.Min(ushort.MaxValue, Math.Round(angle / Math.PI * ushort.MaxValue))));
+        WriteVec3Unit4(axis);
 #endif
     }
 

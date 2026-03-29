@@ -42,12 +42,24 @@ public partial class CGameGhost
         public int? U01 { get; set; }
         public int[]? Offsets { get; set; }
 
+        public int? FirstSampleOffset { get; set; }
+
         public void Read(GbxReader r, int v = 0)
         {
             switch (v)
             {
                 case 0: ReadOld(r); break;
                 case 1: ReadNew(r); break;
+                default: throw new NotSupportedException($"Version {v} is not supported.");
+            }
+        }
+
+        public void Write(GbxWriter w, int v = 0)
+        {
+            switch (v)
+            {
+                case 0: WriteOld(w); break;
+                case 1: WriteNew(w); break;
                 default: throw new NotSupportedException($"Version {v} is not supported.");
             }
         }
@@ -61,7 +73,16 @@ public partial class CGameGhost
             Version = r.ReadInt32();
         }
 
-        internal void ParseOld(GbxReader r)
+        private void WriteOld(GbxWriter w)
+        {
+            w.WriteArray(Offsets);
+            w.WriteArray(stateTimes);
+            w.Write(IsFixedTimeStep);
+            w.Write(SamplePeriod);
+            w.Write(Version);
+        }
+
+        internal void ReadSamplesOld(GbxReader r)
         {
             Samples = [];
 
@@ -82,6 +103,19 @@ public partial class CGameGhost
             }
 
             Samples.Add(ReadSample(new TimeInt32((Offsets.Length - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes((int)r.BaseStream.Length - Offsets[Offsets.Length - 1])));
+        }
+
+        internal void WriteSamplesOld(GbxWriter w)
+        {
+            if (Offsets is null || Samples.Count == 0)
+            {
+                throw new NotSupportedException("This type of ghost data is not supported.");
+            }
+
+            foreach (var sample in Samples)
+            {
+                w.Write(GetSampleData(sample));
+            }
         }
 
         private void ReadNew(GbxReader r)
@@ -108,7 +142,7 @@ public partial class CGameGhost
 
             if (numSamples > 0)
             {
-                var firstSampleOffset = r.ReadInt32();
+                FirstSampleOffset = r.ReadInt32();
 
                 if (numSamples > 1)
                 {
@@ -120,7 +154,6 @@ public partial class CGameGhost
                     }
                 }
             }
-            //
 
             // CGameGhostTMData::ArchiveStateTimes
             stateTimes = null;
@@ -129,7 +162,6 @@ public partial class CGameGhost
             {
                 stateTimes = r.ReadArray<int>();
             }
-            //
 
             Samples = [];
 
@@ -164,9 +196,83 @@ public partial class CGameGhost
             }
         }
 
-        public void Write(GbxWriter w, int v = 0)
+        private void WriteNew(GbxWriter w)
         {
-            throw new NotSupportedException("Writing ghost data is not supported.");
+            w.Write(SavedMobilClassId);
+
+            if (SavedMobilClassId == uint.MaxValue)
+            {
+                return;
+            }
+
+            w.Write(IsFixedTimeStep);
+            w.Write(U01.GetValueOrDefault());
+            w.Write(SamplePeriod);
+            w.Write(Version);
+
+            using var stateBufferMs = new MemoryStream();
+            using var stateBufferW = new GbxWriter(stateBufferMs);
+
+            var numSamples = Samples.Count;
+            var sampleSizes = new int[Math.Max(0, numSamples - 1)];
+            var sizePerSample = -1;
+            var isUniformSize = true;
+            var firstSize = 0;
+
+            for (var i = 0; i < numSamples; i++)
+            {
+                var sampleData = GetSampleData(Samples[i]);
+                stateBufferW.Write(sampleData);
+
+                if (i == 0)
+                    firstSize = sampleData.Length;
+                else if (sampleData.Length != firstSize)
+                    isUniformSize = false;
+
+                if (i < numSamples - 1)
+                {
+                    sampleSizes[i] = sampleData.Length;
+                }
+            }
+
+            if (numSamples > 1 && isUniformSize)
+            {
+                sizePerSample = firstSize;
+            }
+
+            w.WriteData(stateBufferMs.ToArray());
+
+            w.Write(numSamples);
+
+            if (numSamples > 0)
+            {
+                w.Write(FirstSampleOffset ?? 0);
+
+                if (numSamples > 1)
+                {
+                    w.Write(sizePerSample);
+
+                    if (sizePerSample == -1)
+                    {
+                        w.WriteArray<int>(sampleSizes);
+                    }
+                }
+            }
+
+            // Write CGameGhostTMData::ArchiveStateTimes
+            if (!IsFixedTimeStep)
+            {
+                if (stateTimes is not null)
+                {
+                    // If times were discarded or built dynamically, we construct an array of 0s 
+                    // or re-generate based on delta times if you choose to track sample.Time natively.
+                    w.WriteArray(new int[numSamples]);
+                }
+                else
+                {
+                    w.WriteArray(stateTimes);
+                }
+            }
         }
 
         private Sample ReadSample(TimeInt32 time, byte[] sampleData)
@@ -186,11 +292,19 @@ public partial class CGameGhost
             using var sampleMs = new MemoryStream(sampleData);
             using var sampleR = new GbxReader(sampleMs);
 
-            sample.Read(sampleMs, sampleR, Version);
-
-            var sampleProgress = (int)sampleMs.Position;
+            sample.Read(sampleR, Version);
 
             return sample;
+        }
+
+        private byte[] GetSampleData(Sample sample)
+        {
+            using var sampleMs = new MemoryStream();
+            using var sampleW = new GbxWriter(sampleMs);
+
+            sample.Write(sampleW, Version);
+
+            return sampleMs.ToArray();
         }
 
         private static byte[] GetSampleDataFromDifferentSizes(GbxReader reader, int numSamples, int[]? sizesPerSample, int i)
@@ -204,28 +318,19 @@ public partial class CGameGhost
             return reader.ReadBytes(sizesPerSample[i]);
         }
 
-        /// <summary>
-        /// Linearly interpolates <see cref="Sample.Position"/>, <see cref="Sample.Rotation"/>,
-        /// <see cref="Sample.VelocitySpeed"/> and <see cref="Sample.Velocity"/> between two samples. Unknown data is taken from sample A.
-        /// </summary>
-        /// <param name="timestamp">Any timestamp between the range of samples.</param>
-        /// <returns>A new instance of <see cref="Sample"/> that has been linearly interpolated (<see cref="Sample.Time"/> will be null)
-        /// or a reference to an existing sample if <paramref name="timestamp"/> matches an existing sample timestamp.
-        /// Also returns null if there are no samples, or if <paramref name="timestamp"/> is outside of the sample range,
-        /// or <see cref="SamplePeriod"/> is lower or equal to 0.</returns>
         public Sample? GetSampleLerp(TimeSingle timestamp)
         {
             if (Samples is null || Samples.Count == 0 || SamplePeriod.Ticks <= 0)
                 return null;
 
             var sampleKey = timestamp.TotalMilliseconds / SamplePeriod.TotalMilliseconds;
-            var a = Samples.ElementAtOrDefault((int)Math.Floor(sampleKey)); // Sample A
-            var b = Samples.ElementAtOrDefault((int)Math.Ceiling(sampleKey)); // Sample B
+            var a = Samples.ElementAtOrDefault((int)Math.Floor(sampleKey));
+            var b = Samples.ElementAtOrDefault((int)Math.Ceiling(sampleKey));
 
-            if (a == null) // Timestamp is outside of the range
+            if (a == null)
                 return null;
 
-            if (b == null || a == b) // There's no second sample to interpolate with
+            if (b == null || a == b)
                 return a;
 
             var t = (float)(sampleKey - Math.Floor(sampleKey));
