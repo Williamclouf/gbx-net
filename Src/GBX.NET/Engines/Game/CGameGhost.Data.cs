@@ -240,6 +240,11 @@ public partial class CGameGhost
 
         public override string ToString()
         {
+            if (SavedMobilClassId == uint.MaxValue)
+            {
+                return "CGameGhost.Data (empty)";
+            }
+
             return $"CGameGhost.Data ({ClassManager.GetName(SavedMobilClassId)} 0x{SavedMobilClassId:X8}, {Samples.Count} samples)";
         }
     }

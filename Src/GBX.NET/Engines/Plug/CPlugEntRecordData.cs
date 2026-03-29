@@ -13,7 +13,7 @@ public partial class CPlugEntRecordData : IReadableWritable
     private List<CustomModulesDeltaList> customModulesDeltaLists = [];
 
     private ZlibData? compressedData;
-    public ZlibData? CompressedData { get; set; }
+    public ZlibData? CompressedData { get => compressedData; set => compressedData = value; }
 
 #if NET9_0_OR_GREATER
     private readonly Lock CompressedDataLock = new();
@@ -417,11 +417,7 @@ public partial class CPlugEntRecordData : IReadableWritable
         if (data.Length > 0)
         {
             using var ms = new MemoryStream(data);
-            using var rr = new GbxReader(ms);
-
-            delta.Read(ms, rr);
-
-            var sampleProgress = (int)ms.Position;
+            delta.Read(ms);
         }
 
         return delta;
@@ -515,6 +511,7 @@ public partial class CPlugEntRecordData : IReadableWritable
         {
             w.Write(true, asByte: true);
             w.Write(sample.Time);
+            sample.Write();
             w.WriteData(sample.Data);
         }
         w.Write(false, asByte: true);
@@ -684,10 +681,8 @@ public partial class CPlugEntRecordData : IReadableWritable
             Data = data;
         }
 
-        public virtual void Read(MemoryStream ms, GbxReader r)
-        {
-            
-        }
+        internal virtual void Read(MemoryStream ms) { }
+        internal virtual void Write() { }
 
         public override string ToString()
         {

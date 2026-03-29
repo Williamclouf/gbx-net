@@ -89,6 +89,7 @@ public partial interface IGbxWriter : IDisposable
     void WriteSmallLen(int value);
     void WriteSmallString(string? value);
     void WriteMarker(string value);
+    void WriteTransform(Vec3 position, Quat rotation, float speed, Vec3 velocity);
     void WriteZlibData(ZlibData? value, IReadableWritable? readableWritable, int version = 0);
     void WriteZlibData(ZlibData? value, IWritable? writable, int version = 0);
     void WriteZlibData(ZlibData? value, Action<GbxWriter> action);
@@ -1045,6 +1046,101 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
     public void WriteMarker(string value)
     {
         Write(value, StringLengthPrefix.None);
+    }
+
+    public void WriteTransform(Vec3 pos, Quat rotation, float speed, Vec3 velocity)
+    {
+        Write(pos);
+
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        // Clamp W to [-1, 1] to prevent NaN from Acos
+        var w = Math.Clamp(rotation.W, -1f, 1f);
+        var angle = MathF.Acos(w);
+
+        var sinAngle = MathF.Sin(angle);
+        var axisPitch = 0f;
+        var axisHeading = 0f;
+
+        // Avoid division by zero if there's no rotation (Identity Quat)
+        if (MathF.Abs(sinAngle) > 1e-5f)
+        {
+            var uz = Math.Clamp(rotation.Z / sinAngle, -1f, 1f);
+            axisPitch = MathF.Asin(uz);
+            axisHeading = MathF.Atan2(rotation.Y / sinAngle, rotation.X / sinAngle);
+        }
+
+        Write((ushort)Math.Clamp(MathF.Round(angle / MathF.PI * ushort.MaxValue), 0, ushort.MaxValue));
+        Write((short)Math.Clamp(MathF.Round(axisHeading / MathF.PI * short.MaxValue), short.MinValue, short.MaxValue));
+        Write((short)Math.Clamp(MathF.Round(axisPitch / (MathF.PI / 2) * short.MaxValue), short.MinValue, short.MaxValue));
+
+        // -- SPEED --
+        if (speed <= 0f)
+        {
+            Write(short.MinValue);
+        }
+        else
+        {
+            Write((short)Math.Clamp(MathF.Round(MathF.Log(speed) * 1000f), short.MinValue, short.MaxValue));
+        }
+
+        // -- VELOCITY --
+        var velPitch = 0f;
+        var velHeading = 0f;
+        var velLength = MathF.Sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y + velocity.Z * velocity.Z);
+
+        if (velLength > 1e-5f)
+        {
+            var vz = Math.Clamp(velocity.Z / velLength, -1f, 1f);
+            velPitch = MathF.Asin(vz);
+            velHeading = MathF.Atan2(velocity.Y / velLength, velocity.X / velLength);
+        }
+
+        Write((sbyte)Math.Clamp(MathF.Round(velHeading / MathF.PI * sbyte.MaxValue), sbyte.MinValue, sbyte.MaxValue));
+        Write((sbyte)Math.Clamp(MathF.Round(velPitch / (MathF.PI / 2) * sbyte.MaxValue), sbyte.MinValue, sbyte.MaxValue));
+
+#else
+        
+        var w = Math.Max(-1.0, Math.Min(1.0, rotation.W));
+        var angle = Math.Acos(w);
+    
+        var sinAngle = Math.Sin(angle);
+        var axisPitch = 0.0;
+        var axisHeading = 0.0;
+
+        if (Math.Abs(sinAngle) > 1e-5)
+        {
+            var uz = Math.Max(-1.0, Math.Min(1.0, rotation.Z / sinAngle));
+            axisPitch = Math.Asin(uz);
+            axisHeading = Math.Atan2(rotation.Y / sinAngle, rotation.X / sinAngle);
+        }
+
+        Write((ushort)Math.Max(0, Math.Min(ushort.MaxValue, Math.Round(angle / Math.PI * ushort.MaxValue))));
+        Write((short)Math.Max(short.MinValue, Math.Min(short.MaxValue, Math.Round(axisHeading / Math.PI * short.MaxValue))));
+        Write((short)Math.Max(short.MinValue, Math.Min(short.MaxValue, Math.Round(axisPitch / (Math.PI / 2) * short.MaxValue))));
+
+        if (speed <= 0) 
+        {
+            Write(short.MinValue);
+        }
+        else 
+        {
+            Write((short)Math.Max(short.MinValue, Math.Min(short.MaxValue, Math.Round(Math.Log(speed) * 1000.0))));
+        }
+
+        var velPitch = 0.0;
+        var velHeading = 0.0;
+        var velLength = Math.Sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y + velocity.Z * velocity.Z);
+
+        if (velLength > 1e-5)
+        {
+            var vz = Math.Max(-1.0, Math.Min(1.0, velocity.Z / velLength));
+            velPitch = Math.Asin(vz);
+            velHeading = Math.Atan2(velocity.Y / velLength, velocity.X / velLength);
+        }
+
+        Write((sbyte)Math.Max(sbyte.MinValue, Math.Min(sbyte.MaxValue, Math.Round(velHeading / Math.PI * sbyte.MaxValue))));
+        Write((sbyte)Math.Max(sbyte.MinValue, Math.Min(sbyte.MaxValue, Math.Round(velPitch / (Math.PI / 2) * sbyte.MaxValue))));
+#endif
     }
 
     public void WriteZlibData(ZlibData? value, IReadableWritable? readableWritable, int version = 0)
