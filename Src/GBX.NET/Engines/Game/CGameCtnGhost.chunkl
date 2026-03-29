@@ -189,6 +189,8 @@ CGameCtnGhost 0x03092000 // A ghost.
 0x02E (skippable) [TM2020]
  string
 
+0x0304F001 (skippable, ignore, not-remapped) [TMF] // TMCP
+
 archive PlayerInputData
  int<EVersion> Version // 8 in ShootMania, 12 in TM2020
  int
