@@ -497,10 +497,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
     {
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
         Span<byte> buffer = stackalloc byte[6];
-        if (BaseStream.Read(buffer) != 6)
-        {
-            throw new EndOfStreamException("Failed to read Vec3_16 bytes.");
-        }
+        BaseStream.ReadExactly(buffer);
 #else
         var buffer = ReadBytes(6);
 #endif
@@ -522,10 +519,7 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
     {
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
         Span<byte> buffer = stackalloc byte[9];
-        if (BaseStream.Read(buffer) != 9)
-        {
-            throw new EndOfStreamException("Failed to read Vec3_9 bytes.");
-        }
+        BaseStream.ReadExactly(buffer);
 #else
         var buffer = ReadBytes(9);
 #endif
@@ -534,7 +528,6 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
         var y = (float)((((buffer[3] << 16) | (buffer[5] << 8) | buffer[4]) - 0x800000) * 0.002f);
         var z = (float)((((buffer[6] << 16) | (buffer[8] << 8) | buffer[7]) - 0x800000) * 0.002f);
 
-        // Return the Vector3
         return new Vec3(x, y, z);
     }
 
