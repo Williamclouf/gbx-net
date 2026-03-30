@@ -385,46 +385,42 @@ public partial class CSceneVehicleCar
             // CSceneVehicleVis_RestoreStaticState
             if (version >= 7)
             {
-                SpeedForward = (r.ReadUInt16() / 65535f * 11000 - 1000) * 3.6f;
-                SpeedSideward = r.ReadUInt16() / 65535f * 2000 - 1000;
-                RPM = r.ReadUInt16() / 65535f * 30000;
-                FLWheelRotation = r.ReadUInt16() / 65535f * 1608.495f;
-                FRWheelRotation = r.ReadUInt16() / 65535f * 1608.495f;
-                RRWheelRotation = r.ReadUInt16() / 65535f * 1608.495f;
-                RLWheelRotation = r.ReadUInt16() / 65535f * 1608.495f;
-                Steer = r.ReadByte() / 255f * 2 - 1;
-                Gas = r.ReadByte() / 255f;
-                Brake = r.ReadByte() / 255f;
+                speedForward = r.ReadUInt16();
+                speedSideward = r.ReadUInt16();
+                rpm = r.ReadUInt16();
+                flWheelRotation = r.ReadUInt16();
+                frWheelRotation = r.ReadUInt16();
+                rrWheelRotation = r.ReadUInt16();
+                rlWheelRotation = r.ReadUInt16();
+                steer = r.ReadByte();
+                gas = r.ReadByte();
+                brake = r.ReadByte();
 
-                U11 = r.ReadByte() / 255f;
+                u11 = r.ReadByte();
 
                 if (version >= 8)
                 {
                     U12 = r.ReadByte(); // it should be always 0 but sometimes it isnt
                 }
 
-                U13 = r.ReadByte() / 255f * 2 - 1;
-                U14 = r.ReadByte() / 255f * 2 - 1;
-                TurboStrength = r.ReadByte() / 255f;
-#if NET6_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-                SteerFront = r.ReadByte() / 255f * MathF.PI * 2 - MathF.PI;
-#else
-                SteerFront = r.ReadByte() / 255f * (float)Math.PI * 2 - (float)Math.PI;
-#endif
+                u13 = r.ReadByte();
+                u14 = r.ReadByte();
+                turboStrength = r.ReadByte();
+                steerFront = r.ReadByte();
 
-                FLDampenLen = r.ReadByte() / 255f * 4 - 2;
+                flDampenLen = r.ReadByte();
                 FLGroundContactMaterial = (CPlugSurface.MaterialId)r.ReadByte();
                 // + condition "in water"
 
-                FRDampenLen = r.ReadByte() / 255f * 4 - 2;
+                frDampenLen = r.ReadByte();
                 FRGroundContactMaterial = (CPlugSurface.MaterialId)r.ReadByte();
                 // + condition "in water"
 
-                RRDampenLen = r.ReadByte() / 255f * 4 - 2; // RRDampenLenByte?
+                rrDampenLen = r.ReadByte();
                 RRGroundContactMaterial = (CPlugSurface.MaterialId)r.ReadByte();
                 // + condition "in water"
 
-                RLDampenLen = r.ReadByte() / 255f * 4 - 2; // RLDampenLenByte?
+                rlDampenLen = r.ReadByte();
                 RLGroundContactMaterial = (CPlugSurface.MaterialId)r.ReadByte();
                 // + condition "in water"
 
@@ -436,7 +432,7 @@ public partial class CSceneVehicleCar
 
                     if (version >= 9)
                     {
-                        DirtBlend = r.ReadByte() / 255f;
+                        dirtBlend = r.ReadByte();
 
                         if (version >= 10)
                         {
@@ -448,57 +444,42 @@ public partial class CSceneVehicleCar
                             }
 
                             // damage amount
-
-                            var u33 = r.ReadByte();
-                            U33 = new Vec4((u33 & 3) / 3f, ((u33 >> 2) & 3) / 3f, ((u33 >> 4) & 3) / 3f, ((u33 >> 6) & 3) / 3f);
-
-                            var u34 = r.ReadByte();
-                            U34 = new Vec4((u34 & 3) / 3f, ((u34 >> 2) & 3) / 3f, ((u34 >> 4) & 3) / 3f, ((u34 >> 6) & 3) / 3f);
-
-                            var u35 = r.ReadByte();
-                            U35 = (u35 & 3) / 3f;
+                            u33 = r.ReadByte();
+                            u34 = r.ReadByte();
+                            u35 = r.ReadByte();
 
                             if (version >= 11)
                             {
                                 if (version >= 14)
                                 {
-                                    var u36 = r.ReadByte();
-                                    U36_1 = Convert.ToBoolean(u36 & 1);
-                                    U36_2 = Convert.ToBoolean(u36 >> 1 & 1);
-                                    U36_3 = Convert.ToBoolean(u36 >> 2 & 1);
-                                    U36_4 = Convert.ToBoolean(u36 >> 3 & 1);
-                                    U36_5 = Convert.ToBoolean(u36 >> 4 & 1);
-
-                                    var u37 = r.ReadByte();
-                                    U37_1 = (u37 & 3) / 3f;
-                                    U37_2 = Convert.ToBoolean(u37 >> 3 & 1);
-                                    U37_3 = u37 >> 4;
+                                    u36 = r.ReadByte();
+                                    u37 = r.ReadByte();
 
                                     if (version >= 15)
                                     {
-                                        U38 = r.ReadByte() / 255f * 5;
+                                        u38 = r.ReadByte();
 
                                         if (version >= 16)
                                         {
                                             U39 = r.ReadByte();
-                                            U40 = r.ReadByte() / 255f;
+                                            u40 = r.ReadByte();
                                         }
                                     }
                                 }
 
                                 // count is broken in specific cases like the last sample of a ghost
-                                var count = u35 >> 2 & 7;
+                                var count = u35.GetValueOrDefault() >> 2 & 7;
 
                                 if (version == 11 && count > 4)
                                 {
                                     count = 4;
                                 }
 
-                                U35_1 = new (Vec3, Quat, byte)[count];
+                                u35_1 = new (Vec3, Quat, byte)[count];
 
                                 for (var i = 0; i < count; i++)
                                 {
-                                    U35_1[i] = (r.ReadVec3(), r.ReadQuat6(), r.ReadByte());
+                                    u35_1[i] = (r.ReadVec3(), r.ReadQuat6(), r.ReadByte());
                                 }
                             }
                         }
