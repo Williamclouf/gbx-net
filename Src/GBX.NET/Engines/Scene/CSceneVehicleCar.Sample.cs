@@ -2,47 +2,6 @@
 
 public partial class CSceneVehicleCar
 {
-    public interface ISampleRawData
-    {
-        ushort SpeedForward { get; set; }
-        ushort SpeedSideward { get; set; }
-        ushort RPM { get; set; }
-        ushort FLWheelRotation { get; set; }
-        ushort FRWheelRotation { get; set; }
-        ushort RRWheelRotation { get; set; }
-        ushort RLWheelRotation { get; set; }
-        byte Steer { get; set; }
-        byte Gas { get; set; }
-        byte Brake { get; set; }
-        byte U11 { get; set; }
-        byte U12 { get; set; }
-        byte U13 { get; set; }
-        byte U14 { get; set; }
-        byte TurboStrength { get; set; }
-        byte SteerFront { get; set; }
-        byte FLDampenLen { get; set; }
-        CPlugSurface.MaterialId FLGroundContactMaterial { get; set; }
-        byte FRDampenLen { get; set; }
-        CPlugSurface.MaterialId FRGroundContactMaterial { get; set; }
-        byte RRDampenLen { get; set; }
-        CPlugSurface.MaterialId RRGroundContactMaterial { get; set; }
-        byte RLDampenLen { get; set; }
-        CPlugSurface.MaterialId RLGroundContactMaterial { get; set; }
-        byte U25 { get; set; }
-        byte U26 { get; set; }
-        byte U27 { get; set; }
-        byte? DirtBlend { get; set; }
-        byte? U33 { get; set; }
-        byte? U34 { get; set; }
-        byte? U35 { get; set; }
-        (Vec3, Quat, byte)[]? U35_1 { get; set; }
-        byte? U36 { get; set; }
-        byte? U37 { get; set; }
-        byte? U38 { get; set; }
-        byte? U39 { get; set; }
-        byte? U40 { get; set; }
-    }
-
     public sealed class Sample : CGameGhost.Data.Sample, ISampleRawData
     {
         private ushort speedForward;
@@ -320,12 +279,11 @@ public partial class CSceneVehicleCar
             }
         }
 
-        public bool? U36_1 { get => GetBit(u36, 0); set => UpdateBit(ref u36, 0, value); }
-        public bool? U36_2 { get => GetBit(u36, 1); set => UpdateBit(ref u36, 1, value); }
-        public bool? U36_3 { get => GetBit(u36, 2); set => UpdateBit(ref u36, 2, value); }
-        public bool? U36_4 { get => GetBit(u36, 3); set => UpdateBit(ref u36, 3, value); }
-        public bool? U36_5 { get => GetBit(u36, 4); set => UpdateBit(ref u36, 4, value); }
-
+        public bool? U36_1 { get => BitHelper.GetBit(u36, 0); set => u36 = BitHelper.SetBit(u36, 0, value); }
+        public bool? U36_2 { get => BitHelper.GetBit(u36, 1); set => u36 = BitHelper.SetBit(u36, 1, value); }
+        public bool? U36_3 { get => BitHelper.GetBit(u36, 2); set => u36 = BitHelper.SetBit(u36, 2, value); }
+        public bool? U36_4 { get => BitHelper.GetBit(u36, 3); set => u36 = BitHelper.SetBit(u36, 3, value); }
+        public bool? U36_5 { get => BitHelper.GetBit(u36, 4); set => u36 = BitHelper.SetBit(u36, 4, value); }
         public float? U37_1
         {
             get => u37.HasValue ? (u37.Value & 3) / 3f : null;
@@ -336,7 +294,7 @@ public partial class CSceneVehicleCar
             }
         }
 
-        public bool? U37_2 { get => GetBit(u37, 3); set => UpdateBit(ref u37, 3, value); }
+        public bool? U37_2 { get => BitHelper.GetBit(u37, 3); set => u37 = BitHelper.SetBit(u37, 3, value); }
 
         public int? U37_3
         {
@@ -686,22 +644,6 @@ public partial class CSceneVehicleCar
                         }
                     }
                 }
-            }
-        }
-
-        // --- Bitwise Helpers ---
-
-        private static bool? GetBit(byte? flagByte, int bit) => flagByte.HasValue ? (flagByte.Value & (1 << bit)) != 0 : null;
-        private static void UpdateBit(ref byte? flagByte, int bit, bool? value)
-        {
-            if (!value.HasValue)
-            {
-                if (flagByte.HasValue) flagByte = (byte)(flagByte.Value & ~(1 << bit));
-            }
-            else
-            {
-                if (value.Value) flagByte = (byte)(flagByte.GetValueOrDefault() | (1 << bit));
-                else flagByte = (byte)(flagByte.GetValueOrDefault() & ~(1 << bit));
             }
         }
 
