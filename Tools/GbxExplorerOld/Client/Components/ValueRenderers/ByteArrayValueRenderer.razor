@@ -2,6 +2,9 @@
 @using GBX.NET.Attributes
 @using System.Collections
 
+@inject IDownloadStreamService DownloadService
+@inject ILogger Logger
+
 @inherits ValueRenderer
 @attribute [AppliesForType(typeof(byte[]))]
 
@@ -47,30 +50,38 @@ else if (Value is byte[] byteArray)
     {
         <span class="element-box">1 B</span>
     }
-    else if (count == 1000)
+    else if (count == 1024)
     {
         <span class="element-box">1 kB</span>
     }
-    else if (count == 1_000_000)
+    else if (count == 1_048_576)
     {
         <span class="element-box">1 MB</span>
     }
-    else if (count > 1_000_000)
+    else if (count > 1_048_576)
     {
-        <span class="element-box">@(count / 1_000_000f) MB</span>
+        <span class="element-box">@(count / 1_048_576f) MB</span>
     }
-    else if (count > 1000)
+    else if (count > 1024)
     {
-        <span class="element-box">@(count / 1000f) kB</span>
+        <span class="element-box">@(count / 1024f) kB</span>
     }
     else
     {
         <span class="element-box">@count B</span>
     }
+
+    <span class="element-box hoverable utility" data-title="Export this data into a file" @onclick="Export">Export</span>
 }
 
 @code {
     private bool iconHovered;
 
     public override bool ShowPropertyInTree(PropertyInfo prop) => false;
+
+    private async Task Export()
+    {
+        Logger.LogInformation("Exporting the data...");
+        await DownloadService.DownloadAsync((Property?.Name ?? "Data") + ".bin", (byte[])Value!);
+    }
 }

@@ -9,7 +9,12 @@ internal sealed class GbxHeaderWriter(GbxHeader header, GbxWriter writer, GbxWri
     {
         _ = header.Basic.Write(writer);
 
-        WriteClassId();
+        if (!ClassManager.IsClassWriteSupported(header.ClassId))
+        {
+            throw new ClassWriteNotSupportedException(header.ClassId);
+        }
+
+        writer.WriteClassId(header.ClassId);
 
         if (header is GbxHeaderUnknown unknownHeader)
         {
@@ -23,29 +28,6 @@ internal sealed class GbxHeaderWriter(GbxHeader header, GbxWriter writer, GbxWri
         // NumNodes is handled elsewhere as unknown header doesnt change it while known header needs to first count it when writing body
 
         return true;
-    }
-
-    private void WriteClassId()
-    {
-        if (!ClassManager.IsClassWriteSupported(header.ClassId))
-        {
-            throw new ClassWriteNotSupportedException(header.ClassId);
-        }
-
-        if (writer.ClassIdRemapMode == ClassIdRemapMode.Latest)
-        {
-            writer.WriteHexUInt32(header.ClassId);
-            return;
-        }
-
-        if (writer.ClassIdRemapMode == ClassIdRemapMode.Id2008 && header.ClassId == 0x2E001000)
-        {
-            writer.WriteHexUInt32(0x0301A000);
-            return;
-        }
-
-        var unwrappedClassId = ClassManager.Unwrap(header.ClassId);
-        writer.WriteHexUInt32(unwrappedClassId);
     }
 
     private void WriteUnknownHeaderUserData(GbxHeaderUnknown unknownHeader)
@@ -66,7 +48,7 @@ internal sealed class GbxHeaderWriter(GbxHeader header, GbxWriter writer, GbxWri
 
         var headerChunks = unknownHeader.UserData.OfType<HeaderChunk>();
 
-        var concatenatedDataLength = headerChunks.Select(x => x.Data.Length).Sum();
+        var concatenatedDataLength = headerChunks.Sum(x => x.Data.Length);
 
         var infosLength = unknownHeader.UserData.Count * sizeof(int) * 2 + sizeof(int); // +4 for the numHeaderChunks int
         var userDataLength = concatenatedDataLength + infosLength;
@@ -80,7 +62,7 @@ internal sealed class GbxHeaderWriter(GbxHeader header, GbxWriter writer, GbxWri
                 ? (uint)chunk.Data.Length + 0x80000000
                 : (uint)chunk.Data.Length;
 
-            writer.Write(chunk.Id);
+            writer.WriteChunkId(chunk.Id);
             writer.Write(length);
         }
 
@@ -179,21 +161,21 @@ internal sealed class GbxHeaderWriter(GbxHeader header, GbxWriter writer, GbxWri
         WriteUserData(infos, concatenatedDataMs);
     }
 
-    private void WriteUserData(List<HeaderChunkInfo> infos, MemoryStream concatenatedDataStream)
+    private void WriteUserData(List<HeaderChunkInfo> chunkInfos, MemoryStream concatenatedDataStream)
     {
-        var infosLength = infos.Count * sizeof(int) * 2 + sizeof(int);
+        var infosLength = chunkInfos.Count * sizeof(int) * 2 + sizeof(int);
         var userDataLength = (int)concatenatedDataStream.Length + infosLength;
 
         writer.Write(userDataLength);
-        writer.Write(infos.Count);
+        writer.Write(chunkInfos.Count);
 
-        foreach (var info in infos)
+        foreach (var chunk in chunkInfos)
         {
-            var size = info.IsHeavy
-                ? (uint)info.Size + 0x80000000
-                : (uint)info.Size;
+            var size = chunk.IsHeavy
+                ? (uint)chunk.Size + 0x80000000
+                : (uint)chunk.Size;
 
-            writer.Write(info.Id);
+            writer.WriteChunkId(chunk.Id);
             writer.Write(size);
         }
 

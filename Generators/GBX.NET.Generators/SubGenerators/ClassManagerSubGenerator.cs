@@ -133,14 +133,14 @@ internal static class ClassManagerSubGenerator
             {
                 var chunkInfo = pair.Value;
 
-                if (alreadyAddedIds.Contains(chunkInfo.Id))
+                builder.Append("        ");
+
+                if (!alreadyAddedIds.Add(chunkInfo.Id))
                 {
-                    continue;
+                    builder.Append("// ");
                 }
 
-                alreadyAddedIds.Add(chunkInfo.Id);
-
-                builder.Append("        0x");
+                builder.Append("0x");
                 builder.Append(chunkInfo.Id.ToString("X8"));
                 builder.Append(" => new ");
                 builder.Append(classInfo.Key);
@@ -193,6 +193,28 @@ internal static class ClassManagerSubGenerator
         }
 
         builder.AppendLine("        _ => true");
+        builder.AppendLine("    };");
+
+        builder.AppendLine();
+        builder.AppendLine("    internal static partial uint? GetBaseClassId(uint classId) => classId switch");
+        builder.AppendLine("    {");
+
+        foreach (var classInfo in classInfos)
+        {
+            var inherits = classInfo.Value.Inherits;
+            if (inherits is null || !classInfos.TryGetValue(inherits, out var baseClassInfo))
+            {
+                continue;
+            }
+
+            builder.Append("        0x");
+            builder.Append(classInfo.Value.Id.GetValueOrDefault().ToString("X8"));
+            builder.Append(" => 0x");
+            builder.Append(baseClassInfo.Id.GetValueOrDefault().ToString("X8"));
+            builder.AppendLine(",");
+        }
+
+        builder.AppendLine("        _ => null");
         builder.AppendLine("    };");
 
 

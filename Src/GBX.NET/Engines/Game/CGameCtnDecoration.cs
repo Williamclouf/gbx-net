@@ -40,15 +40,13 @@ public partial class CGameCtnDecoration
         }
     }
 
-    public override IHeaderChunk? CreateHeaderChunk(uint chunkId)
+    internal override IHeaderChunk? NewHeaderChunk(uint chunkId)
     {
         if (chunkId == 0x090F4000)
         {
-            var chunk = new CPlugGameSkin.HeaderChunk090F4000 { Node = new() };
-            Chunks.Add(chunk);
-            return chunk;
+            return new CPlugGameSkin.HeaderChunk090F4000 { Node = new() };
         }
 
-        return base.CreateHeaderChunk(chunkId);
+        return base.NewHeaderChunk(chunkId);
     }
 }

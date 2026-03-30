@@ -7,4 +7,4 @@ CGameNetOnlineMessage 0x03028000
  string Message
  int Donation
  bool
- systemtime Date
+ systemtime? Date

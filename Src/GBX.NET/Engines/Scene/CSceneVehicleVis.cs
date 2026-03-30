@@ -1,308 +1,598 @@
-﻿namespace GBX.NET.Engines.Scene;
+﻿using System.Buffers.Binary;
+
+namespace GBX.NET.Engines.Scene;
 
 public partial class CSceneVehicleVis
 {
-    public class EntRecordDelta : CPlugEntRecordData.EntRecordDelta
+    public class EntRecordDelta : CPlugEntRecordData.EntRecordDelta, IEntRecordDeltaRawData
     {
-        public Vec3 Position { get; set; }
-        public Quat Rotation { get; set; }
+        private const float Tau = (float)Math.PI * 2;
+
+        private const byte MaskFR = 0x1;
+        private const byte MaskRR = 0x4;
+        private const byte MaskRL = 0x10;
+        private const byte MaskFL = 0x40;
+
+        private const byte MaskIsGroundMode = 0x1;
+        private const byte MaskIsReactorGroundMode = 0x4;
+        private const byte MaskIsReactorUp = 0x8;
+        private const byte MaskIsReactorDown = 0x10;
+        private const byte MaskReactorLvl1 = 0x20;
+        private const byte MaskReactorLvl2 = 0x40;
+
+        private const byte MaskIsTurbo = 0x82;
+        private const byte MaskIsTopContact = 0x20;
+
+        private const byte MaskPedalNone = 0x10;
+        private const byte MaskPedalAccel = 0x20;
+        private const byte MaskSteerNone = 0x40;
+        private const byte MaskSteerLeft = 0x80;
+
+        private ushort sideSpeed;
+        private byte rpm;
+        private byte flWheelRot;
+        private byte flWheelRotCount;
+        private byte frWheelRot;
+        private byte frWheelRotCount;
+        private byte rrWheelRot;
+        private byte rrWheelRotCount;
+        private byte rlWheelRot;
+        private byte rlWheelRotCount;
+        private byte steer;
+        private byte u15;
+        private byte brake;
+        private byte turboTime;
+        private byte flDampenLen;
+        private byte frDampenLen;
+        private byte rrDampenLen;
+        private byte rlDampenLen;
+        private byte isTurbo;
+        private byte slipCoef1;
+        private byte slipCoef2;
+
+        private Vec3 position;
+        private Quat rotation;
+        private float speed;
+        private Vec3 velocity;
+
+        private byte vehicleState;
+        private byte flIce;
+        private byte frIce;
+        private byte rrIce;
+        private byte rlIce;
+        private byte groundMode;
+        private byte boosterAirControl;
+        private byte gear;
+        private byte flDirt;
+        private byte frDirt;
+        private byte rrDirt;
+        private byte rlDirt;
+        private byte wetnessValue;
+        private byte simulationTimeCoef;
+
+        ushort IEntRecordDeltaRawData.SideSpeed { get => sideSpeed; set => sideSpeed = value; }
+        byte IEntRecordDeltaRawData.Rpm { get => rpm; set => rpm = value; }
+        byte IEntRecordDeltaRawData.FlWheelRot { get => flWheelRot; set => flWheelRot = value; }
+        byte IEntRecordDeltaRawData.FlWheelRotCount { get => flWheelRotCount; set => flWheelRotCount = value; }
+        byte IEntRecordDeltaRawData.FrWheelRot { get => frWheelRot; set => frWheelRot = value; }
+        byte IEntRecordDeltaRawData.FrWheelRotCount { get => frWheelRotCount; set => frWheelRotCount = value; }
+        byte IEntRecordDeltaRawData.RrWheelRot { get => rrWheelRot; set => rrWheelRot = value; }
+        byte IEntRecordDeltaRawData.RrWheelRotCount { get => rrWheelRotCount; set => rrWheelRotCount = value; }
+        byte IEntRecordDeltaRawData.RlWheelRot { get => rlWheelRot; set => rlWheelRot = value; }
+        byte IEntRecordDeltaRawData.RlWheelRotCount { get => rlWheelRotCount; set => rlWheelRotCount = value; }
+        byte IEntRecordDeltaRawData.Steer { get => steer; set => steer = value; }
+        byte IEntRecordDeltaRawData.U15 { get => u15; set => u15 = value; }
+        byte IEntRecordDeltaRawData.Brake { get => brake; set => brake = value; }
+        byte IEntRecordDeltaRawData.TurboTime { get => turboTime; set => turboTime = value; }
+        byte IEntRecordDeltaRawData.FlDampenLen { get => flDampenLen; set => flDampenLen = value; }
+        byte IEntRecordDeltaRawData.FrDampenLen { get => frDampenLen; set => frDampenLen = value; }
+        byte IEntRecordDeltaRawData.RrDampenLen { get => rrDampenLen; set => rrDampenLen = value; }
+        byte IEntRecordDeltaRawData.RlDampenLen { get => rlDampenLen; set => rlDampenLen = value; }
+        byte IEntRecordDeltaRawData.IsTurbo { get => isTurbo; set => isTurbo = value; }
+        byte IEntRecordDeltaRawData.SlipCoef1 { get => slipCoef1; set => slipCoef1 = value; }
+        byte IEntRecordDeltaRawData.SlipCoef2 { get => slipCoef2; set => slipCoef2 = value; }
+        byte IEntRecordDeltaRawData.VehicleState { get => vehicleState; set => vehicleState = value; }
+        byte IEntRecordDeltaRawData.FlIce { get => flIce; set => flIce = value; }
+        byte IEntRecordDeltaRawData.FrIce { get => frIce; set => frIce = value; }
+        byte IEntRecordDeltaRawData.RrIce { get => rrIce; set => rrIce = value; }
+        byte IEntRecordDeltaRawData.RlIce { get => rlIce; set => rlIce = value; }
+        byte IEntRecordDeltaRawData.GroundMode { get => groundMode; set => groundMode = value; }
+        byte IEntRecordDeltaRawData.BoosterAirControl { get => boosterAirControl; set => boosterAirControl = value; }
+        byte IEntRecordDeltaRawData.Gear { get => gear; set => gear = value; }
+        byte IEntRecordDeltaRawData.FlDirt { get => flDirt; set => flDirt = value; }
+        byte IEntRecordDeltaRawData.FrDirt { get => frDirt; set => frDirt = value; }
+        byte IEntRecordDeltaRawData.RrDirt { get => rrDirt; set => rrDirt = value; }
+        byte IEntRecordDeltaRawData.RlDirt { get => rlDirt; set => rlDirt = value; }
+        byte IEntRecordDeltaRawData.WetnessValue { get => wetnessValue; set => wetnessValue = value; }
+        byte IEntRecordDeltaRawData.SimulationTimeCoef { get => simulationTimeCoef; set => simulationTimeCoef = value; }
+
+        public Vec3 Position { get => position; set => position = value; }
+        public Quat Rotation { get => rotation; set => rotation = value; }
         public Vec3 PitchYawRoll => Rotation.ToPitchYawRoll();
-        public float Speed { get; set; }
-        public Vec3 Velocity { get; set; }
-        public float? Gear { get; set; }
-        public byte? RPM { get; set; }
-        public float? Steer { get; set; }
-        public float? Brake { get; set; }
-        public float? Gas { get; set; }
+        public float Speed { get => speed * 3.6f; set => speed = value / 3.6f; }
+        public Vec3 Velocity { get => velocity; set => velocity = value; }
 
-        public float FLIcing { get; set; }
-        public float FRIcing { get; set; }
-        public float RLIcing { get; set; }
-        public float RRIcing { get; set; }
+        public float Gear
+        {
+            get => gear / 5f;
+            set => gear = (byte)AdditionalMath.Clamp(Math.Round(value * 5f), 0, 255);
+        }
 
-        public float FLDirt { get; set; }
-        public float FRDirt { get; set; }
-        public float RLDirt { get; set; }
-        public float RRDirt { get; set; }
+        public byte RPM
+        {
+            get => rpm;
+            set => rpm = value;
+        }
+
+        public float Steer
+        {
+            get => ((steer / 255f) - 0.5f) * 2f;
+            set => steer = (byte)AdditionalMath.Clamp(Math.Round((value / 2f + 0.5f) * 255f), 0, 255);
+        }
+
+        public float Brake
+        {
+            get => brake / 255f;
+            set => brake = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public float Gas
+        {
+            get => (u15 / 255f) + (brake / 255f);
+            set => u15 = (byte)AdditionalMath.Clamp(Math.Round(value * 255f - brake), 0, 255);
+        }
+
+        public float FLIcing
+        {
+            get => flIce / 255f;
+            set => flIce = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public float FRIcing
+        {
+            get => frIce / 255f;
+            set => frIce = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public float RLIcing
+        {
+            get => rlIce / 255f;
+            set => rlIce = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public float RRIcing
+        {
+            get => rrIce / 255f;
+            set => rrIce = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public float FLDirt
+        {
+            get => flDirt / 255f;
+            set => flDirt = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public float FRDirt
+        {
+            get => frDirt / 255f;
+            set => frDirt = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public float RLDirt
+        {
+            get => rlDirt / 255f;
+            set => rlDirt = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public float RRDirt
+        {
+            get => rrDirt / 255f;
+            set => rrDirt = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
 
         public CPlugSurface.MaterialId FLGroundContactMaterial { get; set; }
         public CPlugSurface.MaterialId FRGroundContactMaterial { get; set; }
         public CPlugSurface.MaterialId RLGroundContactMaterial { get; set; }
         public CPlugSurface.MaterialId RRGroundContactMaterial { get; set; }
 
-        public float FLDampenLen { get; set; }
-        public float FRDampenLen { get; set; }
-        public float RLDampenLen { get; set; }
-        public float RRDampenLen { get; set; }
-
-        public bool FLSlipCoef { get; set; }
-        public bool FRSlipCoef { get; set; }
-        public bool RLSlipCoef { get; set; }
-        public bool RRSlipCoef { get; set; }
-
-        public float FLWheelRot { get; set; }
-        public float FRWheelRot { get; set; }
-        public float RLWheelRot { get; set; }
-        public float RRWheelRot { get; set; }
-
-        public float WetnessValue { get; set; }
-        public bool IsGroundContact { get; set; }
-        public bool IsReactorGroundMode { get; set; }
-
-        public ReactorBoostLvl ReactorBoostLvl { get; set; }
-        public ReactorBoostType ReactorBoostType { get; set; }
-
-        public int ReactorAirControlSteer { get; set; }
-        public int ReactorAirControlPedal { get; set; }
-
-        public bool IsTurbo { get; set; }
-        public float TurboTime { get; set; }
-
-        public float SimulationTimeCoef { get; set; }
-
-        public float SideSpeed { get; set; }
-        public bool IsTopContact { get; set; }
-
-        internal EntRecordDelta(TimeInt32 time, byte[] data) : base(time, data)
+        // Multiply by 4 instead of 2 as it matches value given by openplanet CSceneVehicleVisState
+        public float FLDampenLen
         {
+            get => ((flDampenLen / 255f) - 0.5f) * 4f;
+            set => flDampenLen = (byte)AdditionalMath.Clamp(Math.Round((value / 4f + 0.5f) * 255f), 0, 255);
+        }
+        public float FRDampenLen
+        {
+            get => ((frDampenLen / 255f) - 0.5f) * 4f;
+            set => frDampenLen = (byte)AdditionalMath.Clamp(Math.Round((value / 4f + 0.5f) * 255f), 0, 255);
+        }
+        public float RLDampenLen
+        {
+            get => ((rlDampenLen / 255f) - 0.5f) * 4f;
+            set => rlDampenLen = (byte)AdditionalMath.Clamp(Math.Round((value / 4f + 0.5f) * 255f), 0, 255);
+        }
+        public float RRDampenLen
+        {
+            get => ((rrDampenLen / 255f) - 0.5f) * 4f;
+            set => rrDampenLen = (byte)AdditionalMath.Clamp(Math.Round((value / 4f + 0.5f) * 255f), 0, 255);
         }
 
-        public override void Read(MemoryStream ms, GbxReader r)
+        // Nadeo uses two bytes. FLSlip is at the 7th bit of SlipCoefByte1.
+        public bool FLSlipCoef
         {
+            get => (slipCoef1 & MaskFL) != 0;
+            set { if (value) slipCoef1 |= MaskFL; else slipCoef1 &= 255 - MaskFL; }
+        }
+        public bool FRSlipCoef
+        {
+            get => (slipCoef2 & MaskFR) != 0;
+            set { if (value) slipCoef2 |= MaskFR; else slipCoef2 &= 255 - MaskFR; }
+        }
+        public bool RLSlipCoef
+        {
+            get => (slipCoef2 & MaskRL) != 0;
+            set { if (value) slipCoef2 |= MaskRL; else slipCoef2 &= 255 - MaskRL; }
+        }
+        public bool RRSlipCoef
+        {
+            get => (slipCoef2 & MaskRR) != 0;
+            set { if (value) slipCoef2 |= MaskRR; else slipCoef2 &= 255 - MaskRR; }
+        }
+
+        public float FLWheelRot
+        {
+            get => (flWheelRot / 255f * Tau) + (flWheelRotCount * Tau);
+            set
+            {
+                var rotations = value / Tau;
+                flWheelRotCount = (byte)Math.Floor(rotations);
+                flWheelRot = (byte)AdditionalMath.Clamp(Math.Round((rotations - flWheelRotCount) * 255f), 0, 255);
+            }
+        }
+        public float FRWheelRot
+        {
+            get => (frWheelRot / 255f * Tau) + (frWheelRotCount * Tau);
+            set
+            {
+                var rotations = value / Tau;
+                frWheelRotCount = (byte)Math.Floor(rotations);
+                frWheelRot = (byte)AdditionalMath.Clamp(Math.Round((rotations - frWheelRotCount) * 255f), 0, 255);
+            }
+        }
+        public float RLWheelRot
+        {
+            get => (rlWheelRot / 255f * Tau) + (rlWheelRotCount * Tau);
+            set
+            {
+                var rotations = value / Tau;
+                rlWheelRotCount = (byte)Math.Floor(rotations);
+                rlWheelRot = (byte)AdditionalMath.Clamp(Math.Round((rotations - rlWheelRotCount) * 255f), 0, 255);
+            }
+        }
+        public float RRWheelRot
+        {
+            get => (rrWheelRot / 255f * Tau) + (rrWheelRotCount * Tau);
+            set
+            {
+                var rotations = value / Tau;
+                rrWheelRotCount = (byte)Math.Floor(rotations);
+                rrWheelRot = (byte)AdditionalMath.Clamp(Math.Round((rotations - rrWheelRotCount) * 255f), 0, 255);
+            }
+        }
+
+        public float WetnessValue
+        {
+            get => wetnessValue / 255f;
+            set => wetnessValue = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public bool IsGroundContact
+        {
+            get => (groundMode & MaskIsGroundMode) != 0;
+            set { if (value) groundMode |= MaskIsGroundMode; else groundMode &= 255 - MaskIsGroundMode; }
+        }
+
+        public bool IsReactorGroundMode
+        {
+            get => (groundMode & MaskIsReactorGroundMode) != 0;
+            set { if (value) groundMode |= MaskIsReactorGroundMode; else groundMode &= 255 - MaskIsReactorGroundMode; }
+        }
+
+        public ReactorBoostLvl ReactorBoostLvl
+        {
+            get
+            {
+                if ((groundMode & MaskReactorLvl1) != 0) return ReactorBoostLvl.Lvl1;
+                if ((groundMode & MaskReactorLvl2) != 0) return ReactorBoostLvl.Lvl2;
+                return ReactorBoostLvl.None;
+            }
+            set
+            {
+                // Clear both bits first
+                groundMode &= 255 - (MaskReactorLvl1 | MaskReactorLvl2);
+
+                if (value == ReactorBoostLvl.Lvl1) groundMode |= MaskReactorLvl1;
+                else if (value == ReactorBoostLvl.Lvl2) groundMode |= MaskReactorLvl2;
+            }
+        }
+
+        public ReactorBoostType ReactorBoostType
+        {
+            get
+            {
+                var isUp = (groundMode & MaskIsReactorUp) != 0;
+                var isDown = (groundMode & MaskIsReactorDown) != 0;
+
+                if (isUp && isDown) return ReactorBoostType.UpAndDown;
+                if (isUp) return ReactorBoostType.Up;
+                if (isDown) return ReactorBoostType.Down;
+                return ReactorBoostType.None;
+            }
+            set
+            {
+                groundMode &= 255 - (MaskIsReactorUp | MaskIsReactorDown);
+
+                if (value == ReactorBoostType.Up || value == ReactorBoostType.UpAndDown)
+                    groundMode |= MaskIsReactorUp;
+
+                if (value == ReactorBoostType.Down || value == ReactorBoostType.UpAndDown)
+                    groundMode |= MaskIsReactorDown;
+            }
+        }
+
+        // [1,0,-1] = (Left,None,Right)
+        public int ReactorAirControlSteer
+        {
+            get
+            {
+                var isLeft = (boosterAirControl & MaskSteerLeft) != 0;
+                var isNone = (boosterAirControl & MaskSteerNone) != 0;
+                return isLeft ? 1 : isNone ? 0 : -1;
+            }
+            set
+            {
+                boosterAirControl &= 255 - (MaskSteerLeft | MaskSteerNone);
+                if (value == 1) boosterAirControl |= MaskSteerLeft;
+                else if (value == 0) boosterAirControl |= MaskSteerNone;
+            }
+        }
+
+        // [1,0,-1] = (Accell,None,Brake)
+        public int ReactorAirControlPedal
+        {
+            get
+            {
+                var isAccel = (boosterAirControl & MaskPedalAccel) != 0;
+                var isNone = (boosterAirControl & MaskPedalNone) != 0;
+                return isAccel ? 1 : isNone ? 0 : -1;
+            }
+            set
+            {
+                boosterAirControl &= (byte)(255 - (MaskPedalAccel | MaskPedalNone));
+                if (value == 1) boosterAirControl |= MaskPedalAccel;
+                else if (value == 0) boosterAirControl |= MaskPedalNone;
+            }
+        }
+
+        public bool IsTurbo
+        {
+            get => (isTurbo & MaskIsTurbo) != 0;
+            set { if (value) isTurbo |= MaskIsTurbo; else isTurbo &= (byte)(255 - MaskIsTurbo); }
+        }
+        
+        public float TurboTime
+        {
+            get => turboTime / 255f;
+            set => turboTime = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public float SimulationTimeCoef
+        {
+            get => simulationTimeCoef / 255f;
+            set => simulationTimeCoef = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public float SideSpeed
+        {
+            get => (float)(((sideSpeed / 65536.0) - 0.5) * 2000.0);
+            set => sideSpeed = (ushort)AdditionalMath.Clamp(Math.Round((value / 2000.0 + 0.5) * 65536.0), 0, 65535);
+        }
+
+        public bool IsTopContact
+        {
+            get => (vehicleState & MaskIsTopContact) != 0;
+            set { if (value) vehicleState |= MaskIsTopContact; else vehicleState &= 255 - MaskIsTopContact; }
+        }
+
+        internal EntRecordDelta(TimeInt32 time, byte[] data) : base(time, data) { }
+
+        internal override void Read(MemoryStream ms)
+        {
+            using var r = new GbxReader(ms);
+
+            ms.Position = 2;
+            sideSpeed = r.ReadUInt16();
+
             ms.Position = 5;
-            var rpmByte = r.ReadByte();
+            rpm = r.ReadByte();
+
+            flWheelRot = r.ReadByte();
+            flWheelRotCount = r.ReadByte();
+            frWheelRot = r.ReadByte();
+            frWheelRotCount = r.ReadByte();
+            rrWheelRot = r.ReadByte();
+            rrWheelRotCount = r.ReadByte();
+            rlWheelRot = r.ReadByte();
+            rlWheelRotCount = r.ReadByte();
 
             ms.Position = 14;
-            var steerByte = r.ReadByte();
-            var steer = ((steerByte / 255f) - 0.5f) * 2;
-
-            ms.Position = 91;
-            var gearByte = r.ReadByte();
-            var gear = gearByte / 5f;
-
-            Gear = gear;
-            RPM = rpmByte;
-            Steer = steer;
-
-            ms.Position = 15;
-            var u15 = r.ReadByte();
+            steer = r.ReadByte();
+            u15 = r.ReadByte(); // Position 15
 
             ms.Position = 18;
-            var brakeByte = r.ReadByte();
-            var brake = brakeByte / 255f;
-            var gas = u15 / 255f + brake;
+            brake = r.ReadByte();
 
-            Brake = brake;
-            Gas = gas;
+            ms.Position = 21;
+            turboTime = r.ReadByte();
+
+            ms.Position = 23;
+            flDampenLen = r.ReadByte();
+            FLGroundContactMaterial = (CPlugSurface.MaterialId)r.ReadByte();
+            frDampenLen = r.ReadByte();
+            FRGroundContactMaterial = (CPlugSurface.MaterialId)r.ReadByte();
+            rrDampenLen = r.ReadByte();
+            RRGroundContactMaterial = (CPlugSurface.MaterialId)r.ReadByte();
+            rlDampenLen = r.ReadByte();
+            RLGroundContactMaterial = (CPlugSurface.MaterialId)r.ReadByte();
+
+            ms.Position = 31;
+            isTurbo = r.ReadByte();
+            slipCoef1 = r.ReadByte(); // Position 32
+            slipCoef2 = r.ReadByte(); // Position 33
 
             ms.Position = 47;
-
             var (position, rotation, speed, velocity) = r.ReadTransform();
+            this.position = position;
+            this.rotation = rotation;
+            this.speed = speed;
+            this.velocity = velocity;
 
-            Position = position;
-            Rotation = rotation;
-            Speed = speed * 3.6f;
-            Velocity = velocity;
-
-            // ICE
-            ms.Position = 81;
-            var FLIceByte = r.ReadByte();
-            ms.Position = 82;
-            var FRIceByte = r.ReadByte();
-            ms.Position = 83;
-            var RRIceByte = r.ReadByte();
-            ms.Position = 84;
-            var RLIceByte = r.ReadByte();
-
-            FLIcing = FLIceByte / 255f;
-            FRIcing = FRIceByte / 255f;
-            RRIcing = RRIceByte / 255f;
-            RLIcing = RLIceByte / 255f;
-
-            // DIRT
-            ms.Position = 93;
-            var FLDirtByte = r.ReadByte();
-            ms.Position = 95;
-            var FRDirtByte = r.ReadByte();
-            ms.Position = 97;
-            var RRDirtByte = r.ReadByte();
-            ms.Position = 99;
-            var RLDirtByte = r.ReadByte();
-
-            FLDirt = FLDirtByte / 255f;
-            FRDirt = FRDirtByte / 255f;
-            RRDirt = RRDirtByte / 255f;
-            RLDirt = RLDirtByte / 255f;
-
-            // GroundContactMaterial
-            ms.Position = 24;
-            var FLGroundContactMaterialByte = r.ReadByte();
-            ms.Position = 26;
-            var FRGroundContactMaterialByte = r.ReadByte();
-            ms.Position = 28;
-            var RRGroundContactMaterialByte = r.ReadByte();
-            ms.Position = 30;
-            var RLGroundContactMaterialByte = r.ReadByte();
-
-            FLGroundContactMaterial = (CPlugSurface.MaterialId)FLGroundContactMaterialByte;
-            FRGroundContactMaterial = (CPlugSurface.MaterialId)FRGroundContactMaterialByte;
-            RRGroundContactMaterial = (CPlugSurface.MaterialId)RRGroundContactMaterialByte;
-            RLGroundContactMaterial = (CPlugSurface.MaterialId)RLGroundContactMaterialByte;
-
-            // DampenLen
-            ms.Position = 23;
-            var FLDampenLenByte = r.ReadByte();
-            ms.Position = 25;
-            var FRDampenLenByte = r.ReadByte();
-            ms.Position = 27;
-            var RRDampenLenByte = r.ReadByte();
-            ms.Position = 29;
-            var RLDampenLenByte = r.ReadByte();
-
-            // Multiply by 4 instead of 2 as it matches value given by openplanet CSceneVehicleVisState
-            FLDampenLen = ((FLDampenLenByte / 255f) - 0.5f) * 4;
-            FRDampenLen = ((FRDampenLenByte / 255f) - 0.5f) * 4;
-            RRDampenLen = ((RRDampenLenByte / 255f) - 0.5f) * 4;
-            RLDampenLen = ((RLDampenLenByte / 255f) - 0.5f) * 4;
-
-            // SlipCoef
-            ms.Position = 32;
-            var SlipCoefByte1 = r.ReadByte();
-            ms.Position = 33;
-            var SlipCoefByte2 = r.ReadByte();
-
-            byte maskFR = 0x1;  // 00000001
-            byte maskRR = 0x4;  // 00000100
-            byte maskRL = 0x10; // 00010000
-            byte maskFL = 0x40; // 01000000
-
-            // Nadeo uses two bytes for some reason
-            // FLSlip is unique in that it is located at the 7th bit of SlipCoefByte1.
-            // The 7th bit of SlipCoefByte2 is used too, however it appears to not be correlated with anything.
-            FLSlipCoef = (SlipCoefByte1 & maskFL) != 0;
-            FRSlipCoef = (SlipCoefByte2 & maskFR) != 0;
-            RRSlipCoef = (SlipCoefByte2 & maskRR) != 0;
-            RLSlipCoef = (SlipCoefByte2 & maskRL) != 0;
-
-            // WheelRotation
-            ms.Position = 6;
-            var FLWheelRotationByte = r.ReadByte();
-            ms.Position = 7;
-            var FLWheelRotationCountByte = r.ReadByte();
-            ms.Position = 8;
-            var FRWheelRotationByte = r.ReadByte();
-            ms.Position = 9;
-            var FRWheelRotationCountByte = r.ReadByte();
-            ms.Position = 10;
-            var RRWheelRotationByte = r.ReadByte();
-            ms.Position = 11;
-            var RRWheelRotationCountByte = r.ReadByte();
-            ms.Position = 12;
-            var RLWheelRotationByte = r.ReadByte();
-            ms.Position = 13;
-            var RLWheelRotationCountByte = r.ReadByte();
-
-            var tau = (float)Math.PI * 2;
-            FLWheelRot = (FLWheelRotationByte / 255f * tau) + (FLWheelRotationCountByte * tau);
-            FRWheelRot = (FRWheelRotationByte / 255f * tau) + (FRWheelRotationCountByte * tau);
-            RRWheelRot = (RRWheelRotationByte / 255f * tau) + (RRWheelRotationCountByte * tau);
-            RLWheelRot = (RLWheelRotationByte / 255f * tau) + (RLWheelRotationCountByte * tau);
-
-            // Water
-            ms.Position = 101;
-            var waterByte = r.ReadByte();
-
-            WetnessValue = waterByte / 255f;
-
-            // IsGroundContact, IsReactorGroundMode, ReactorState
-            ms.Position = 89;
-            var groundModeByte = r.ReadByte();
-
-            var maskIsGroundMode = 0x1;         // 00000001
-            var maskIsReactorGroundMode = 0x4;  // 00000010
-            var maskIsReactorUp = 0x8;          // 00001000
-            var maskIsReactorDown = 0x10;       // 00010000
-            var maskReactorLvl1 = 0x20;         // 00100000
-            var maskReactorLvl2 = 0x40;         // 01000000 
-                                                //var maskSlowMo = 0x80;              // 10000000 // Can use SimulationTimeCoef instead
-
-            IsGroundContact = (groundModeByte & maskIsGroundMode) != 0;
-            IsReactorGroundMode = (groundModeByte & maskIsReactorGroundMode) != 0;
-
-            var isReactorUp = (groundModeByte & maskIsReactorUp) != 0;
-            var isReactorDown = (groundModeByte & maskIsReactorDown) != 0;
-
-            var isReactorLvl1 = (groundModeByte & maskReactorLvl1) != 0;
-            var isReactorLvl2 = (groundModeByte & maskReactorLvl2) != 0;
-
-            //var isSlowMo = (groundModeByte & maskSlowMo) != 0;
-
-            if (isReactorLvl1)
-                ReactorBoostLvl = ReactorBoostLvl.Lvl1;
-            else if (isReactorLvl2)
-                ReactorBoostLvl = ReactorBoostLvl.Lvl2;
-            else
-                ReactorBoostLvl = ReactorBoostLvl.None;
-
-            if (isReactorUp && isReactorDown)
-                ReactorBoostType = ReactorBoostType.UpAndDown;
-            else if (isReactorUp)
-                ReactorBoostType = ReactorBoostType.Up;
-            else if (isReactorDown)
-                ReactorBoostType = ReactorBoostType.Down;
-            else
-                ReactorBoostType = ReactorBoostType.None;
-
-            // Turbo
-            ms.Position = 31;
-            var isTurboByte = r.ReadByte();
-            ms.Position = 21;
-            var turboTimeByte = r.ReadByte();
-
-            var maskIsTurbo = 0x82; // 10000010
-
-            IsTurbo = (isTurboByte & maskIsTurbo) != 0;
-            TurboTime = turboTimeByte / 255f;
-
-            // SimulationTimeCoef (SlowMo)
-            ms.Position = 102;
-            var SimulationTimeCoefByte = r.ReadByte();
-
-            SimulationTimeCoef = SimulationTimeCoefByte / 255f;
-
-            // ReactorAirControl
-            // [1,0,-1] = (Accell,None,Brake), (Left,None,Right)
-            ms.Position = 90;
-            var boosterAirControlByte = r.ReadByte();
-
-            var maskPedalNone = 0x10;   // 00010000
-            var maskPedalAccel = 0x20;  // 00100000
-            var maskSteerNone = 0x40;   // 01000000
-            var maskSteerLeft = 0x80;   // 10000000
-
-            var isAirControlPedalAccel = (boosterAirControlByte & maskPedalAccel) != 0;
-            var isAirControlPedalNone = (boosterAirControlByte & maskPedalNone) != 0;
-
-            ReactorAirControlPedal = isAirControlPedalAccel ? 1 : isAirControlPedalNone ? 0 : -1;
-
-            var isAirControlSteerLeft = (boosterAirControlByte & maskSteerLeft) != 0;
-            var isAirControlSteerNone = (boosterAirControlByte & maskSteerNone) != 0;
-
-            ReactorAirControlSteer = isAirControlSteerLeft ? 1 : isAirControlSteerNone ? 0 : -1;
-
-            // IsTopContact
             ms.Position = 76;
-            var vechicleStateByte = r.ReadByte();
+            vehicleState = r.ReadByte();
 
-            var maskIsTopContact = 0x20;
-            //var maskIsReactor = 0x10; 
+            ms.Position = 81;
+            flIce = r.ReadByte();
+            frIce = r.ReadByte();
+            rrIce = r.ReadByte();
+            rlIce = r.ReadByte();
 
-            IsTopContact = (vechicleStateByte & maskIsTopContact) != 0;
+            ms.Position = 89;
+            groundMode = r.ReadByte();
+            boosterAirControl = r.ReadByte(); // Position 90
+            gear = r.ReadByte(); // Position 91
 
-            // SideSpeed
-            ms.Position = 2;
-            float sideSpeedInt = r.ReadUInt16();
-            SideSpeed = (float)((float)((sideSpeedInt / 65536.0) - 0.5) * 2000.0);
+            ms.Position = 93;
+            flDirt = r.ReadByte();
+
+            ms.Position = 95;
+            frDirt = r.ReadByte();
+
+            ms.Position = 97;
+            rrDirt = r.ReadByte();
+
+            ms.Position = 99;
+            rlDirt = r.ReadByte();
+
+            ms.Position = 101;
+            wetnessValue = r.ReadByte();
+            simulationTimeCoef = r.ReadByte(); // Position 102
         }
+
+        internal override void Write()
+        {
+            BinaryPrimitives.WriteUInt16LittleEndian(Data.AsSpan(2), sideSpeed);
+
+            Data[5] = rpm;
+
+            Data[6] = flWheelRot;
+            Data[7] = flWheelRotCount;
+            Data[8] = frWheelRot;
+            Data[9] = frWheelRotCount;
+            Data[10] = rrWheelRot;
+            Data[11] = rrWheelRotCount;
+            Data[12] = rlWheelRot;
+            Data[13] = rlWheelRotCount;
+
+            Data[14] = steer;
+            Data[15] = u15;
+
+            Data[18] = brake;
+
+            Data[21] = turboTime;
+
+            Data[23] = flDampenLen;
+            Data[24] = (byte)FLGroundContactMaterial;
+            Data[25] = frDampenLen;
+            Data[26] = (byte)FRGroundContactMaterial;
+            Data[27] = rrDampenLen;
+            Data[28] = (byte)RRGroundContactMaterial;
+            Data[29] = rlDampenLen;
+            Data[30] = (byte)RLGroundContactMaterial;
+
+            Data[31] = isTurbo;
+            Data[32] = slipCoef1;
+            Data[33] = slipCoef2;
+
+            // Wrap the Data array in a MemoryStream specifically
+            // This edits the underlying Data array directly in memory without copying
+            using (var ms = new MemoryStream(Data))
+            using (var w = new GbxWriter(ms))
+            {
+                ms.Position = 47;
+                w.WriteTransform(position, rotation, speed, velocity);
+            }
+
+            Data[76] = vehicleState;
+
+            Data[81] = flIce;
+            Data[82] = frIce;
+            Data[83] = rrIce;
+            Data[84] = rlIce;
+
+            Data[89] = groundMode;
+            Data[90] = boosterAirControl;
+            Data[91] = gear;
+
+            Data[93] = flDirt;
+            Data[95] = frDirt;
+            Data[97] = rrDirt;
+            Data[99] = rlDirt;
+
+            Data[101] = wetnessValue;
+            Data[102] = simulationTimeCoef;
+        }
+    }
+
+    public interface IEntRecordDeltaRawData
+    {
+        ushort SideSpeed { get; set; }
+        byte Rpm { get; set; }
+        byte FlWheelRot { get; set; }
+        byte FlWheelRotCount { get; set; }
+        byte FrWheelRot { get; set; }
+        byte FrWheelRotCount { get; set; }
+        byte RrWheelRot { get; set; }
+        byte RrWheelRotCount { get; set; }
+        byte RlWheelRot { get; set; }
+        byte RlWheelRotCount { get; set; }
+        byte Steer { get; set; }
+        byte U15 { get; set; }
+        byte Brake { get; set; }
+        byte TurboTime { get; set; }
+        byte FlDampenLen { get; set; }
+        CPlugSurface.MaterialId FLGroundContactMaterial { get; set; }
+        byte FrDampenLen { get; set; }
+        CPlugSurface.MaterialId FRGroundContactMaterial { get; set; }
+        byte RrDampenLen { get; set; }
+        CPlugSurface.MaterialId RRGroundContactMaterial { get; set; }
+        byte RlDampenLen { get; set; }
+        CPlugSurface.MaterialId RLGroundContactMaterial { get; set; }
+        byte IsTurbo { get; set; }
+        byte SlipCoef1 { get; set; }
+        byte SlipCoef2 { get; set; }
+        byte VehicleState { get; set; }
+        byte FlIce { get; set; }
+        byte FrIce { get; set; }
+        byte RrIce { get; set; }
+        byte RlIce { get; set; }
+        byte GroundMode { get; set; }
+        byte BoosterAirControl { get; set; }
+        byte Gear { get; set; }
+        byte FlDirt { get; set; }
+        byte FrDirt { get; set; }
+        byte RrDirt { get; set; }
+        byte RlDirt { get; set; }
+        byte WetnessValue { get; set; }
+        byte SimulationTimeCoef { get; set; }
     }
 }

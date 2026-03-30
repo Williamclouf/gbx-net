@@ -25,18 +25,6 @@ public partial class CGameCtnBlockInfo
     private External<CSceneMobil>[][]? airMobils;
     public External<CSceneMobil>[][]? AirMobils { get => airMobils; set => airMobils = value; }
 
-    public override IHeaderChunk? CreateHeaderChunk(uint chunkId)
-    {
-        if (chunkId == 0x090F4000)
-        {
-            var chunk = new CPlugGameSkin.HeaderChunk090F4000 { Node = new() };
-            Chunks.Add(chunk);
-            return chunk;
-        }
-
-        return base.CreateHeaderChunk(chunkId);
-    }
-
     public partial class Chunk0304E005
     {
         public int U02;
@@ -123,5 +111,15 @@ public partial class CGameCtnBlockInfo
             w.Write(U09);
             w.Write(U10);
         }
+    }
+
+    internal override IHeaderChunk? NewHeaderChunk(uint chunkId)
+    {
+        if (chunkId == 0x090F4000)
+        {
+            return new CPlugGameSkin.HeaderChunk090F4000 { Node = new() };
+        }
+
+        return base.NewHeaderChunk(chunkId);
     }
 }

@@ -26,10 +26,8 @@ public partial class CGameGhost
                 return $"{Time}, {Data.Length} bytes";
             }
 
-            internal virtual void Read(MemoryStream ms, GbxReader r, int version)
-            {
-
-            }
+            internal virtual void Read(GbxReader r, int version) { }
+            internal virtual void Write(GbxWriter w, int version) { }
         }
     }
 }

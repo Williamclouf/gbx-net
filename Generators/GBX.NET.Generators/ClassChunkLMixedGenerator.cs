@@ -3,22 +3,14 @@ using GBX.NET.Generators.Models;
 using GBX.NET.Generators.SubGenerators;
 using Microsoft.CodeAnalysis;
 using System.Collections.Immutable;
-using System.Diagnostics;
 
 namespace GBX.NET.Generators;
 
 [Generator]
 public partial class ClassChunkLMixedGenerator : IIncrementalGenerator
 {
-    private const bool Debug = false;
-
     public virtual void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        if (Debug && !Debugger.IsAttached)
-        {
-            Debugger.Launch();
-        }
-
         var chunklFiles = context.AdditionalTextsProvider
             .Where(static file =>
             {

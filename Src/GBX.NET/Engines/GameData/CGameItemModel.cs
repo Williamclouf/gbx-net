@@ -144,27 +144,13 @@ public partial class CGameItemModel
         };
     }
 
-    public override IHeaderChunk? CreateHeaderChunk(uint chunkId)
+    internal override IHeaderChunk? NewHeaderChunk(uint chunkId)
     {
         if (chunkId == 0x090F4000)
         {
-            var chunk = new CPlugGameSkin.HeaderChunk090F4000 { Node = new() };
-            Chunks.Add(chunk);
-            return chunk;
-        }
-        else if (chunkId == 0x2E002000)
-        {
-            var chunk = new HeaderChunk2E002000();
-            Chunks.Add(chunk);
-            return chunk;
-        }
-        else if (chunkId == 0x2E002001)
-        {
-            var chunk = new HeaderChunk2E002001();
-            Chunks.Add(chunk);
-            return chunk;
+            return new CPlugGameSkin.HeaderChunk090F4000 { Node = new() };
         }
 
-        return base.CreateHeaderChunk(chunkId);
+        return base.NewHeaderChunk(chunkId);
     }
 }

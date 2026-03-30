@@ -6,7 +6,6 @@ using System.Runtime.InteropServices;
 using GBX.NET.Components;
 using System.Collections.Immutable;
 
-
 #if NET6_0_OR_GREATER
 using System.Buffers;
 #endif
@@ -56,8 +55,13 @@ public partial interface IGbxWriter : IDisposable
     void Write(Byte3 value);
     void Write(Vec2 value);
     void Write(Vec3 value);
+    void WriteVec3Unit2(Vec3 value);
+    void WriteVec3_4(Vec3 value);
+    void WriteVec3_6(Vec3 value);
+    void WriteVec3_9(Vec3 value);
     void WriteVec3_10b(Vec3 value);
     void WriteVec3Unit4(Vec3 value);
+    void WriteQuat6(Quat value);
     void Write(Vec4 value);
     void Write(BoxAligned value);
     void Write(BoxInt3 value);
@@ -83,12 +87,15 @@ public partial interface IGbxWriter : IDisposable
     void Write(TimeSingle value);
     void WriteTimeSingleNullable(TimeSingle? value);
     void WriteTimeOfDay(TimeSpan? value);
-    void WriteFileTime(DateTime value);
-    void WriteSystemTime(DateTime value);
+    void WriteFileTime(DateTime? value);
+    void WriteSystemTime(DateTime? value);
     void WriteUnixTime(DateTimeOffset value);
     void WriteSmallLen(int value);
     void WriteSmallString(string? value);
     void WriteMarker(string value);
+    void WriteZlibData(ZlibData? value, IReadableWritable? readableWritable, int version = 0);
+    void WriteZlibData(ZlibData? value, IWritable? writable, int version = 0);
+    void WriteZlibData(ZlibData? value, Action<GbxWriter> action);
     void WriteOptimizedInt(int value, int determineFrom);
     void WriteVarNat15(short value);
     void WriteWritable<T>(T? value, int version = 0) where T : IWritable, new();
@@ -144,6 +151,10 @@ public partial interface IGbxWriter : IDisposable
     [IgnoreForCodeGeneration] void WriteListId(IList<string>? value, int length);
     [IgnoreForCodeGeneration] void WriteListId_deprec(IList<string>? value);
 
+    void WriteEncapsulated(RawData value);
+    void WriteEncapsulated(Action<GbxWriter> action);
+    void WriteEncapsulated(RawData? value, Action<GbxWriter> action);
+
     void ResetIdState();
 }
 
@@ -152,6 +163,8 @@ public partial interface IGbxWriter : IDisposable
 /// </summary>
 public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 {
+    internal const int MaxDataSize = 0x10000000; // ~268MB
+
     private static readonly Encoding encoding = Encoding.UTF8;
 
     private readonly XmlWriter? xmlWriter;
@@ -560,6 +573,128 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         Write(value.Z);
     }
 
+    public void WriteVec3Unit2(Vec3 value)
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        // Ensure Z is clamped to [-1, 1] to avoid NaN from Asin
+        var pitch = MathF.Asin(Math.Clamp(value.Z, -1f, 1f));
+        var heading = MathF.Atan2(value.Y, value.X);
+
+        // Map radians back to the 8-bit scale and clamp to sbyte boundaries.
+        var headingEncoded = (sbyte)Math.Clamp(MathF.Round(heading / MathF.PI * sbyte.MaxValue), sbyte.MinValue, sbyte.MaxValue);
+        var pitchEncoded = (sbyte)Math.Clamp(MathF.Round(pitch / (MathF.PI / 2) * sbyte.MaxValue), sbyte.MinValue, sbyte.MaxValue);
+
+        // Write as byte to match the ReadByte() signature used in ReadVec3Unit2
+        Write(unchecked((byte)headingEncoded));
+        Write(unchecked((byte)pitchEncoded));
+#else
+        var pitch = Math.Asin(Math.Max(-1.0, Math.Min(1.0, value.Z)));
+        var heading = Math.Atan2(value.Y, value.X);
+
+        var headingEncoded = (sbyte)Math.Max(sbyte.MinValue, Math.Min(sbyte.MaxValue, Math.Round(heading / Math.PI * sbyte.MaxValue)));
+        var pitchEncoded = (sbyte)Math.Max(sbyte.MinValue, Math.Min(sbyte.MaxValue, Math.Round(pitch / (Math.PI / 2) * sbyte.MaxValue)));
+
+        Write(unchecked((byte)headingEncoded));
+        Write(unchecked((byte)pitchEncoded));
+#endif
+    }
+
+    public void WriteVec3_4(Vec3 value)
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        var mag = MathF.Sqrt(value.X * value.X + value.Y * value.Y + value.Z * value.Z);
+
+        if (mag < 1e-5f)
+        {
+            Write(short.MinValue);
+            WriteVec3Unit2(new Vec3(1, 0, 0)); // Default unit vector to prevent undefined behavior
+        }
+        else
+        {
+            var mag16 = (short)Math.Clamp(MathF.Round(MathF.Log(mag) * 1000f), short.MinValue, short.MaxValue);
+            Write(mag16);
+            WriteVec3Unit2(new Vec3(value.X / mag, value.Y / mag, value.Z / mag));
+        }
+#else
+        var mag = Math.Sqrt(value.X * value.X + value.Y * value.Y + value.Z * value.Z);
+
+        if (mag < 1e-5)
+        {
+            Write(short.MinValue);
+            WriteVec3Unit2(new Vec3(1, 0, 0)); 
+        }
+        else
+        {
+            var mag16 = (short)Math.Max(short.MinValue, Math.Min(short.MaxValue, Math.Round(Math.Log(mag) * 1000.0)));
+            Write(mag16);
+            WriteVec3Unit2(new Vec3((float)(value.X / mag), (float)(value.Y / mag), (float)(value.Z / mag)));
+        }
+#endif
+    }
+
+    public void WriteVec3_6(Vec3 value)
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        Span<byte> buffer = stackalloc byte[6];
+        
+        BitConverter.TryWriteBytes(buffer.Slice(0, 2), (Half)value.X);
+        BitConverter.TryWriteBytes(buffer.Slice(2, 2), (Half)value.Y);
+        BitConverter.TryWriteBytes(buffer.Slice(4, 2), (Half)value.Z);
+        
+        BaseStream.Write(buffer);
+#else
+        var x = HalfUtility.FloatToHalf(value.X);
+        var y = HalfUtility.FloatToHalf(value.Y);
+        var z = HalfUtility.FloatToHalf(value.Z);
+
+        var buffer = new byte[6];
+        buffer[0] = (byte)(x & 0xFF);
+        buffer[1] = (byte)(x >> 8);
+        buffer[2] = (byte)(y & 0xFF);
+        buffer[3] = (byte)(y >> 8);
+        buffer[4] = (byte)(z & 0xFF);
+        buffer[5] = (byte)(z >> 8);
+
+        BaseStream.Write(buffer, 0, 6);
+#endif
+    }
+
+    public void WriteVec3_9(Vec3 value)
+    {
+        // Reverse: val = ((encoded - 0x800000) * 0.002f)
+        // encoded = (val / 0.002f) + 0x800000
+        static int Encode(float v) => (int)AdditionalMath.Clamp((int)Math.Round(v / 0.002f) + 0x800000, 0, 0xFFFFFF);
+
+        var ix = Encode(value.X);
+        var iy = Encode(value.Y);
+        var iz = Encode(value.Z);
+
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        Span<byte> buffer = stackalloc byte[9];
+#else
+        var buffer = new byte[9];
+#endif
+
+        // Note: The byte order is specifically unaligned: [16-23], [0-7], [8-15]
+        buffer[0] = (byte)(ix >> 16);
+        buffer[1] = (byte)(ix);
+        buffer[2] = (byte)(ix >> 8);
+
+        buffer[3] = (byte)(iy >> 16);
+        buffer[4] = (byte)(iy);
+        buffer[5] = (byte)(iy >> 8);
+
+        buffer[6] = (byte)(iz >> 16);
+        buffer[7] = (byte)(iz);
+        buffer[8] = (byte)(iz >> 8);
+
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        BaseStream.Write(buffer);
+#else
+        Write(buffer);
+#endif
+    }
+
     public void WriteVec3_10b(Vec3 value)
     {
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -587,6 +722,34 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 #else
         Write((short)(Math.Atan2(value.Y, value.X) * short.MaxValue / Math.PI));
         Write((short)(Math.Asin(value.Z) * short.MaxValue / (Math.PI / 2)));
+#endif
+    }
+
+    public void WriteQuat6(Quat value)
+    {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        var w = Math.Clamp(value.W, -1f, 1f);
+        var angle = MathF.Acos(w);
+        var sinAngle = MathF.Sin(angle);
+
+        // Avoid division by zero if there is no rotation
+        var axis = MathF.Abs(sinAngle) > 1e-5f
+            ? new Vec3(value.X / sinAngle, value.Y / sinAngle, value.Z / sinAngle)
+            : new Vec3(1, 0, 0);
+
+        Write((ushort)Math.Clamp(MathF.Round(angle / MathF.PI * ushort.MaxValue), 0, ushort.MaxValue));
+        WriteVec3Unit4(axis);
+#else
+        var w = Math.Max(-1.0, Math.Min(1.0, value.W));
+        var angle = Math.Acos(w);
+        var sinAngle = Math.Sin(angle);
+
+        var axis = Math.Abs(sinAngle) > 1e-5
+            ? new Vec3((float)(value.X / sinAngle), (float)(value.Y / sinAngle), (float)(value.Z / sinAngle))
+            : new Vec3(1, 0, 0);
+
+        Write((ushort)Math.Max(0, Math.Min(ushort.MaxValue, Math.Round(angle / Math.PI * ushort.MaxValue))));
+        WriteVec3Unit4(axis);
 #endif
     }
 
@@ -844,7 +1007,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             throw new ClassWriteNotSupportedException(classId);
         }
 
-        Write(classId);
+        WriteClassId(classId);
 
         rw ??= new GbxReaderWriter(this);
 
@@ -935,14 +1098,46 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         Write(Convert.ToInt32(secs / maxSecs * ushort.MaxValue));
     }
 
-    public void WriteFileTime(DateTime value)
+    public void WriteFileTime(DateTime? value)
     {
-        Write(value.ToFileTimeUtc());
+        if (value is null)
+        {
+            Write(0L);
+            return;
+        }
+
+        Write(value.Value.ToFileTimeUtc());
     }
 
-    public void WriteSystemTime(DateTime value)
+    public void WriteSystemTime(DateTime? value)
     {
-        Write(value.Ticks);
+        if (value is null || value == DateTime.MinValue)
+        {
+            Write(0UL);
+            return;
+        }
+
+        var v = value.Value;
+
+        var year = (ulong)v.Year;
+        var month = (ulong)v.Month;
+        var dayOfWeek = (ulong)v.DayOfWeek;
+        var day = (ulong)v.Day;
+        var hour = (ulong)v.Hour;
+        var minute = (ulong)v.Minute;
+        var second = (ulong)v.Second;
+        var millisecond = (ulong)v.Millisecond;
+
+        var data = year |
+            (month << 16) |
+            (dayOfWeek << 20) |
+            (day << 23) |
+            (hour << 32) |
+            (minute << 37) |
+            (second << 43) |
+            (millisecond << 49);
+
+        Write(data);
     }
 
     public void WriteUnixTime(DateTimeOffset value)
@@ -977,6 +1172,180 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
     public void WriteMarker(string value)
     {
         Write(value, StringLengthPrefix.None);
+    }
+
+    internal void WriteTransform(Vec3 pos, Quat rotation, float speed, Vec3 velocity)
+    {
+        Write(pos);
+
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        // Clamp W to [-1, 1] to prevent NaN from Acos
+        var w = Math.Clamp(rotation.W, -1f, 1f);
+        var angle = MathF.Acos(w);
+
+        var sinAngle = MathF.Sin(angle);
+        var axisPitch = 0f;
+        var axisHeading = 0f;
+
+        // Avoid division by zero if there's no rotation (Identity Quat)
+        if (MathF.Abs(sinAngle) > 1e-5f)
+        {
+            var uz = Math.Clamp(rotation.Z / sinAngle, -1f, 1f);
+            axisPitch = MathF.Asin(uz);
+            axisHeading = MathF.Atan2(rotation.Y / sinAngle, rotation.X / sinAngle);
+        }
+
+        Write((ushort)Math.Clamp(MathF.Round(angle / MathF.PI * ushort.MaxValue), 0, ushort.MaxValue));
+        Write((short)Math.Clamp(MathF.Round(axisHeading / MathF.PI * short.MaxValue), short.MinValue, short.MaxValue));
+        Write((short)Math.Clamp(MathF.Round(axisPitch / (MathF.PI / 2) * short.MaxValue), short.MinValue, short.MaxValue));
+
+        // -- SPEED --
+        if (speed <= 0f)
+        {
+            Write(short.MinValue);
+        }
+        else
+        {
+            Write((short)Math.Clamp(MathF.Round(MathF.Log(speed) * 1000f), short.MinValue, short.MaxValue));
+        }
+
+        // -- VELOCITY --
+        var velPitch = 0f;
+        var velHeading = 0f;
+        var velLength = MathF.Sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y + velocity.Z * velocity.Z);
+
+        if (velLength > 1e-5f)
+        {
+            var vz = Math.Clamp(velocity.Z / velLength, -1f, 1f);
+            velPitch = MathF.Asin(vz);
+            velHeading = MathF.Atan2(velocity.Y / velLength, velocity.X / velLength);
+        }
+
+        Write((sbyte)Math.Clamp(MathF.Round(velHeading / MathF.PI * sbyte.MaxValue), sbyte.MinValue, sbyte.MaxValue));
+        Write((sbyte)Math.Clamp(MathF.Round(velPitch / (MathF.PI / 2) * sbyte.MaxValue), sbyte.MinValue, sbyte.MaxValue));
+
+#else
+        
+        var w = Math.Max(-1.0, Math.Min(1.0, rotation.W));
+        var angle = Math.Acos(w);
+    
+        var sinAngle = Math.Sin(angle);
+        var axisPitch = 0.0;
+        var axisHeading = 0.0;
+
+        if (Math.Abs(sinAngle) > 1e-5)
+        {
+            var uz = Math.Max(-1.0, Math.Min(1.0, rotation.Z / sinAngle));
+            axisPitch = Math.Asin(uz);
+            axisHeading = Math.Atan2(rotation.Y / sinAngle, rotation.X / sinAngle);
+        }
+
+        Write((ushort)Math.Max(0, Math.Min(ushort.MaxValue, Math.Round(angle / Math.PI * ushort.MaxValue))));
+        Write((short)Math.Max(short.MinValue, Math.Min(short.MaxValue, Math.Round(axisHeading / Math.PI * short.MaxValue))));
+        Write((short)Math.Max(short.MinValue, Math.Min(short.MaxValue, Math.Round(axisPitch / (Math.PI / 2) * short.MaxValue))));
+
+        if (speed <= 0) 
+        {
+            Write(short.MinValue);
+        }
+        else 
+        {
+            Write((short)Math.Max(short.MinValue, Math.Min(short.MaxValue, Math.Round(Math.Log(speed) * 1000.0))));
+        }
+
+        var velPitch = 0.0;
+        var velHeading = 0.0;
+        var velLength = Math.Sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y + velocity.Z * velocity.Z);
+
+        if (velLength > 1e-5)
+        {
+            var vz = Math.Max(-1.0, Math.Min(1.0, velocity.Z / velLength));
+            velPitch = Math.Asin(vz);
+            velHeading = Math.Atan2(velocity.Y / velLength, velocity.X / velLength);
+        }
+
+        Write((sbyte)Math.Max(sbyte.MinValue, Math.Min(sbyte.MaxValue, Math.Round(velHeading / Math.PI * sbyte.MaxValue))));
+        Write((sbyte)Math.Max(sbyte.MinValue, Math.Min(sbyte.MaxValue, Math.Round(velPitch / (Math.PI / 2) * sbyte.MaxValue))));
+#endif
+    }
+
+    public void WriteZlibData(ZlibData? value, IReadableWritable? readableWritable, int version = 0)
+    {
+        if (value?.Parsed == false)
+        {
+            Write(value.UncompressedSize);
+            WriteData(value.Data);
+            return;
+        }
+
+        if (readableWritable is null)
+        {
+            throw new Exception("Archive cannot be null if zlib data was parsed.");
+        }
+
+        using var uncompressedStream = new MemoryStream();
+        using var writer = new GbxWriter(uncompressedStream);
+
+        using var rwBuffer = new GbxReaderWriter(writer);
+        readableWritable.ReadWrite(rwBuffer, version);
+        writer.Flush();
+
+        uncompressedStream.Position = 0;
+        using var compressedStream = new MemoryStream();
+        Gbx.ZLib.Compress(uncompressedStream, compressedStream);
+        Write((int)uncompressedStream.Length);
+        Write((int)compressedStream.Length);
+        compressedStream.WriteTo(BaseStream);
+    }
+
+    public void WriteZlibData(ZlibData? value, IWritable? writable, int version = 0)
+    {
+        if (value?.Parsed == false)
+        {
+            Write(value.UncompressedSize);
+            WriteData(value.Data);
+            return;
+        }
+
+        if (writable is null)
+        {
+            throw new Exception("Archive cannot be null if zlib data was parsed.");
+        }
+
+        using var uncompressedStream = new MemoryStream();
+        using var writer = new GbxWriter(uncompressedStream);
+
+        writable.Write(writer, version);
+        writer.Flush();
+
+        uncompressedStream.Position = 0;
+        using var compressedStream = new MemoryStream();
+        Gbx.ZLib.Compress(uncompressedStream, compressedStream);
+        Write((int)uncompressedStream.Length);
+        Write((int)compressedStream.Length);
+        compressedStream.WriteTo(BaseStream);
+    }
+
+    public void WriteZlibData(ZlibData? value, Action<GbxWriter> action)
+    {
+        if (value?.Parsed == false)
+        {
+            Write(value.UncompressedSize);
+            WriteData(value.Data);
+            return;
+        }
+
+        using var uncompressedStream = new MemoryStream();
+        using var writer = new GbxWriter(uncompressedStream);
+        action(writer);
+        writer.Flush();
+
+        uncompressedStream.Position = 0;
+        using var compressedStream = new MemoryStream();
+        Gbx.ZLib.Compress(uncompressedStream, compressedStream);
+        Write((int)uncompressedStream.Length);
+        Write((int)compressedStream.Length);
+        compressedStream.WriteTo(BaseStream);
     }
 
     public void WriteOptimizedInt(int value, int determineFrom)
@@ -1021,7 +1390,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        ValidateCollectionLength(value.Length);
+        EnsureValidLength(value.Length);
 
         if (hasLengthPrefix)
         {
@@ -1063,7 +1432,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        ValidateCollectionLength(value.Length);
+        EnsureValidLength(value.Length);
 
         if (hasLengthPrefix)
         {
@@ -1086,7 +1455,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
 
     public void WriteArrayVec3_10b(Vec3[]? value, int length)
     {
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         if (value is not null)
         {
@@ -1113,7 +1482,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        ValidateCollectionLength(value.Length);
+        EnsureValidLength(value.Length);
 
         Write(value.Length);
 
@@ -1265,7 +1634,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        ValidateCollectionLength(value.Length);
+        EnsureValidLength(value.Length);
 
         Write(value.Length);
 #if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
@@ -1282,7 +1651,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        ValidateCollectionLength(length);
+        EnsureValidLength(length);
 
         if (value.Length == length)
         {
@@ -1332,7 +1701,7 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
             return;
         }
 
-        ValidateCollectionLength(value.Count);
+        EnsureValidLength(value.Count);
 
         Write(value.Count);
 #if NET6_0_OR_GREATER
@@ -1540,16 +1909,16 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
         WriteListWritable(value, byteLengthPrefix, version);
     }
 
-    private static void ValidateCollectionLength(int length)
+    private void EnsureValidLength(int length)
     {
         if (length < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(length), "Length is not valid.");
+            throw new ArgumentOutOfRangeException(nameof(length), "Length cannot be negative.");
         }
 
-        if (length < 0 || length > 0x10000000) // ~268MB
+        if (length > (Settings.MaxDataSize ?? MaxDataSize))
         {
-            throw new Exception($"Length is too big to handle ({length}).");
+            throw new LengthLimitException(length);
         }
     }
 
@@ -1676,5 +2045,72 @@ public sealed partial class GbxWriter : BinaryWriter, IGbxWriter
     {
         WriteDeprecVersion();
         WriteListId(value);
+    }
+
+    public void WriteEncapsulated(Action<GbxWriter> action)
+    {
+        Write(0);
+
+        using var ms = new MemoryStream();
+        using var wBuffer = new GbxWriter(ms);
+        using var _ = new Encapsulation(wBuffer);
+
+        action(wBuffer);
+
+        Write((int)ms.Length);
+        ms.WriteTo(BaseStream);
+    }
+
+    public void WriteEncapsulated(RawData? value, Action<GbxWriter> action)
+    {
+        if (value?.Parsed == false)
+        {
+            WriteEncapsulated(value);
+            return;
+        }
+
+        WriteEncapsulated(action);
+    }
+
+    public void WriteEncapsulated(RawData value)
+    {
+        Write(0);
+        WriteData(value.Data);
+    }
+
+    internal void WriteChunkId(uint chunkId)
+    {
+        if (ClassIdRemapMode == ClassIdRemapMode.Latest)
+        {
+            WriteHexUInt32(chunkId);
+            return;
+        }
+
+        if (ClassIdRemapMode == ClassIdRemapMode.Id2008 && (chunkId & 0xFFFFF000) == 0x2E001000)
+        {
+            WriteHexUInt32(0x0301A000 | (chunkId & 0xFFF));
+            return;
+        }
+
+        var unwrappedChunkId = ClassManager.Unwrap(chunkId);
+        WriteHexUInt32(unwrappedChunkId);
+    }
+
+    internal void WriteClassId(uint classId)
+    {
+        if (ClassIdRemapMode == ClassIdRemapMode.Latest)
+        {
+            WriteHexUInt32(classId);
+            return;
+        }
+        
+        if (ClassIdRemapMode == ClassIdRemapMode.Id2008 && classId == 0x2E001000)
+        {
+            WriteHexUInt32(0x0301A000);
+            return;
+        }
+
+        var unwrappedClassId = ClassManager.Unwrap(classId);
+        WriteHexUInt32(unwrappedClassId);
     }
 }

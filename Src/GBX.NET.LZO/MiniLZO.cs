@@ -490,6 +490,16 @@ public class MiniLZO : ILzo
         {
             lzo1x_decompress(pIn, (uint)@in.Length, @pOut, ref @out_len, wrkmem);
         }
+
+        if (out_len == 0)
+        {
+            throw new InvalidOperationException("Decompression resulted in zero-length output.");
+        }
+
+        if (out_len != @out.Length)
+        {
+            throw new InvalidOperationException($"Decompression resulted in unexpected output length. Expected: {@out.Length}, Actual: {out_len}");
+        }
     }
 
     public unsafe byte[] Compress(byte[] input)

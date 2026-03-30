@@ -71,10 +71,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? bronzeTime : ChallengeParameters.BronzeTime;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.BronzeTime = value;
-            }
+            ChallengeParameters?.BronzeTime = value;
 
             bronzeTime = value;
         }
@@ -89,10 +86,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? silverTime : ChallengeParameters.SilverTime;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.SilverTime = value;
-            }
+            ChallengeParameters?.SilverTime = value;
 
             silverTime = value;
         }
@@ -107,10 +101,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? goldTime : ChallengeParameters.GoldTime;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.GoldTime = value;
-            }
+            ChallengeParameters?.GoldTime = value;
 
             goldTime = value;
         }
@@ -125,10 +116,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? authorTime : ChallengeParameters.AuthorTime;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.AuthorTime = value;
-            }
+            ChallengeParameters?.AuthorTime = value;
 
             authorTime = value;
         }
@@ -143,10 +131,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? authorScore : ChallengeParameters.AuthorScore;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.AuthorScore = value;
-            }
+            ChallengeParameters?.AuthorScore = value;
 
             authorScore = value;
         }
@@ -161,10 +146,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? mapType : ChallengeParameters.MapType;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.MapType = value;
-            }
+            ChallengeParameters?.MapType = value;
 
             mapType = value;
         }
@@ -179,10 +161,7 @@ public partial class CGameCtnChallenge :
         get => ChallengeParameters is null ? mapStyle : ChallengeParameters.MapStyle;
         set
         {
-            if (ChallengeParameters is not null)
-            {
-                ChallengeParameters.MapStyle = value;
-            }
+            ChallengeParameters?.MapStyle = value;
 
             mapStyle = value;
         }
@@ -288,7 +267,13 @@ public partial class CGameCtnChallenge :
 
     [AppliedWithChunk<Chunk0304303D>]
     [AppliedWithChunk<Chunk0304305B>]
-    public CompressedData? LightmapCacheData { get; set; }
+    public ZlibData? LightmapCacheData { get; set; }
+
+#if NET9_0_OR_GREATER
+    private readonly Lock LightmapCacheDataLock = new();
+#else
+    private readonly object LightmapCacheDataLock = new();
+#endif
 
     private CHmsLightMapCache? lightmapCache;
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
@@ -298,26 +283,124 @@ public partial class CGameCtnChallenge :
     {
         get
         {
-            if (Gbx.ZLib is null && lightmapCache is null && LightmapCacheData is not null)
+            // Lightmap cache is not compressed in version 1 and below
+            if (lightmapCache is not null || LightmapVersion < 2) return lightmapCache;
+            if (LightmapCacheData is null || LightmapCacheData.Parsed) return lightmapCache;
+
+            lock (LightmapCacheDataLock)
             {
-                throw new ZLibNotDefinedException();
+                if (lightmapCache is not null) return lightmapCache;
+                ParseLightMapCacheSmall(); // sets lightmapCache and LightmapCacheData.Parsed to true
+                return lightmapCache;
             }
-            return lightmapCache;
         }
-        set => lightmapCache = value;
+        set
+        {
+            lock (LightmapCacheDataLock)
+            {
+                lightmapCache = value;
+            }
+        }
     }
 
+    private CHmsLightMapCache.Frame[]? lightmapFrames;
     [AppliedWithChunk<Chunk0304303D>]
     [AppliedWithChunk<Chunk0304305B>]
-    public LightmapFrame[]? LightmapFrames { get; set; }
+    public CHmsLightMapCache.Frame[]? LightmapFrames
+    {
+        get
+        {
+            if (lightmapFrames is not null) return lightmapFrames;
+            if (LightmapCacheData is null || LightmapCacheData.Parsed) return lightmapFrames;
+
+            lock (LightmapCacheDataLock)
+            {
+                if (lightmapFrames is not null) return lightmapFrames;
+                ParseLightMapCacheSmall(); // updates lightmapFrames and LightmapCacheData.Parsed to true
+                return lightmapFrames;
+            }
+        }
+        set
+        {
+            lock (LightmapCacheDataLock)
+            {
+                lightmapFrames = value;
+            }
+        }
+    }
+
+    private CHmsLightMapCache.Small? lightmapCacheSmall;
+    public CHmsLightMapCache.Small? LightmapCacheSmall
+    {
+        get
+        {
+            if (LightmapCacheData is null || LightmapCacheData.Parsed) return lightmapCacheSmall;
+
+            lock (LightmapCacheDataLock)
+            {
+                if (LightmapCacheData is null || LightmapCacheData.Parsed) return lightmapCacheSmall;
+                ParseLightMapCacheSmall(); // updates lightmapCacheSmall and LightmapCacheData.Parsed to true
+                return lightmapCacheSmall;
+            }
+        }
+        set
+        {
+            lock (LightmapCacheDataLock)
+            {
+                lightmapCacheSmall = value;
+            }
+        }
+    }
 
     private List<CGameCtnAnchoredObject>? anchoredObjects;
     [AppliedWithChunk<Chunk03043040>]
     public List<CGameCtnAnchoredObject>? AnchoredObjects { get => anchoredObjects; set => anchoredObjects = value; }
 
+#if NET9_0_OR_GREATER
+    private readonly Lock ZoneGenealogyDataLock = new();
+#else
+    private readonly object ZoneGenealogyDataLock = new();
+#endif
+
+    public RawData? ZoneGenealogyData { get; set; }
+
     private List<CGameCtnZoneGenealogy>? zoneGenealogy;
     [AppliedWithChunk<Chunk03043043>]
-    public List<CGameCtnZoneGenealogy>? ZoneGenealogy { get => zoneGenealogy; set => zoneGenealogy = value; }
+    public List<CGameCtnZoneGenealogy>? ZoneGenealogy
+    {
+        get
+        {
+            if (ZoneGenealogyData is null || ZoneGenealogyData.Parsed) return zoneGenealogy;
+
+            lock (ZoneGenealogyDataLock)
+            {
+                if (ZoneGenealogyData is null || ZoneGenealogyData.Parsed) return zoneGenealogy;
+
+                try
+                {
+                    using var ms = new MemoryStream(ZoneGenealogyData.Data);
+                    using var r = new GbxReader(ms);
+                    using var _ = new Encapsulation(r);
+                    zoneGenealogy = r.ReadListNodeRef<CGameCtnZoneGenealogy>()!;
+
+                    ZoneGenealogyData.Parsed = true;
+                }
+                catch (Exception ex)
+                {
+                    ZoneGenealogyData.Exception = ex;
+                    throw;
+                }
+                return zoneGenealogy;
+            }
+        }
+        set
+        {
+            lock (ZoneGenealogyDataLock)
+            {
+                zoneGenealogy = value;
+            }
+        }
+    }
 
     private CScriptTraitsMetadata? scriptMetadata;
     [AppliedWithChunk<Chunk03043044>]
@@ -595,7 +678,7 @@ public partial class CGameCtnChallenge :
             }
         }
     }
-    
+
     /// <summary>
     /// Removes the map password.
     /// </summary>
@@ -910,7 +993,7 @@ public partial class CGameCtnChallenge :
                     var exebuild = default(string);
                     var lighmapVersion = 0;
 
-                    if (LightmapFrames?.Length > 0)
+                    if (lightmapFrames?.Length > 0)
                     {
                         lighmapVersion = gameVersion switch
                         {
@@ -1265,21 +1348,32 @@ public partial class CGameCtnChallenge :
         }
     }
 
+    private void ParseLightMapCacheSmall()
+    {
+        if (LightmapCacheData is null) throw new InvalidOperationException("LightmapCacheData not available");
+
+        try
+        {
+            if (lightmapFrames is null) throw new InvalidOperationException("LightmapFrames not available");
+            if (LightmapVersion is null) throw new InvalidOperationException("LightmapVersion not available");
+
+            using var r = LightmapCacheData.OpenDecompressedReader();
+            using var rw = new GbxReaderWriter(r);
+
+            lightmapCacheSmall = new CHmsLightMapCache.Small();
+            lightmapCacheSmall.ReadWrite(LightmapVersion.Value, ref lightmapCache, lightmapFrames, rw);
+
+            LightmapCacheData.Parsed = true;
+        }
+        catch (Exception ex)
+        {
+            LightmapCacheData.Exception = ex;
+            throw;
+        }
+    }
+
     public partial class Chunk0304303D
     {
-        public int U01;
-        public int? U02;
-        public int? U03;
-        public int? U04;
-        public int? U05;
-        public int? U06;
-        public int? U07;
-        public byte[]? U08;
-        public int U09;
-        public int U10;
-        public float? U11;
-        public int? U12;
-
         public override void ReadWrite(CGameCtnChallenge n, GbxReaderWriter rw)
         {
             rw.Boolean(ref n.hasLightmaps); // true if SHmsLightMapCacheSmall is not empty
@@ -1292,303 +1386,62 @@ public partial class CGameCtnChallenge :
             ReadWriteLightMapCacheSmall(n, rw);
         }
 
-        internal void ReadWriteLightMapCacheSmall(CGameCtnChallenge n, GbxReaderWriter rw)
+        protected static void ReadWriteLightMapCacheSmall(CGameCtnChallenge n, GbxReaderWriter rw)
         {
+            n.LightmapVersion = rw.Int32(n.LightmapVersion.GetValueOrDefault(8));
+
+            if (n.LightmapVersion < 2)
+            {
+                rw.NodeRef<CHmsLightMapCache>(ref n.lightmapCache);
+                throw new NotSupportedException("Lightmap version <2 is not supported.");
+            }
+
             if (rw.Reader is not null)
             {
-                ReadLightMapCacheSmall(n, rw.Reader);
+                var r = rw.Reader;
+
+                var frameCount = n.LightmapVersion >= 5 ? r.ReadInt32() : 1;
+
+                n.lightmapFrames = r.ReadArrayReadable<CHmsLightMapCache.Frame>(frameCount, n.LightmapVersion.GetValueOrDefault(8));
+
+                if (!n.lightmapFrames.Any(x => x.Data?.Length > 0 || x.Data2?.Length > 0 || x.Data3?.Length > 0))
+                {
+                    return;
+                }
+
+                n.LightmapCacheData = r.ReadZlibData();
             }
 
             if (rw.Writer is not null)
             {
-                WriteLightMapCacheSmall(n, rw.Writer);
-            }
-        }
+                var w = rw.Writer;
 
-        private void ReadLightMapCacheSmall(CGameCtnChallenge n, GbxReader r)
-        {
-            n.LightmapVersion = r.ReadInt32();
-
-            if (n.LightmapVersion < 2)
-            {
-                n.LightmapCache = r.ReadNodeRef<CHmsLightMapCache>();
-                throw new NotSupportedException("Lightmap version <2 is not supported.");
-            }
-
-            var frameCount = n.LightmapVersion >= 5 ? r.ReadInt32() : 1;
-
-            n.LightmapFrames = r.ReadArrayReadable<LightmapFrame>(frameCount, n.LightmapVersion.GetValueOrDefault(8));
-
-            if (!n.LightmapFrames.Any(x => x.Data?.Length > 0 || x.Data2?.Length > 0 || x.Data3?.Length > 0))
-            {
-                return;
-            }
-
-            n.LightmapCacheData = new CompressedData(r.ReadInt32(), r.ReadData());
-
-            if (Gbx.ZLib is null)
-            {
-                return;
-            }
-
-            using var ms = n.LightmapCacheData.OpenDecompressedMemoryStream();
-            var rBuffer = new GbxReader(ms);
-            rBuffer.LoadFrom(r);
-
-            n.LightmapCache = rBuffer.ReadNode<CHmsLightMapCache>();
-
-            var rw = new GbxReaderWriter(rBuffer);
-            ReadWriteTheRestOfCompressedData(n, rw);
-        }
-
-        private void WriteLightMapCacheSmall(CGameCtnChallenge n, GbxWriter w)
-        {
-            var lightmapVersion = n.LightmapVersion.GetValueOrDefault(8);
-
-            w.Write(lightmapVersion);
-
-            if (n.LightmapVersion < 2)
-            {
-                w.WriteNodeRef(n.LightmapCache);
-                return;
-            }
-
-            if (n.LightmapVersion >= 5)
-            {
-                w.Write(n.LightmapFrames?.Length ?? 0);
-            }
-
-            if (n.LightmapFrames is null || n.LightmapFrames.Length == 0)
-            {
-                return;
-            }
-
-            foreach (var frame in n.LightmapFrames)
-            {
-                w.WriteWritable(frame, version: lightmapVersion);
-            }
-
-            if (Gbx.ZLib is null)
-            {
-                if (n.LightmapCacheData is null)
+                if (n.LightmapVersion >= 5)
                 {
-                    throw new ZLibNotDefinedException();
+                    w.Write(n.lightmapFrames?.Length ?? 0);
                 }
 
-                w.Write(n.LightmapCacheData.UncompressedSize);
-                w.WriteData(n.LightmapCacheData.Data);
-                return;
-            }
-
-            using var ms = new MemoryStream();
-            using var wBuffer = new GbxWriter(ms);
-            wBuffer.LoadFrom(w);
-
-            wBuffer.WriteNode(n.LightmapCache);
-
-            var rw = new GbxReaderWriter(wBuffer);
-            ReadWriteTheRestOfCompressedData(n, rw);
-
-            ms.Position = 0;
-            using var compressedMs = new MemoryStream();
-            Gbx.ZLib.Compress(ms, compressedMs);
-
-            w.Write((int)ms.Length);
-            w.Write((int)compressedMs.Length);
-            compressedMs.WriteTo(w.BaseStream);
-        }
-
-        private void ReadWriteTheRestOfCompressedData(CGameCtnChallenge n, GbxReaderWriter rw)
-        {
-            rw.Int32(ref U01);
-
-            if (n.LightmapVersion >= 3)
-            {
-                rw.Int32(ref U02);
-                rw.Int32(ref U03);
-                rw.Int32(ref U04);
-                rw.Int32(ref U05);
-                rw.Int32(ref U06);
-
-                if (n.LightmapVersion >= 4)
+                if (n.lightmapFrames is null or { Length: 0 })
                 {
-                    rw.Int32(ref U07);
-
-                    if (n.LightmapVersion < 5)
-                    {
-                        rw.Data(ref U08);
-                    }
-                    else if (n.LightmapFrames is not null)
-                    {
-                        foreach (var frame in n.LightmapFrames)
-                        {
-                            frame.U01 = rw.Data(frame.U01);
-                            frame.U02 = rw.Single(frame.U02);
-
-                            if (n.LightmapVersion >= 6)
-                            {
-                                // NHmsLightMapCache::ArchiveToZip
-                                frame.Version = rw.Int32(frame.Version);
-
-                                if (frame.Version < 2)
-                                {
-                                    frame.U03 = rw.Single(frame.U03);
-                                    frame.U04 = rw.Int32(frame.U04);
-
-                                    if (frame.Version != 0)
-                                    {
-                                        frame.U05 = rw.Int32(frame.U05);
-                                    }
-
-                                    frame.U06 = rw.Int32(frame.U06);
-                                    frame.U07 = rw.Int32(frame.U07);
-                                    frame.U08 = rw.Int32(frame.U08);
-                                    frame.U09 = rw.Iso4(frame.U09);
-                                    frame.U10 = rw.Array<short>(frame.U10);
-                                }
-                                else
-                                {
-                                    frame.U11 = rw.Single(frame.U11);
-                                    frame.U12 = rw.Int32(frame.U12);
-
-                                    if (frame.Version >= 5)
-                                    {
-                                        frame.U39 = rw.Single(frame.U39);
-                                        frame.U40 = rw.Int32(frame.U40);
-
-                                        if (frame.Version >= 6)
-                                        {
-                                            frame.U41 = rw.Single(frame.U41);
-                                            frame.U42 = rw.Int32(frame.U42);
-                                        }
-                                    }
-
-                                    frame.U13 = rw.Int32(frame.U13);
-                                    frame.U14 = rw.Int32(frame.U14);
-                                    frame.U15 = rw.Int32(frame.U15);
-
-                                    if (frame.Version < 4)
-                                    {
-                                        frame.U16 = rw.ArrayReadableWritable<ProbeGridBoxOld>(frame.U16);
-                                    }
-                                    else
-                                    {
-                                        frame.U17 = rw.ArrayReadableWritable<ProbeGridBox>(frame.U17);
-                                    }
-
-                                    frame.U18 = rw.Array<Int2>(frame.U18);
-                                    frame.U19 = rw.Array<short>(frame.U19);
-
-                                    if (frame.Version >= 3)
-                                    {
-                                        frame.U20 = rw.Int32(frame.U20);
-                                        frame.U21 = rw.Int32(frame.U21);
-                                        frame.U22 = rw.Int32(frame.U22);
-                                        frame.U23 = rw.Int32(frame.U23);
-                                        frame.U24 = rw.Int32(frame.U24);
-                                        frame.U25 = rw.Int32(frame.U25);
-
-                                        if (frame.Version >= 4)
-                                        {
-                                            frame.U33 = rw.Int32(frame.U33);
-                                            frame.U34 = rw.Int32(frame.U34);
-                                            frame.U35 = rw.Int32(frame.U35);
-                                        }
-
-                                        frame.U26 = rw.Single(frame.U26);
-                                        frame.U27 = rw.Single(frame.U27);
-                                        frame.U28 = rw.Single(frame.U28);
-                                        frame.U29 = rw.Single(frame.U29);
-                                        frame.U30 = rw.Single(frame.U30);
-                                        frame.U31 = rw.Single(frame.U31);
-                                        frame.U32 = rw.Array<int>(frame.U32);
-                                    }
-                                }
-                                //
-
-                                if (n.LightmapVersion >= 8)
-                                {
-                                    frame.U36 = rw.Int32(frame.U36);
-                                    frame.U37 = rw.Int32(frame.U37);
-
-                                    // Unchecked
-                                    if (n.LightmapVersion >= 10)
-                                    {
-                                        frame.U38 = rw.Int32(frame.U38);
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    return;
                 }
-            }
 
-            rw.Int32(ref U09);
-            rw.Int32(ref U10);
+                foreach (var frame in n.lightmapFrames)
+                {
+                    w.WriteWritable(frame, version: n.LightmapVersion.Value);
+                }
 
-            if (n.LightmapVersion < 5)
-            {
-                rw.Single(ref U11);
-            }
-
-            if (n.LightmapVersion >= 7)
-            {
-                rw.Int32(ref U12);
+                w.WriteZlibData(n.LightmapCacheData, w =>
+                {
+                    using var rw = new GbxReaderWriter(w);
+                    (n.LightmapCacheSmall ?? new()).ReadWrite(n.LightmapVersion.Value, ref n.lightmapCache, n.lightmapFrames, rw);
+                });
             }
         }
-    }
-
-    [ArchiveGenerationOptions(StructureKind = StructureKind.SeparateReadAndWrite)]
-    public partial class LightmapFrame : IVersionable
-    {
-        public byte[]? U01 { get; set; }
-        public float U02 { get; set; }
-        public int Version { get; set; }
-        public float? U03 { get; set; }
-        public int? U04 { get; set; }
-        public int? U05 { get; set; }
-        public int? U06 { get; set; }
-        public int? U07 { get; set; }
-        public int? U08 { get; set; }
-        public Iso4? U09 { get; set; }
-        public short[]? U10 { get; set; }
-        public float? U11 { get; set; }
-        public int? U12 { get; set; }
-        public int? U13 { get; set; }
-        public int? U14 { get; set; }
-        public int? U15 { get; set; }
-        public ProbeGridBoxOld[]? U16 { get; set; }
-        public ProbeGridBox[]? U17 { get; set; }
-        public Int2[]? U18 { get; set; }
-        public short[]? U19 { get; set; }
-        public int? U20 { get; set; }
-        public int? U21 { get; set; }
-        public int? U22 { get; set; }
-        public int? U23 { get; set; }
-        public int? U24 { get; set; }
-        public int? U25 { get; set; }
-        public float? U26 { get; set; }
-        public float? U27 { get; set; }
-        public float? U28 { get; set; }
-        public float? U29 { get; set; }
-        public float? U30 { get; set; }
-        public float? U31 { get; set; }
-        public int[]? U32 { get; set; }
-        public int? U33 { get; set; }
-        public int? U34 { get; set; }
-        public int? U35 { get; set; }
-        public int? U36 { get; set; }
-        public int? U37 { get; set; }
-        public int? U38 { get; set; }
-        public float? U39 { get; set; }
-        public int? U40 { get; set; }
-        public float? U41 { get; set; }
-        public int? U42 { get; set; }
     }
 
     public partial class Chunk03043040 : IVersionable
     {
-        public int U01;
         public int[]? U02;
 
         /// <summary>
@@ -1599,312 +1452,275 @@ public partial class CGameCtnChallenge :
         public override void Read(CGameCtnChallenge n, GbxReader r)
         {
             Version = r.ReadInt32();
-            U01 = r.ReadInt32(); // always 0
-            var size = r.ReadInt32();
 
-            using var _ = new Encapsulation(r);
-
-            n.anchoredObjects = r.ReadListNodeRef_deprec<CGameCtnAnchoredObject>()!;
-
-            if (Version >= 1 && Version != 5 && Version < 8)
+            r.ReadEncapsulated(r =>
             {
-                // defines which (second element) items are deleted together with other (first element) item?
-                var itemsOnItem = r.ReadArray<Int2>();
+                n.anchoredObjects = r.ReadListNodeRef_deprec<CGameCtnAnchoredObject>()!;
 
-                foreach (var item in itemsOnItem)
+                if (Version >= 1 && Version != 5 && Version < 8)
                 {
-                    n.anchoredObjects[item.Y].PlacedOnItem = n.anchoredObjects[item.X];
-                }
-            }
+                    // defines which (second element) items are deleted together with other (first element) item?
+                    var itemsOnItem = r.ReadArray<Int2>();
 
-            if (Version >= 5)
-            {
-                if (Version >= 9)
-                {
-                    throw new ChunkVersionNotSupportedException(Version);
-                }
-
-                var blockIndexes = r.ReadArray<int>(); // block indexes, -1 means itemIndexes will have the value instead
-                var usedBlocks = new CGameCtnBlock?[blockIndexes.Length];
-                
-                for (var i = 0; i < blockIndexes.Length; i++)
-                {
-                    var index = blockIndexes[i];
-
-                    if (index > -1)
+                    foreach (var item in itemsOnItem)
                     {
-                        usedBlocks[i] = n.blocks![index];
+                        n.anchoredObjects[item.Y].PlacedOnItem = n.anchoredObjects[item.X];
                     }
                 }
 
-                var snapItemGroups = Version < 7 ? r.ReadArray<int>() : null; // snap item group - only some snapped items will delete on a block. they are consistent numbers
-
-                var usedItems = default(CGameCtnAnchoredObject[]);
-
-                if (Version >= 6)
+                if (Version >= 5)
                 {
-                    var itemIndexes = r.ReadArray<int>(); // item indexes
-                    usedItems = new CGameCtnAnchoredObject[itemIndexes.Length];
-
-                    for (var i = 0; i < itemIndexes.Length; i++)
+                    if (Version >= 9)
                     {
-                        var index = itemIndexes[i];
+                        throw new ChunkVersionNotSupportedException(Version);
+                    }
+
+                    var blockIndexes = r.ReadArray<int>(); // block indexes, -1 means itemIndexes will have the value instead
+                    var usedBlocks = new CGameCtnBlock?[blockIndexes.Length];
+
+                    for (var i = 0; i < blockIndexes.Length; i++)
+                    {
+                        var index = blockIndexes[i];
 
                         if (index > -1)
                         {
-                            usedItems[i] = n.anchoredObjects![index];
+                            usedBlocks[i] = n.blocks![index];
                         }
                     }
-                }
 
-                snapItemGroups ??= Version >= 7 ? r.ReadArray<int>() : null;
+                    var snapItemGroups = Version < 7 ? r.ReadArray<int>() : null; // snap item group - only some snapped items will delete on a block. they are consistent numbers
 
-                if (Version != 6)
-                {
-                    var U07 = r.ReadArray<int>();
+                    var usedItems = default(CGameCtnAnchoredObject[]);
 
-                    if (U07.Any(x => x != -1))
+                    if (Version >= 6)
                     {
-                        throw new NotSupportedException("U07 has something else than -1");
+                        var itemIndexes = r.ReadArray<int>(); // item indexes
+                        usedItems = new CGameCtnAnchoredObject[itemIndexes.Length];
+
+                        for (var i = 0; i < itemIndexes.Length; i++)
+                        {
+                            var index = itemIndexes[i];
+
+                            if (index > -1)
+                            {
+                                usedItems[i] = n.anchoredObjects![index];
+                            }
+                        }
+                    }
+
+                    snapItemGroups ??= Version >= 7 ? r.ReadArray<int>() : null;
+
+                    if (Version != 6)
+                    {
+                        var U07 = r.ReadArray<int>();
+
+                        if (U07.Any(x => x != -1))
+                        {
+                            throw new NotSupportedException("U07 has something else than -1");
+                        }
+                    }
+
+                    // always the same count as anchoredObjects
+                    var snappedIndexes = r.ReadArray<int>(); // "snapped onto block/item" indexes
+
+                    for (var i = 0; i < snappedIndexes.Length; i++)
+                    {
+                        var snappedIndex = snappedIndexes[i];
+
+                        if (snappedIndex <= -1)
+                        {
+                            continue;
+                        }
+
+                        var usedBlock = usedBlocks[snappedIndex];
+
+                        if (usedBlock is not null)
+                        {
+                            n.anchoredObjects[i].SnappedOnBlock = usedBlock;
+                        }
+
+                        var usedItem = usedItems?[snappedIndex];
+
+                        if (usedItem is not null)
+                        {
+                            n.anchoredObjects[i].SnappedOnItem = usedItem;
+                        }
+
+                        n.anchoredObjects[i].SnappedOnGroup = snapItemGroups?[snappedIndex] ?? 0;
                     }
                 }
-
-                // always the same count as anchoredObjects
-                var snappedIndexes = r.ReadArray<int>(); // "snapped onto block/item" indexes
-
-                for (var i = 0; i < snappedIndexes.Length; i++)
-                {
-                    var snappedIndex = snappedIndexes[i];
-
-                    if (snappedIndex <= -1)
-                    {
-                        continue;
-                    }
-
-                    var usedBlock = usedBlocks[snappedIndex];
-
-                    if (usedBlock is not null)
-                    {
-                        n.anchoredObjects[i].SnappedOnBlock = usedBlock;
-                    }
-
-                    var usedItem = usedItems?[snappedIndex];
-
-                    if (usedItem is not null)
-                    {
-                        n.anchoredObjects[i].SnappedOnItem = usedItem;
-                    }
-
-                    n.anchoredObjects[i].SnappedOnGroup = snapItemGroups?[snappedIndex] ?? 0;
-                }
-            }
+            });
         }
 
         public override void Write(CGameCtnChallenge n, GbxWriter w)
         {
             w.Write(Version);
-            w.Write(U01);
 
-            using var itemMs = new MemoryStream();
-            using var itemW = new GbxWriter(itemMs);
-            using var _ = new Encapsulation(itemW);
-
-            itemW.WriteListNodeRef_deprec((n.anchoredObjects ?? [])!);
-
-            var itemDict = new Dictionary<CGameCtnAnchoredObject, int>();
-
-            if (n.anchoredObjects is not null)
+            w.WriteEncapsulated(w =>
             {
-                for (var i = 0; i < n.anchoredObjects.Count; i++)
-                {
-                    itemDict[n.anchoredObjects[i]] = i;
-                }
-            }
+                w.WriteListNodeRef_deprec((n.anchoredObjects ?? [])!);
 
-            if (Version >= 1 && Version != 5 && Version < 8)
-            {
-                var pairs = new List<Int2>();
+                var itemDict = new Dictionary<CGameCtnAnchoredObject, int>();
 
                 if (n.anchoredObjects is not null)
                 {
                     for (var i = 0; i < n.anchoredObjects.Count; i++)
                     {
-                        var placedOnItem = n.anchoredObjects[i].PlacedOnItem;
-
-                        if (placedOnItem is not null && itemDict.TryGetValue(placedOnItem, out int index))
-                        {
-                            pairs.Add((index, i));
-                        }
+                        itemDict[n.anchoredObjects[i]] = i;
                     }
                 }
 
-                itemW.WriteList(pairs);
-            }
-
-            if (Version >= 5)
-            {
-                var blockDict = new Dictionary<CGameCtnBlock, int>();
-
-                if (n.blocks is not null)
+                if (Version >= 1 && Version != 5 && Version < 8)
                 {
-                    for (var i = 0; i < n.blocks.Count; i++)
+                    var pairs = new List<Int2>();
+
+                    if (n.anchoredObjects is not null)
                     {
-                        blockDict[n.blocks[i]] = i;
-                    }
-                }
-
-                var usedBlockIndexHashSet = new HashSet<(int blockIndex, int group)>();
-                var usedBlockIndexList = new List<(int blockIndex, int group)>();
-                var usedItemIndexHashSet = new HashSet<(int itemIndex, int group)>();
-                var usedItemIndexList = new List<(int itemIndex, int group)>();
-
-                var indicesOnUsedBlocksAndItems = new Dictionary<(int index, int group), int>();
-                var snappedOnIndices = new List<int>(n.anchoredObjects?.Count ?? 0);
-
-                foreach (var item in n.GetAnchoredObjects())
-                {
-                    var isItemNotSnappedOnBlock = item.SnappedOnBlock is null || !blockDict.ContainsKey(item.SnappedOnBlock);
-                    var isItemNotSnappedOnItem = item.SnappedOnItem is null || !itemDict.ContainsKey(item.SnappedOnItem);
-
-                    if (isItemNotSnappedOnBlock && isItemNotSnappedOnItem)
-                    {
-                        snappedOnIndices.Add(-1);
-                        continue;
-                    }
-
-                    var groupIndex = item.SnappedOnGroup ?? 0;
-                    var unique = (-1, groupIndex);
-
-                    if (item.SnappedOnBlock is not null)
-                    {
-                        var blockIndex = blockDict[item.SnappedOnBlock];
-
-                        unique = (blockIndex, groupIndex);
-
-                        if (!usedBlockIndexHashSet.Contains(unique))
+                        for (var i = 0; i < n.anchoredObjects.Count; i++)
                         {
-                            usedBlockIndexList.Add(unique);
-                            usedBlockIndexHashSet.Add(unique);
+                            var placedOnItem = n.anchoredObjects[i].PlacedOnItem;
 
-                            if (isItemNotSnappedOnItem)
+                            if (placedOnItem is not null && itemDict.TryGetValue(placedOnItem, out int index))
                             {
-                                usedItemIndexList.Add((-1, groupIndex));
+                                pairs.Add((index, i));
                             }
                         }
                     }
 
-                    if (item.SnappedOnItem is not null && itemDict.TryGetValue(item.SnappedOnItem, out var itemIndex))
+                    w.WriteList(pairs);
+                }
+
+                if (Version >= 5)
+                {
+                    var blockDict = new Dictionary<CGameCtnBlock, int>();
+
+                    if (n.blocks is not null)
                     {
-                        unique = (itemIndex, groupIndex);
-
-                        if (!usedItemIndexHashSet.Contains(unique))
+                        for (var i = 0; i < n.blocks.Count; i++)
                         {
-                            usedItemIndexList.Add(unique);
-                            usedItemIndexHashSet.Add(unique);
-
-                            if (item.SnappedOnBlock is null)
-                            {
-                                usedBlockIndexList.Add((-1, groupIndex));
-                            }
+                            blockDict[n.blocks[i]] = i;
                         }
                     }
 
-                    if (indicesOnUsedBlocksAndItems.TryGetValue(unique, out int indexOfBlockOrItemIndex))
+                    var usedBlockIndexHashSet = new HashSet<(int blockIndex, int group)>();
+                    var usedBlockIndexList = new List<(int blockIndex, int group)>();
+                    var usedItemIndexHashSet = new HashSet<(int itemIndex, int group)>();
+                    var usedItemIndexList = new List<(int itemIndex, int group)>();
+
+                    var indicesOnUsedBlocksAndItems = new Dictionary<(int index, int group), int>();
+                    var snappedOnIndices = new List<int>(n.anchoredObjects?.Count ?? 0);
+
+                    foreach (var item in n.GetAnchoredObjects())
                     {
-                        snappedOnIndices.Add(indexOfBlockOrItemIndex);
+                        var isItemNotSnappedOnBlock = item.SnappedOnBlock is null || !blockDict.ContainsKey(item.SnappedOnBlock);
+                        var isItemNotSnappedOnItem = item.SnappedOnItem is null || !itemDict.ContainsKey(item.SnappedOnItem);
+
+                        if (isItemNotSnappedOnBlock && isItemNotSnappedOnItem)
+                        {
+                            snappedOnIndices.Add(-1);
+                            continue;
+                        }
+
+                        var groupIndex = item.SnappedOnGroup ?? 0;
+                        var unique = (-1, groupIndex);
+
+                        if (item.SnappedOnBlock is not null)
+                        {
+                            var blockIndex = blockDict[item.SnappedOnBlock];
+
+                            unique = (blockIndex, groupIndex);
+
+                            if (!usedBlockIndexHashSet.Contains(unique))
+                            {
+                                usedBlockIndexList.Add(unique);
+                                usedBlockIndexHashSet.Add(unique);
+
+                                if (isItemNotSnappedOnItem)
+                                {
+                                    usedItemIndexList.Add((-1, groupIndex));
+                                }
+                            }
+                        }
+
+                        if (item.SnappedOnItem is not null && itemDict.TryGetValue(item.SnappedOnItem, out var itemIndex))
+                        {
+                            unique = (itemIndex, groupIndex);
+
+                            if (!usedItemIndexHashSet.Contains(unique))
+                            {
+                                usedItemIndexList.Add(unique);
+                                usedItemIndexHashSet.Add(unique);
+
+                                if (item.SnappedOnBlock is null)
+                                {
+                                    usedBlockIndexList.Add((-1, groupIndex));
+                                }
+                            }
+                        }
+
+                        if (indicesOnUsedBlocksAndItems.TryGetValue(unique, out int indexOfBlockOrItemIndex))
+                        {
+                            snappedOnIndices.Add(indexOfBlockOrItemIndex);
+                        }
+                        else
+                        {
+                            indicesOnUsedBlocksAndItems[unique] = indicesOnUsedBlocksAndItems.Count;
+                            snappedOnIndices.Add(indicesOnUsedBlocksAndItems.Count - 1);
+                        }
                     }
-                    else
+
+                    w.WriteArray(usedBlockIndexList.Select(x => x.blockIndex).ToArray());
+
+                    if (Version < 7)
                     {
-                        indicesOnUsedBlocksAndItems[unique] = indicesOnUsedBlocksAndItems.Count;
-                        snappedOnIndices.Add(indicesOnUsedBlocksAndItems.Count - 1);
+                        w.WriteArray(usedBlockIndexList.Select(x => x.group).ToArray());
                     }
+
+                    if (Version >= 6)
+                    {
+                        w.WriteArray(usedItemIndexList.Select(x => x.itemIndex).ToArray());
+                    }
+
+                    if (Version >= 7)
+                    {
+                        w.WriteArray(usedBlockIndexList.Select(x => x.group).ToArray());
+                    }
+
+                    if (Version != 6)
+                    {
+                        w.WriteArray(Enumerable.Repeat(-1, usedBlockIndexList.Count).ToArray());
+                    }
+
+                    w.WriteArray(snappedOnIndices.ToArray());
                 }
-
-                itemW.WriteArray(usedBlockIndexList.Select(x => x.blockIndex).ToArray());
-
-                if (Version < 7)
-                {
-                    itemW.WriteArray(usedBlockIndexList.Select(x => x.group).ToArray());
-                }
-
-                if (Version >= 6)
-                {
-                    itemW.WriteArray(usedItemIndexList.Select(x => x.itemIndex).ToArray());
-                }
-
-                if (Version >= 7)
-                {
-                    itemW.WriteArray(usedBlockIndexList.Select(x => x.group).ToArray());
-                }
-
-                if (Version != 6)
-                {
-                    itemW.WriteArray(Enumerable.Repeat(-1, usedBlockIndexList.Count).ToArray());
-                }
-
-                itemW.WriteArray(snappedOnIndices.ToArray());
-            }
-
-            w.Write((int)itemMs.Length);
-            w.Write(itemMs.ToArray());
+            });
         }
     }
 
     public partial class Chunk03043043
     {
-        public int U01;
-
         public override void Read(CGameCtnChallenge n, GbxReader r)
         {
-            U01 = r.ReadInt32(); // always 0
-            var size = r.ReadInt32();
-
-            using var _ = new Encapsulation(r);
-
-            n.zoneGenealogy = r.ReadListNodeRef<CGameCtnZoneGenealogy>()!;
+            n.ZoneGenealogyData = r.ReadEncapsulated();
         }
 
         public override void Write(CGameCtnChallenge n, GbxWriter w)
         {
-            w.Write(U01);
-            
-            using var ms = new MemoryStream();
-            using var wBuffer = new GbxWriter(ms);
-            using var _ = new Encapsulation(wBuffer);
-
-            wBuffer.WriteListNodeRef((n.zoneGenealogy ?? [])!);
-
-            w.Write((int)ms.Length);
-            ms.WriteTo(w.BaseStream);
+            w.WriteEncapsulated(n.ZoneGenealogyData, w =>
+            {
+                w.WriteListNodeRef<CGameCtnZoneGenealogy>(n.ZoneGenealogy!);
+            });
         }
     }
 
     public partial class Chunk03043044
     {
-        public int U01;
-
-        public override void Read(CGameCtnChallenge n, GbxReader r)
+        public override void ReadWrite(CGameCtnChallenge n, GbxReaderWriter rw)
         {
-            U01 = r.ReadInt32(); // always 0
-            var size = r.ReadInt32();
-
-            using var _ = new Encapsulation(r);
-
-            n.scriptMetadata = r.ReadNode<CScriptTraitsMetadata>()!;
-        }
-
-        public override void Write(CGameCtnChallenge n, GbxWriter w)
-        {
-            w.Write(U01);
-
-            using var ms = new MemoryStream();
-            using var wBuffer = new GbxWriter(ms);
-            using var _ = new Encapsulation(wBuffer);
-
-            wBuffer.WriteNode(n.scriptMetadata!);
-
-            w.Write((int)ms.Length);
-            ms.WriteTo(w.BaseStream);
+            rw.Encapsulated(rw =>
+            {
+                rw.Node<CScriptTraitsMetadata>(ref n.scriptMetadata!);
+            });
         }
     }
 
@@ -1984,8 +1800,7 @@ public partial class CGameCtnChallenge :
     {
         public int Version { get; set; } = 3;
 
-        public int U01;
-        public byte[]? U02;
+        public RawData? U02;
         public byte U03;
 
         public override void Read(CGameCtnChallenge n, GbxReader r)
@@ -1994,11 +1809,7 @@ public partial class CGameCtnChallenge :
 
             if (Version < 2)
             {
-                U01 = r.ReadInt32(); // always 0
-                var size = r.ReadInt32();
-
-                using var _ = new Encapsulation(r);
-                U02 = r.ReadData(size);
+                U02 = r.ReadEncapsulated();
                 return;
             }
 
@@ -2021,8 +1832,7 @@ public partial class CGameCtnChallenge :
 
             if (Version < 2)
             {
-                w.Write(U01);
-                w.WriteData(U02);
+                w.WriteEncapsulated(U02 ?? throw new InvalidOperationException("U02 must be set for version <2"));
                 return;
             }
 
@@ -2040,118 +1850,110 @@ public partial class CGameCtnChallenge :
     {
         public int Version { get; set; }
 
-        public int U01;
-
         public override void Read(CGameCtnChallenge n, GbxReader r)
         {
             Version = r.ReadInt32();
-            U01 = r.ReadInt32(); // always 0
-            var size = r.ReadInt32();
 
-            using var _ = new Encapsulation(r);
-
-            n.ExpectedEmbeddedItemModels = r.ReadArrayIdent().ToImmutableList();
-
-            n.EmbeddedZipData = r.ReadData();
-
-            if (Version >= 1)
+            r.ReadEncapsulated(r =>
             {
-                n.Textures = r.ReadListString();
-            }
+                n.ExpectedEmbeddedItemModels = r.ReadArrayIdent().ToImmutableList();
+
+                n.EmbeddedZipData = r.ReadData();
+
+                if (Version >= 1)
+                {
+                    n.Textures = r.ReadListString();
+                }
+            });
         }
 
         public override void Write(CGameCtnChallenge n, GbxWriter w)
         {
             w.Write(Version);
-            w.Write(U01);
 
-            using var ms = new MemoryStream();
-            using var wBuffer = new GbxWriter(ms);
-            using var _ = new Encapsulation(wBuffer);
-
-            if (n.EmbeddedZipData is null || n.EmbeddedZipData.Length == 0)
+            w.WriteEncapsulated(w =>
             {
-                wBuffer.Write(0);
-                wBuffer.Write(0);
-            }
-            else
-            {
-                using var embeddedMs = new MemoryStream(n.EmbeddedZipData);
-                using var zip = new ZipArchive(embeddedMs, ZipArchiveMode.Read);
-
-                var itemModelList = new List<Ident>();
-
-                foreach (var entry in zip.Entries)
+                if (n.EmbeddedZipData is null || n.EmbeddedZipData.Length == 0)
                 {
-                    const string itemsPrefix = "Items\\";
-                    const string blocksPrefix = "Blocks\\";
-                    const string clubItemsPrefix = "ClubItems\\";
+                    w.Write(0);
+                    w.Write(0);
+                }
+                else
+                {
+                    using var embeddedMs = new MemoryStream(n.EmbeddedZipData);
+                    using var zip = new ZipArchive(embeddedMs, ZipArchiveMode.Read);
 
-                    using var entryStream = entry.Open();
+                    var itemModelList = new List<Ident>();
 
-                    try
+                    foreach (var entry in zip.Entries)
                     {
-                        var nodeHeader = Gbx.ParseHeaderNode(entryStream);
+                        const string itemsPrefix = "Items\\";
+                        const string blocksPrefix = "Blocks\\";
+                        const string clubItemsPrefix = "ClubItems\\";
 
-                        if (nodeHeader is not CGameItemModel itemModel)
-                        {
-                            continue;
-                        }
+                        using var entryStream = entry.Open();
 
-                        if (itemModel.Ident is null)
+                        try
                         {
-                            continue;
-                        }
+                            var nodeHeader = Gbx.ParseHeaderNode(entryStream);
 
-                        var ident = itemModel.Ident;
-
-                        // sometimes, when the items are placed in incorrect or different folders, the ident won't match the file name
-                        // this will cause a popup on opening, but the items will still be loaded. needs more investigation if the ident
-                        // should come entirely from the file name or not
-                        var fullName = entry.FullName.Replace('/', '\\');
-                        if (fullName.StartsWith(itemsPrefix))
-                        {
-                            ident = ident with { Id = fullName.Substring(itemsPrefix.Length) };
-                        }
-                        else if (fullName.StartsWith(blocksPrefix))
-                        {
-                            ident = ident with { Id = fullName.Substring(blocksPrefix.Length) };
-                        }
-                        else if (fullName.StartsWith(clubItemsPrefix))
-                        {
-                            ident = ident with
+                            if (nodeHeader is not CGameItemModel itemModel)
                             {
+                                continue;
+                            }
+
+                            if (itemModel.Ident is null)
+                            {
+                                continue;
+                            }
+
+                            var ident = itemModel.Ident;
+
+                            // sometimes, when the items are placed in incorrect or different folders, the ident won't match the file name
+                            // this will cause a popup on opening, but the items will still be loaded. needs more investigation if the ident
+                            // should come entirely from the file name or not
+                            var fullName = entry.FullName.Replace('/', '\\');
+                            if (fullName.StartsWith(itemsPrefix))
+                            {
+                                ident = ident with { Id = fullName.Substring(itemsPrefix.Length) };
+                            }
+                            else if (fullName.StartsWith(blocksPrefix))
+                            {
+                                ident = ident with { Id = fullName.Substring(blocksPrefix.Length) };
+                            }
+                            else if (fullName.StartsWith(clubItemsPrefix))
+                            {
+                                ident = ident with
+                                {
 #if NET6_0_OR_GREATER
-                                Id = string.Concat("club:", fullName.AsSpan(clubItemsPrefix.Length))
+                                    Id = string.Concat("club:", fullName.AsSpan(clubItemsPrefix.Length))
 #else
-                                Id = "club:" + fullName.Substring(clubItemsPrefix.Length)
+                                    Id = "club:" + fullName.Substring(clubItemsPrefix.Length)
 #endif
-                            };
+                                };
+                            }
+
+                            itemModelList.Add(ident);
+
+                            // CGameItemModel.Ident is also often renamed inside the Gbx file
+                            // so if this is an issue to match the Ident, read the gbx fully, change Ident, and save
+                            // do so only if it doesn't match with entry file name, to optimize the process
                         }
-
-                        itemModelList.Add(ident);
-
-                        // CGameItemModel.Ident is also often renamed inside the Gbx file
-                        // so if this is an issue to match the Ident, read the gbx fully, change Ident, and save
-                        // do so only if it doesn't match with entry file name, to optimize the process
+                        catch
+                        {
+                            // TODO: log
+                        }
                     }
-                    catch
-                    {
-                        // TODO: log
-                    }
+
+                    w.WriteList(itemModelList);
+                    w.WriteData(n.EmbeddedZipData!);
                 }
 
-                wBuffer.WriteList(itemModelList);
-                wBuffer.WriteData(n.EmbeddedZipData!);
-            }
-
-            if (Version >= 1)
-            {
-                wBuffer.WriteList(n.Textures);
-            }
-
-            w.Write((int)ms.Length);
-            w.Write(ms.ToArray());
+                if (Version >= 1)
+                {
+                    w.WriteList(n.Textures);
+                }
+            });
         }
     }
 
@@ -2159,16 +1961,16 @@ public partial class CGameCtnChallenge :
     {
         public int Version { get; set; }
 
-        public bool U13;
-        public bool U14;
+        public bool U01;
+        public bool U02;
 
         public override void ReadWrite(CGameCtnChallenge n, GbxReaderWriter rw)
         {
             rw.VersionInt32(this);
 
             n.HasLightmaps = rw.Boolean(n.HasLightmaps);
-            rw.Boolean(ref U13);
-            rw.Boolean(ref U14);
+            rw.Boolean(ref U01);
+            rw.Boolean(ref U02);
 
             if (!n.HasLightmaps)
             {

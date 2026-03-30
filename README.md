@@ -88,7 +88,7 @@ Here are some of the known file types to start with:
 | LightMapCache.Gbx | [CHmsLightMapCache](Src/GBX.NET/Engines/Hms/CHmsLightMapCache.chunkl) | No | No
 | SystemConfig.Gbx | [CSystemConfig](Src/GBX.NET/Engines/System/CSystemConfig.chunkl) | Yes | Yes
 | FidCache.Gbx | [CMwRefBuffer](Src/GBX.NET/Engines/MwFoundations/CMwRefBuffer.chunkl) | Yes | Yes
-| Scores.Gbx | [CGamePlayerScore](Src/GBX.NET/Engines/Game/CGamePlayerScore.chunkl) | No | No
+| Scores.Gbx | [CGamePlayerScore](Src/GBX.NET/Engines/Game/CGamePlayerScore.chunkl) | Yes | Yes
 
 **Full list of supported file types is available in the [SUPPORTED GBX FILE TYPES](SUPPORTED_GBX_FILE_TYPES.md)**.
 
@@ -613,6 +613,7 @@ GBX.NET 2 is licensed under multiple licenses, depending on the part of the proj
 
 - MIT License
   - **Src/GBX.NET**
+  - Src/GBX.NET.PAK
   - Src/GBX.NET.Crypto
   - Src/GBX.NET.Hashing
   - Src/GBX.NET.Json
@@ -627,7 +628,6 @@ GBX.NET 2 is licensed under multiple licenses, depending on the part of the proj
 - GNU GPL v3 License
   - **Src/GBX.NET.LZO**
   - Src/GBX.NET.Tool.CLI
-  - **Src/GBX.NET.PAK**
   - Samples
   - Tools
 - The Unlicense

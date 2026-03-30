@@ -1,6 +1,6 @@
 ﻿using GBX.NET.Inputs;
+using System.Buffers.Binary;
 using System.Collections.Immutable;
-using System.Numerics;
 
 namespace GBX.NET.Engines.Game;
 
@@ -58,11 +58,11 @@ public partial class CGameCtnGhost
     [AppliedWithChunk<Chunk03092025>]
     public string? Validate_RaceSettings { get => validate_RaceSettings; set => validate_RaceSettings = value; }
 
-    private ImmutableList<IInput>? inputs;
+    private ImmutableArray<IInput> inputs = [];
     [AppliedWithChunk<Chunk03092011>]
     [AppliedWithChunk<Chunk03092019>]
     [AppliedWithChunk<Chunk03092025>]
-    public ImmutableList<IInput>? Inputs { get => inputs; set => inputs = value; }
+    public ImmutableArray<IInput> Inputs { get => inputs; set => inputs = value; }
 
     private bool steeringWheelSensitivity;
     [AppliedWithChunk<Chunk03092025>]
@@ -87,11 +87,6 @@ public partial class CGameCtnGhost
     /// <returns>Displayable inputs as IEnumerable.</returns>
     public IEnumerable<IInput> GetDisplayableInputs()
     {
-        if (inputs is null)
-        {
-            yield break;
-        }
-
         uint version = 0;
 
         foreach (var input in inputs)
@@ -106,7 +101,7 @@ public partial class CGameCtnGhost
                     version = 1;
                 }
 
-                if (version > 2)
+                if (version > 3)
                 {
                     throw new VersionNotSupportedException((int)version);
                 }
@@ -123,13 +118,14 @@ public partial class CGameCtnGhost
                 if (input.Time.TotalMilliseconds % 10 == 0)
                 {
                     yield return input;
+                    break;
                 }
                 continue;
             }
 
             if (input is SteerLeft or SteerRight)
             {
-                if (input.Time.TotalMilliseconds % 10 == 1)
+                if (input.Time.TotalMilliseconds % 10 is 1 or 2 or 3)
                 {
                     var ceilingTime = TimeInt32.FromMilliseconds((input.Time.TotalMilliseconds + 9) / 10 * 10);
 
@@ -145,7 +141,7 @@ public partial class CGameCtnGhost
             
             if (input is Steer steer)
             {
-                if (input.Time.TotalMilliseconds % 10 is 2 or 9)
+                if (input.Time.TotalMilliseconds % 10 is 2 or 3 or 9)
                 {
                     yield return steer with { Time = new((input.Time.TotalMilliseconds + 9) / 10 * 10) };
                 }
@@ -213,41 +209,51 @@ public partial class CGameCtnGhost
         {
             var inputNames = r.ReadArrayId();
 
-            var numEntries = r.ReadInt32();
+            var numInputs = r.ReadInt32();
             U02 = r.ReadInt32(); // CountLimit?
 
-            var inputs = ImmutableList.CreateBuilder<IInput>();
-
-            for (var i = 0; i < numEntries; i++)
+            if (numInputs == 0)
             {
-                var time = TimeInt32.FromMilliseconds(r.ReadInt32() - 100000);
-                var inputNameIndex = r.ReadByte();
-                var data = r.ReadUInt32();
+                return;
+            }
+
+            Span<IInput> inputs = new IInput[numInputs];
+
+            // 9 bytes per entry: 4 for time, 1 for name index, 4 for data
+            var inputDataLength = numInputs * 9;
+
+#if NET5_0_OR_GREATER
+            Span<byte> inputData = inputDataLength > 8192 ? new byte[inputDataLength] : stackalloc byte[inputDataLength];
+            r.BaseStream.ReadExactly(inputData);
+#else
+            Span<byte> inputData = r.ReadBytes(inputDataLength);
+#endif
+
+            for (var i = 0; i < numInputs; i++)
+            {
+                var time = TimeInt32.FromMilliseconds(BinaryPrimitives.ReadInt32LittleEndian(inputData.Slice(i * 9, 4)) - 100000);
+                var inputNameIndex = inputData[i * 9 + 4];
+                var data = BinaryPrimitives.ReadUInt32LittleEndian(inputData.Slice(i * 9 + 5, 4));
 
                 var name = inputNames[inputNameIndex];
 
-                inputs.Add(NET.Inputs.Input.Parse(time, name, data));
+                inputs[i] = NET.Inputs.Input.Parse(time, name, data);
             }
 
-            n.inputs = inputs.ToImmutable();
+            n.inputs = inputs.ToImmutableArray();
         }
 
         private void WriteInputs(CGameCtnGhost n, GbxWriter w)
         {
-            var inputNames = n.inputs?
+            var inputNames = n.inputs
                 .Select(NET.Inputs.Input.GetName)
                 .Distinct()
                 .ToImmutableList() ?? ImmutableList<string>.Empty;
 
             w.WriteListId(inputNames);
 
-            w.Write(n.inputs?.Count ?? 0);
+            w.Write(n.inputs.Length);
             w.Write(U02);
-
-            if (n.inputs is null)
-            {
-                return;
-            }
 
             foreach (var input in n.inputs)
             {

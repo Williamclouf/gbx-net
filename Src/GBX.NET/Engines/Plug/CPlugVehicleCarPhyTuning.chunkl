@@ -569,107 +569,116 @@ CPlugVehicleCarPhyTuning 0x090ED000
 
 0x08B
  version
- v1-
+ v2-
   float?
- v9-
+ v10-
   float?
   CFuncKeysReal
-  v8-
-   float
-   v7-
-    CFuncKeysReal
- float
- v8-
-  float
  v9-
+  float
+ v8-
+  CFuncKeysReal
+ float
+ v9-
+  float
+ v10-
   CFuncKeysReal
  v1+
   bool
- v8-
-  float
-  float
+ v3+
+  v9-
+   float
+   float
  v4+
   Keys (version: Version - 37)
   v5+
-   v8-
+   v9-
     int
     int
    v9+
     Keys (version: Version - 37)
     v13+
-     v21-
+     v22-
       float
      v22+
       Keys (version: Version - 37)
      float
-    v6+
-     Keys (version: Version - 37)
-     v7+
-      float
-      v10+
-       Keys (version: Version - 37)
-       Keys (version: Version - 37)
-       Keys (version: Version - 37)
-       v11+
-        float
-        float
-        float
-        float
-        float
-        Keys (version: Version - 37)
-        v12+
-         float
-         v14+
-          Keys (version: Version - 37)
-          v15+
-           Keys (version: Version - 37)
-           v16+
-            Keys (version: Version - 37)
-            v17+
-             int
-             v18+
-              int
-              v19+
-               Keys (version: Version - 37)
-               v20+
-                float
-                float
-                float
-                v21+
-                 int
-                 int
-                 int
-                 v23+
-                  bool
-                  float
-                  float
-                  Keys (version: Version - 37)
-                  v24+
-                   int
-                   v25+
-                    bool
-                    float
-                    v26+
-                     float
- v33-
-  float
-  float
-  float
-  CFuncKeysReal
-  CFuncKeysReal
- v29+
-  int
-  float
-  float
-  v34+
-   return
-  v30+
-   CFuncKeysReal
-   v31+
-    CFuncKeysReal
-    v32+
+   v6+
+    Keys (version: Version - 37)
+    v7+
      float
-     CFuncKeysReal
+     v10+
+      Keys (version: Version - 37)
+      Keys (version: Version - 37)
+      Keys (version: Version - 37)
+      v11+
+       float
+       float
+       float
+       float
+       float
+       Keys (version: Version - 37)
+       v12+
+        float
+        v14+
+         Keys (version: Version - 37)
+         v15+
+          Keys (version: Version - 37)
+          v16+
+           Keys (version: Version - 37)
+           v17+
+            int
+            v18+
+             int
+             v19+
+              Keys (version: Version - 37)
+              v20+
+               float
+               float
+               float
+               v21+
+                int
+                int
+                int
+                v23+
+                 bool
+                 float
+                 float
+                 Keys (version: Version - 37)
+                 v24+
+                  int
+                  v25+
+                   bool
+                   float
+                   v26+
+                    float
+                    v27+
+                     v33-
+                      float
+                      float
+                      float
+                      CFuncKeysReal
+                     v28+
+                      v33-
+                       CFuncKeysReal
+                      v29+
+                       int
+                       float
+                       float
+                       v33-
+                        v30+
+                         CFuncKeysReal
+                        v31+
+                         CFuncKeysReal
+                        v32+
+                         float
+                         CFuncKeysReal
+                       v35+
+                        bool
+                        v36+
+                         bool
+                         Keys (version: Version - 37)
+                         CFuncKeysReal
 
 0x08C
  version
@@ -705,48 +714,69 @@ CPlugVehicleCarPhyTuning 0x090ED000
 
 0x08E
  version
- v4+
+ v5+
   throw
- int
- CPlugCamControlModel[] (external)
+ CPlugCamControlModel[]_deprec (external)
  v1+
-  int
-  CPlugCamControlModel[] (external)
+  CPlugCamControlModel[]_deprec (external)
   v2+
    CPlugCamControlModel (external)
    v3+
     CPlugCamControlModel (external)
+    v4+
+     CPlugCamControlModel[] (external)
 
 0x094
  version
- v3+
+ v6+
   throw
  float
- CFuncKeysReal
+ Keys (version: Version - 3)
  int
  float
- CFuncKeysReal
+ Keys (version: Version - 3)
  int
  v1+
   int?
   int?
   v2+
    float?
-   CFuncKeysReal
+   Keys (version: Version - 3)
    int?
    int?
+   v3=
+    int?
+   v4+
+    int
 
 0x095
  version
- v1+
+ v8+
   throw
  int
  float
- CFuncKeysReal
+ Keys (version: Version - 1)
  bool
  float
  float
  float
+ v1+
+  int?
+  v2+
+   int?
+   Keys (version: Version - 1)
+   Keys (version: Version - 1)
+   v3+
+    Keys (version: Version - 1)
+    v4+
+     int?
+     v5+
+      int?
+      int?
+      Keys (version: Version - 1)
+      int?
+      v6+
+       Keys (version: Version - 1)
 
 0x096
  version
@@ -847,25 +877,27 @@ CPlugVehicleCarPhyTuning 0x090ED000
     float?
     float?
     float?
+    v4+
+     Keys
 
 0x09C
  version
  v17-
   float?
  v18+
-  CFuncKeysReal
-  CFuncKeysReal
-  CFuncKeysReal
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
  float?
  float?
  CFuncKeysReal
  CFuncKeysReal
  CFuncKeysReal
- CFuncKeysReal
- CFuncKeysReal
+ Keys (version: Version - 21)
+ Keys (version: Version - 21)
  v1+
-  CFuncKeysReal
-  CFuncKeysReal
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
  v2+
   float?
  v3=
@@ -874,7 +906,7 @@ CPlugVehicleCarPhyTuning 0x090ED000
   CFuncKeysReal
   v5+
    float?
-   CFuncKeysReal
+   Keys (version: Version - 21)
    float?
    float?
    float?
@@ -882,26 +914,26 @@ CPlugVehicleCarPhyTuning 0x090ED000
     float?
     v7+
      int?
-     CFuncKeysReal
+     Keys (version: Version - 21)
      v8+
-      CFuncKeysReal
+      Keys (version: Version - 21)
       v9+
        float?
        v10+
         float?
         v11+
-         CFuncKeysReal
-         CFuncKeysReal
+         Keys (version: Version - 21)
+         Keys (version: Version - 21)
          v12+
-          CFuncKeysReal
+          Keys (version: Version - 21)
           v13+
-           CFuncKeysReal
+           Keys (version: Version - 21)
            v15+
             float?
             v16+
              float?
              v19+
-              CFuncKeysReal
+              Keys (version: Version - 21)
               v20+
                float?
 
@@ -917,59 +949,71 @@ CPlugVehicleCarPhyTuning 0x090ED000
   float
   float
  v1+
-  CFuncKeysReal
+  v20-
+   Keys (version: Version - 21)
+   float?
+   Keys (version: Version - 21)
+   float?
+   float?
   float
-  CFuncKeysReal
-  float?
   float
-  float
-  float
-  CFuncKeysReal
-  CFuncKeysReal
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
  v2+
-  CFuncKeysReal
-  v3+
-   CFuncKeysReal
-   CFuncKeysReal
-   v4+
-    float?
-    float?
-    v5+
-     float?
-     CFuncKeysReal
-     CFuncKeysReal
-     CFuncKeysReal
-     CFuncKeysReal
-     v6+
-      CFuncKeysReal
-      v8+
-       float?
-       CFuncKeysReal
-       v9+
-        float?
-        float?
-        float?
-        v10+
-         CFuncKeysReal
-         v11+
-          float?
-          v12+
-           CFuncKeysReal
-           v13+
-            CFuncKeysReal
-            v14+
-             CFuncKeysReal
-             v15+
-              float?
-              int?
-              v16+
-               float?
-               v17+
-                float?
-                v18+
-                 CFuncKeysReal
-                 v19+
-                  bool?
+  v20-
+   Keys (version: Version - 21)
+ v3+
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
+ v4+
+  float?
+  float?
+ v5+
+  float?
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
+  v20-
+   Keys (version: Version - 21)
+ v6+
+  Keys (version: Version - 21)
+ v7-
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
+  Keys (version: Version - 21)
+ v8+
+  float?
+  Keys (version: Version - 21)
+ v9+
+  float?
+  float?
+  float?
+ v10+
+  Keys (version: Version - 21)
+ v11+
+  float?
+ v12+
+  Keys (version: Version - 21)
+ v13+
+  Keys (version: Version - 21)
+ v14+
+  Keys (version: Version - 21)
+ v15+
+  float?
+  float?
+ v16+
+  float?
+ v17+
+  float?
+ v18+
+  Keys (version: Version - 21)
+ v19+
+  float?
+ v20+
+  CPlugDynaWaterModel
 
 0x09E
  version
@@ -985,23 +1029,29 @@ CPlugVehicleCarPhyTuning 0x090ED000
     float?
     v4+
      float?
-     CFuncKeysReal
-     float?
+     Keys (version: Version - 8)
+     v6-
+      float?
+     v7+
+      Keys
      v5+
       float?
+      v6+
+       int?
+       int?
 
 0x09F
  version
- CFuncKeysReal
+ Keys (version: Version - 14)
  float
  float
  float
  v1+
   float?
   v2+
-   CFuncKeysReal
+   Keys (version: Version - 14)
    v3+
-    CFuncKeysReal
+    Keys (version: Version - 14)
     v4+
      float?
      float?
@@ -1012,11 +1062,11 @@ CPlugVehicleCarPhyTuning 0x090ED000
      v5+
       float?
       v6+
-       CFuncKeysReal
+       Keys (version: Version - 14)
        v7+
         float?
-        CFuncKeysReal
-        CFuncKeysReal
+        Keys (version: Version - 14)
+        Keys (version: Version - 14)
         float?
         v8+
          float?
@@ -1027,9 +1077,9 @@ CPlugVehicleCarPhyTuning 0x090ED000
           vec3?
           vec3?
           v10+
-           CFuncKeysReal
+           Keys (version: Version - 14)
            v11+
-            CFuncKeysReal
+            Keys (version: Version - 14)
             v12+
              bool?
              v13+
@@ -1038,6 +1088,480 @@ CPlugVehicleCarPhyTuning 0x090ED000
               int?
               int?
               int?
+
+0x0A0
+ version
+ v1+
+  int
+  int
+  int
+  int
+  int
+  v2+
+   int
+   int
+   int
+   int
+   int
+
+0x0A1
+ version
+ Keys
+ Keys
+ int
+ int
+ Keys
+ Keys
+ int
+ int
+ int
+ int
+ int
+ Keys
+
+0x0A2
+ version
+ Keys (version: Version - 2)
+ Keys (version: Version - 2)
+ Keys (version: Version - 2)
+ Keys (version: Version - 2)
+ Keys (version: Version - 2)
+ Keys (version: Version - 2)
+ Keys (version: Version - 2)
+ Keys (version: Version - 2)
+ Keys (version: Version - 2)
+ Keys (version: Version - 2)
+ Keys (version: Version - 2)
+ Keys (version: Version - 2)
+
+0x0A3
+ version
+ int
+ int
+ int
+ int
+ v1+
+  int
+  v2+
+   int
+   int
+   int
+   int
+   v3+
+    int
+    v4+
+     CFuncKeysReal
+     int
+     int
+     int
+     int
+     v5+
+      int
+      CFuncKeysReal
+      CFuncKeysReal
+      Keys (version: Version - 13)
+      Keys (version: Version - 13)
+      v6+
+       int
+       v7+
+        int
+        v8+
+         int
+         v9+
+          int
+          int
+          v10+
+           int
+           v11+
+            int
+            v12+
+             Keys (version: Version - 13)
+             Keys (version: Version - 13)
+
+0x0A4
+ version
+ int
+ v1+
+  int
+ v2+
+  int
+ v3+
+  int
+  Keys (version: Version - 14)
+  int
+  int
+ v4+
+  int
+  int
+  int
+ v5+
+  Keys (version: Version - 14)
+ v6+
+  Keys (version: Version - 14)
+ v7+
+  Keys (version: Version - 14)
+  int
+ v8+
+  Keys (version: Version - 14)
+  Keys (version: Version - 14)
+ v9+
+  int
+ v10+
+  int
+ v11+
+  v17-
+   int
+   int
+   int
+ v12+
+  Keys (version: Version - 14)
+ v13+
+  v17-
+   int
+ v15+
+  int
+ v16+
+  int
+ v18+
+  int
+
+0x0A5
+ version
+ v1-
+  int
+ int
+ v1-
+  int
+ int
+ v1-
+  int
+  int
+  int
+  int
+ int
+ int
+ int
+ int
+ int
+ int
+ v1-
+  Keys (version: Version - 1)
+  Keys (version: Version - 1)
+  Keys (version: Version - 1)
+  Keys (version: Version - 1)
+  Keys (version: Version - 1)
+  Keys (version: Version - 1)
+ Keys
+ v1-
+  Keys (version: Version - 1)
+  Keys (version: Version - 1)
+  Keys (version: Version - 1)
+ Keys (version: Version - 1)
+
+0x0A6
+ version
+ Keys (version: Version - 11)
+ Keys (version: Version - 11)
+ Keys (version: Version - 11)
+ int
+ int
+ int
+ v1+
+  int
+  Keys (version: Version - 11)
+  Keys (version: Version - 11)
+  int
+  Keys (version: Version - 11)
+ v2+
+  int
+ v3+
+  Keys (version: Version - 11)
+ v4+
+  Keys (version: Version - 11)
+ v5+
+  int
+  int
+ v6+
+  v13-
+   Keys (version: Version - 11)
+ v7+
+  v13-
+   Keys (version: Version - 11)
+ v8+
+  Keys (version: Version - 11)
+  Keys (version: Version - 11)
+ v9+
+  Keys (version: Version - 11)
+ v10+
+  Keys (version: Version - 11)
+ v12+
+  v13-
+   int
+   int
+ v13+
+  int
+  int
+ v14=
+  int
+ v15+
+  Keys
+
+0x0A7
+ version
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ Keys (version: Version - 19)
+ Keys (version: Version - 19)
+ v1+
+  int
+ v2+
+  int
+  Keys (version: Version - 19)
+ v3+
+  int
+ v4+
+  int
+  int
+  int
+  int
+ v5+
+  int
+  int
+ v6+
+  CFuncKeysReal
+ v7+
+  int
+ v8+
+  Keys (version: Version - 19)
+ v9+
+  Keys (version: Version - 19)
+  Keys (version: Version - 19)
+  int
+ v10+
+  int
+  Keys (version: Version - 19)
+ v11+
+  Keys (version: Version - 19)
+ v12+
+  int
+  int
+ v13+
+  Keys (version: Version - 19)
+ v14+
+  Keys (version: Version - 19)
+  Keys (version: Version - 19)
+ v15+
+  int
+ v16+
+  Keys (version: Version - 19)
+ v17+
+  Keys (version: Version - 19)
+ v18+
+  int
+  int
+
+0x0A8
+ version
+ int
+ Keys (version: Version - 10)
+ v1+
+  Keys (version: Version - 10)
+  Keys (version: Version - 10)
+ v2+
+  Keys (version: Version - 10)
+ v3+
+  Keys (version: Version - 10)
+ v4+
+  int
+ v5+
+  int
+  int
+ v6+
+  Keys (version: Version - 10)
+ v7+
+  Keys (version: Version - 10)
+ v8+
+  int
+  int
+ v9+
+  Keys (version: Version - 10)
+
+0x0A9
+ version
+ int
+ int
+ Keys (version: Version - 4)
+ Keys (version: Version - 4)
+ v1+
+  int
+ v2+
+  int
+  int
+  Keys (version: Version - 4)
+  Keys (version: Version - 4)
+ v3+
+  Keys (version: Version - 4)
+
+0x0AA
+ version
+ int
+
+0x0AB
+ version
+ int
+ int
+ int
+ Keys (version: Version - 1)
+
+0x0AC
+ version
+ int
+
+0x0AD
+ version
+ Keys (version: Version - 10)
+ int
+ int
+ int
+ CFuncKeysReal
+ int
+ int
+ int
+ int
+ CFuncKeysReal
+ Keys (version: Version - 10)
+ int
+ int
+ CFuncKeysReal
+ Keys (version: Version - 10)
+ CFuncKeysReal
+ v1+
+  Keys (version: Version - 10)
+  Keys (version: Version - 10)
+  Keys (version: Version - 10)
+  Keys (version: Version - 10)
+ v2+
+  int
+  int
+  int
+ v3+
+  Keys (version: Version - 10)
+  Keys (version: Version - 10)
+ v4+
+  Keys (version: Version - 10)
+  int
+ v5+
+  int
+ v6+
+  Keys (version: Version - 10)
+ v7+
+  CFuncKeysReal
+  CFuncKeysReal
+ v8+
+  Keys (version: Version - 10)
+ v9+
+  int
+ v11+
+  int
+
+0x0AE
+ version
+ int
+ Keys (version: Version - 2)
+ v1+
+  int
+
+0x0AF
+ version
+ Keys
+ int
+ int
+ int
+ int
+ Keys
+ Keys
+ Keys
+ Keys
+ int
+ int
+ int
+ int
+ int
+ Keys
+ int
+ int
+ int
+ Keys
+ Keys
+ int
+ Keys
+ int
+ int
+ Keys
+ Keys
+ Keys
+ int
+ int
+ int
+ Keys
+ Keys
+ Keys
+ Keys
+ int
+ Keys
+ Keys
+ int
+ int
+ Keys
+ Keys
+ Keys
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ int
+ Keys
+ Keys
+ int
+ int
+ int
+ int
+ int
+ Keys
+ int
+ int
+ Keys
+ int
+ Keys
+ Keys
+ int
+ Keys
+ Keys
+ Keys
+ Keys
+
+0x0B0
+ version
+ int
+ v1+
+  int
 
 enum EShockModel
  Demo01

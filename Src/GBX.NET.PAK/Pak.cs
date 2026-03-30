@@ -31,7 +31,7 @@ public partial class Pak : IDisposable
 
     public int Version { get; }
 
-    public int GbxHeadersStart { get; private set; }
+    public uint GbxHeadersStart { get; private set; }
     public int? GbxHeadersSize { get; private set; }
     public int? GbxHeadersComprSize { get; private set; }
     public int? HeaderMaxSize { get; protected set; }
@@ -101,7 +101,7 @@ public partial class Pak : IDisposable
         }
 
         byte[] keyForHeader;
-        if (!IsHeaderPrivate)
+        if (version >= 18 && !IsHeaderPrivate)
         {
             keyForHeader = headerKey;
         }
@@ -152,7 +152,7 @@ public partial class Pak : IDisposable
         var r = new AsyncGbxReader(stream);
 
         HeaderMD5 = await r.ReadBytesAsync(16, cancellationToken);
-        GbxHeadersStart = await r.ReadInt32Async(cancellationToken); // offset to metadata section
+        GbxHeadersStart = await r.ReadUInt32Async(cancellationToken); // offset to metadata section
 
         if (Version < 15)
         {
@@ -417,6 +417,13 @@ public partial class Pak : IDisposable
         return Gbx.ParseHeader(stream, settings with { EncryptionInitializer = encryptionInitializer });
     }
 
+    [Zomp.SyncMethodGenerator.CreateSyncVersion]
+    public async Task<bool> CheckIsGbxAsync(PakFile file, CancellationToken cancellationToken = default)
+    {
+        using var stream = OpenFile(file, out var _);
+        return await Gbx.IsGbxAsync(stream, cancellationToken);
+    }
+
     public void Dispose()
     {
         stream.Dispose();
@@ -455,7 +462,7 @@ public partial class Pak : IDisposable
         var pakList = await PakList.ParseAsync(pakListFilePath, game, cancellationToken);
 
         return await BruteforceFileHashesAsync(directoryPath,
-            pakList.ToDictionary(x => x.Key, x => Convert.FromHexString(x.Value.Key)),
+            pakList.ToDictionary(x => x.Key, x => (byte[]?)Convert.FromHexString(x.Value.Key)),
             progress,
             keepUnresolvedHashes,
             cancellationToken);
@@ -486,6 +493,12 @@ public partial class Pak : IDisposable
             
             foundFileNames.Add(file.Name);
 
+            // only gbx files can be checked for reference table
+            if (!await pak.CheckIsGbxAsync(file, cancellationToken))
+            {
+                continue;
+            }
+
             Gbx gbx;
             try
             {
@@ -495,7 +508,7 @@ public partial class Pak : IDisposable
             {
                 continue;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 continue;
             }
