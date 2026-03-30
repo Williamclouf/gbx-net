@@ -6,7 +6,7 @@ public partial class CGameGhost
 {
     public partial class Data : IReadable, IWritable
     {
-        private int[]? stateTimes;
+        private int[] stateTimes = [];
 
         /// <summary>
         /// How much time is between each sample.
@@ -51,6 +51,11 @@ public partial class CGameGhost
                 case 0: ReadOld(r); break;
                 case 1: ReadNew(r); break;
                 default: throw new NotSupportedException($"Version {v} is not supported.");
+            }
+
+            if (r.BaseStream.Position != r.BaseStream.Length)
+            {
+                throw new InvalidDataException($"Not all data was read. {r.BaseStream.Length - r.BaseStream.Position} bytes remaining.");
             }
         }
 
@@ -156,12 +161,7 @@ public partial class CGameGhost
             }
 
             // CGameGhostTMData::ArchiveStateTimes
-            stateTimes = null;
-
-            if (!IsFixedTimeStep)
-            {
-                stateTimes = r.ReadArray<int>();
-            }
+            stateTimes = r.ReadArray<int>();
 
             Samples = [];
 
@@ -183,7 +183,7 @@ public partial class CGameGhost
                     _ => stateBufferR.ReadBytes(sizePerSample)
                 };
 
-                if (stateTimes is null)
+                if (stateTimes.Length == 0)
                 {
                     currentTime = new TimeInt32(i * SamplePeriod.Milliseconds);
                 }
@@ -254,25 +254,13 @@ public partial class CGameGhost
 
                     if (sizePerSample == -1)
                     {
-                        w.WriteArray<int>(sampleSizes);
+                        w.WriteArray<int>(sampleSizes, numSamples - 1);
                     }
                 }
             }
 
-            // Write CGameGhostTMData::ArchiveStateTimes
-            if (!IsFixedTimeStep)
-            {
-                if (stateTimes is not null)
-                {
-                    // If times were discarded or built dynamically, we construct an array of 0s 
-                    // or re-generate based on delta times if you choose to track sample.Time natively.
-                    w.WriteArray(new int[numSamples]);
-                }
-                else
-                {
-                    w.WriteArray(stateTimes);
-                }
-            }
+            // CGameGhostTMData::ArchiveStateTimes
+            w.WriteArray(stateTimes);
         }
 
         private Sample ReadSample(TimeInt32 time, byte[] sampleData)
