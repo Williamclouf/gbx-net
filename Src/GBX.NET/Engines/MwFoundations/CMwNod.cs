@@ -328,6 +328,12 @@ public partial class CMwNod : IClass
 
             if (chunk is ISkippableChunk skippable)
             {
+                if (skippable is CGameCtnChallenge.Chunk03043055 { TMUnlimiterChunk: not null } unlimiterChunk)
+                {
+                    unlimiterChunk.ReadWrite(this, chunkRw);
+                    continue;
+                }
+
                 w.WriteHexUInt32(SKIP);
 
                 if (skippable.Data is not null)

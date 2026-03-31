@@ -4,6 +4,23 @@ namespace GBX.NET.Engines.Game;
 
 public partial class CGameCtnChallenge
 {
+    private Dictionary<int, CGameCtnMediaClip.TMUnlimiter>? tempOldTMUnlimiterClipData;
+
+    internal override void Read(GbxReaderWriter rw)
+    {
+        base.Read(rw);
+
+        if (tempOldTMUnlimiterClipData is not null && clipGroupInGame is not null)
+        {
+            foreach (var clipData in tempOldTMUnlimiterClipData)
+            {
+                clipGroupInGame.Clips[clipData.Key].Clip.TMUnlimiterData = clipData.Value;
+            }
+
+            tempOldTMUnlimiterClipData = null;
+        }
+    }
+
     public sealed class TMUnlimiter
     {
         public Vec3 DecorationOffset { get; set; }
@@ -26,61 +43,85 @@ public partial class CGameCtnChallenge
 
             n.TMUnlimiterData = new TMUnlimiter();
 
-            TMUnlimiterChunk.Version = r.ReadByte() switch
+            var versionByte = r.ReadByte();
+            TMUnlimiterChunk.Version = versionByte switch
             {
                 1 => 4,
                 2 => 5,
-                _ => throw new NotSupportedException("Unlimiter chunk version not supported.")
+                _ => throw new NotSupportedException($"Unlimiter chunk version {versionByte} not supported.")
             };
 
             n.TMUnlimiterData.DecorationOffset = r.ReadInt3();
             n.TMUnlimiterData.SkyDecorationVisibility = r.ReadBoolean(asByte: true);
 
             var blockCount = r.ReadInt32();
-            var blocks = new (CGameCtnBlock, Byte3, bool, Int3, Byte3)[blockCount];
 
             if (n.blocks is null) throw new InvalidOperationException("Blocks are null.");
 
             for (var i = 0; i < blockCount; i++)
             {
                 var block = n.blocks[r.ReadInt32()];
-                var overOverSizeChunk = r.ReadByte3();
-                var isInverted = r.ReadBoolean(asByte: true);
-                var blockOffset = r.ReadInt3();
-                var blockRotation = r.ReadByte3();
-
-                blocks[i] = (block, overOverSizeChunk, isInverted, blockOffset, blockRotation);
+                block.TMUnlimiterData = new CGameCtnBlock.TMUnlimiter
+                {
+                    OverOverSizeChunk = r.ReadByte3(),
+                    IsInverted = r.ReadBoolean(asByte: true),
+                    Offset = r.ReadInt3(),
+                    Rotation = TMUnlimiterChunk.Version >= 5 ? r.ReadInt3() : r.ReadByte3()
+                };
             }
 
-            var mediaClipMappingCount = r.ReadUInt32();
+            var mediaClipMappingCount = r.ReadInt32();
+            n.tempOldTMUnlimiterClipData = new(mediaClipMappingCount);
 
             for (var i = 0; i < mediaClipMappingCount; i++)
             {
-                var mediaClipIndex = r.ReadUInt32();
+                // this appears before the mediatracker chunk, so this has to be stored in a private dictionary
+                var mediaClipIndex = r.ReadInt32();
                 var resourceType = r.ReadByte();
+
+                CGameCtnMediaClip.TMUnlimiter.LegacyResource resource;
 
                 switch (resourceType)
                 {
                     case 0: // Parameter Set
-                        var parameterSet = new ParameterSet();
-
-                        for (var parameterIndex = 0; parameterIndex < 4; parameterIndex++)
+                        var parameterSet = new CGameCtnMediaClip.TMUnlimiter.LegacyParameterSet
                         {
-                            var catalogIndex = r.ReadByte();
-                            var functionIndex = r.ReadByte();
-                            var value = r.ReadSingle();
+                            Parameters = new CGameCtnMediaClip.TMUnlimiter.Parameter[4]
+                        };
+
+                        for (var parameterIndex = 0; parameterIndex < parameterSet.Parameters.Length; parameterIndex++)
+                        {
+                            parameterSet.Parameters[parameterIndex] = new CGameCtnMediaClip.TMUnlimiter.Parameter
+                            {
+                                CatalogIndex = r.ReadByte(),
+                                FunctionIndex = r.ReadByte(),
+                                Value = r.ReadSingle()
+                            };
                         }
+
+                        resource = parameterSet;
 
                         break;
                     case 1: // Legacy Script
-                        var byteCode = r.ReadData();
+                        resource = new CGameCtnMediaClip.TMUnlimiter.LegacyScript
+                        {
+                            ByteCode = r.ReadData()
+                        };
                         break;
                     default: // Unknown
                         throw new NotSupportedException($"Media clip mapping resource type {resourceType} not supported.");
                 }
+
+                n.tempOldTMUnlimiterClipData[mediaClipIndex] = new CGameCtnMediaClip.TMUnlimiter
+                {
+                    Resource = resource
+                };
             }
 
-            r.ReadUInt32(); // 0xFACADE01
+            if (r.ReadUInt32() != 0xFACADE01)
+            {
+                throw new InvalidDataException("Unlimiter chunk did not end properly.");
+            }
         }
 
         public override void Write(CGameCtnChallenge n, GbxWriter w)
@@ -92,12 +133,62 @@ public partial class CGameCtnChallenge
 
             w.Write((byte)(TMUnlimiterChunk.Version == 4 ? 1 : 2));
 
-            throw new NotSupportedException("Writing unlimiter chunk not supported.");
-        }
+            w.Write(n.TMUnlimiterData?.DecorationOffset ?? Vec3.Zero);
+            w.Write(n.TMUnlimiterData?.SkyDecorationVisibility ?? false, asByte: true);
 
-        public record ParameterSet
-        {
+            var blocks = n.blocks ?? throw new InvalidOperationException("Blocks are null.");
 
+            w.Write(blocks.Count(x => x.TMUnlimiterData is not null));
+
+            foreach (var (block, i) in blocks
+                .Select((block, i) => (block, i))
+                .Where(x => x.block.TMUnlimiterData is not null))
+            {
+                w.Write(i);
+                w.Write(block.TMUnlimiterData?.OverOverSizeChunk ?? default);
+                w.Write(block.TMUnlimiterData?.IsInverted ?? false, asByte: true);
+                w.Write(block.TMUnlimiterData?.Offset ?? default);
+
+                if (TMUnlimiterChunk.Version >= 5)
+                {
+                    w.Write(block.TMUnlimiterData?.Rotation ?? default);
+                }
+                else
+                {
+                    w.Write((Byte3)(block.TMUnlimiterData?.Rotation ?? default));
+                }
+            }
+
+            w.Write(n.clipGroupInGame?.Clips.Count(x => x.Clip.TMUnlimiterData is not null) ?? 0);
+
+            foreach (var (clip, i) in n.clipGroupInGame?.Clips
+                .Select((clip, i) => (clip.Clip, i))
+                .Where(x => x.Clip.TMUnlimiterData is not null) ?? [])
+            {
+                w.Write(i);
+
+                switch (clip.TMUnlimiterData?.Resource)
+                {
+                    case CGameCtnMediaClip.TMUnlimiter.LegacyParameterSet parameterSet:
+                        w.Write((byte)0); // Parameter Set
+                        foreach (var parameter in parameterSet.Parameters)
+                        {
+                            w.Write(parameter.CatalogIndex);
+                            w.Write(parameter.FunctionIndex);
+                            w.Write(parameter.Value);
+                        }
+                        break;
+
+                    case CGameCtnMediaClip.TMUnlimiter.LegacyScript legacyScript:
+                        w.Write((byte)1); // Legacy Script
+                        w.WriteData(legacyScript.ByteCode);
+                        break;
+                    default:
+                        throw new InvalidOperationException("Unsupported TM Unlimiter media clip resource type.");
+                }
+            }
+
+            w.Write(0xFACADE01);
         }
     }
 
@@ -279,7 +370,7 @@ public partial class CGameCtnChallenge
 
                 if ((Flags & 1) != 0)
                 {
-                    DecorationOffset = rw.Int3((Int3)DecorationOffset);
+                    n.TMUnlimiterData.DecorationOffset = rw.Int3((Int3)n.TMUnlimiterData.DecorationOffset);
                 }
 
                 rw.ListReadableWritable(ref legacyScripts);
@@ -319,7 +410,7 @@ public partial class CGameCtnChallenge
                 {
                     if ((Flags & 4) != 0) // decorationOffsetApplied
                     {
-                        rw.Vec3(ref decorationOffset);
+                        n.TMUnlimiterData.DecorationOffset = rw.Vec3(n.TMUnlimiterData.DecorationOffset);
                     }
 
                     if ((Flags & 8) != 0) // decorationScaleApplied
