@@ -24,7 +24,35 @@ public partial class CGameCtnChallenge
     public sealed class TMUnlimiter
     {
         public Vec3 DecorationOffset { get; set; }
-        public bool SkyDecorationVisibility { get; set; }
+        public Vec3 DecorationScale { get; set; }
+        public DecorationVisibility SkyDecorationVisibility { get; set; }
+        public bool IsDecorationMoved => DecorationOffset != Vec3.Zero;
+        public bool IsDecorationScaled => DecorationScale != new Vec3(1, 1, 1);
+        public bool IsTrackBaseEmpty { get; set; }
+        public bool IsVanillaMode { get; set; }
+        public bool IsPylonsDisabled { get; set; }
+
+        public enum DecorationVisibility
+        {
+            Default,
+            SkyOnly,
+            Nothing = 1 << 2,
+            Warp = 1 << 8
+        }
+
+        [Flags]
+        internal enum ChallengeFlags
+        {
+            DecorationVisibility_SkyOnly = 1 << 0,
+            IsDecorationMoved = 1 << 1,
+            DecorationVisibility_Nothing = 1 << 2,
+            IsDecorationScaled = 1 << 3,
+            IsTrackBaseEmpty = 1 << 4,
+            IsVanillaMode = 1 << 5,
+            DecorationVisibility_Warp = 1 << 8,
+            IsPylonsDisabled = 1 << 9,
+            ReservedBit = 1 << 15,
+        };
     }
 
     public partial class Chunk03043055
@@ -52,7 +80,7 @@ public partial class CGameCtnChallenge
             };
 
             n.TMUnlimiterData.DecorationOffset = r.ReadInt3();
-            n.TMUnlimiterData.SkyDecorationVisibility = r.ReadBoolean(asByte: true);
+            n.TMUnlimiterData.SkyDecorationVisibility = (TMUnlimiter.DecorationVisibility)r.ReadByte();
 
             var blockCount = r.ReadInt32();
 
@@ -61,6 +89,7 @@ public partial class CGameCtnChallenge
             for (var i = 0; i < blockCount; i++)
             {
                 var block = n.blocks[r.ReadInt32()];
+
                 block.TMUnlimiterData = new CGameCtnBlock.TMUnlimiter
                 {
                     OverOverSizeChunk = r.ReadByte3(),
@@ -134,7 +163,7 @@ public partial class CGameCtnChallenge
             w.Write((byte)(TMUnlimiterChunk.Version == 4 ? 1 : 2));
 
             w.Write(n.TMUnlimiterData?.DecorationOffset ?? Vec3.Zero);
-            w.Write(n.TMUnlimiterData?.SkyDecorationVisibility ?? false, asByte: true);
+            w.Write((byte)(n.TMUnlimiterData?.SkyDecorationVisibility ?? TMUnlimiter.DecorationVisibility.Default));
 
             var blocks = n.blocks ?? throw new InvalidOperationException("Blocks are null.");
 
@@ -145,17 +174,17 @@ public partial class CGameCtnChallenge
                 .Where(x => x.block.TMUnlimiterData is not null))
             {
                 w.Write(i);
-                w.Write(block.TMUnlimiterData?.OverOverSizeChunk ?? default);
-                w.Write(block.TMUnlimiterData?.IsInverted ?? false, asByte: true);
-                w.Write(block.TMUnlimiterData?.Offset ?? default);
+                w.Write(block.TMUnlimiterData!.OverOverSizeChunk);
+                w.Write(block.TMUnlimiterData.IsInverted, asByte: true);
+                w.Write(block.TMUnlimiterData.Offset);
 
                 if (TMUnlimiterChunk.Version >= 5)
                 {
-                    w.Write(block.TMUnlimiterData?.Rotation ?? default);
+                    w.Write(block.TMUnlimiterData.Rotation);
                 }
                 else
                 {
-                    w.Write((Byte3)(block.TMUnlimiterData?.Rotation ?? default));
+                    w.Write((Byte3)(Int3)(block.TMUnlimiterData.Rotation));
                 }
             }
 
@@ -167,7 +196,7 @@ public partial class CGameCtnChallenge
             {
                 w.Write(i);
 
-                switch (clip.TMUnlimiterData?.Resource)
+                switch (clip.TMUnlimiterData!.Resource)
                 {
                     case CGameCtnMediaClip.TMUnlimiter.LegacyParameterSet parameterSet:
                         w.Write((byte)0); // Parameter Set
@@ -198,7 +227,8 @@ public partial class CGameCtnChallenge
 
         public int U01;
 
-        private enum BlockFlags : ushort
+        [Flags]
+        private enum BlockFlags
         {
             IsOutsideBoundaries = 1 << 0,
             IsMoved = 1 << 1,
@@ -218,15 +248,47 @@ public partial class CGameCtnChallenge
 
         public override void Read(CGameCtnChallenge n, GbxReader r)
         {
-            using var ms = new MemoryStream(Decrypt(r.ReadToEnd()));
+            using var ms = new MemoryStream(Crypt(r.ReadToEnd()));
             using var decryptedReader = new GbxReader(ms);
             decryptedReader.LoadFrom(r);
             ReadDecrypted(n, decryptedReader);
         }
 
+        public override void Write(CGameCtnChallenge n, GbxWriter w)
+        {
+            using var ms = new MemoryStream();
+            using var decryptedWriter = new GbxWriter(ms);
+            decryptedWriter.LoadFrom(w);
+            WriteDecrypted(n, decryptedWriter);
+
+            w.Write(Crypt(ms.ToArray()));
+        }
+
         private void ReadDecrypted(CGameCtnChallenge n, GbxReader r)
         {
-            var challengeFlags = r.ReadUInt16();
+            n.TMUnlimiterData = new TMUnlimiter();
+
+            var challengeFlags = (TMUnlimiter.ChallengeFlags)r.ReadUInt16();
+            n.TMUnlimiterData.SkyDecorationVisibility = (TMUnlimiter.DecorationVisibility)((int)challengeFlags & 0x105);
+            var isDecorationMoved = (challengeFlags & TMUnlimiter.ChallengeFlags.IsDecorationMoved) != 0;
+            var isDecorationScaled = (challengeFlags & TMUnlimiter.ChallengeFlags.IsDecorationScaled) != 0;
+            n.TMUnlimiterData.IsTrackBaseEmpty = (challengeFlags & TMUnlimiter.ChallengeFlags.IsTrackBaseEmpty) != 0;
+            n.TMUnlimiterData.IsVanillaMode = (challengeFlags & TMUnlimiter.ChallengeFlags.IsVanillaMode) != 0;
+            n.TMUnlimiterData.IsPylonsDisabled = (challengeFlags & TMUnlimiter.ChallengeFlags.IsPylonsDisabled) != 0;
+
+            if (n.TMUnlimiterData.SkyDecorationVisibility != TMUnlimiter.DecorationVisibility.Nothing)
+            {
+                if (isDecorationMoved)
+                {
+                    n.TMUnlimiterData.DecorationOffset = r.ReadVec3();
+                }
+
+                if (isDecorationScaled)
+                {
+                    n.TMUnlimiterData.DecorationScale = r.ReadVec3();
+                }
+            }
+
             var blockCount = r.ReadInt32();
 
             if (n.blocks is null) throw new InvalidOperationException("Blocks are null.");
@@ -234,51 +296,137 @@ public partial class CGameCtnChallenge
             for (var i = 0; i < blockCount; i++)
             {
                 var block = n.blocks![r.ReadInt32()];
+                block.TMUnlimiterData = new CGameCtnBlock.TMUnlimiter();
                 var flags = (BlockFlags)r.ReadUInt16();
 
                 if (flags.HasFlag(BlockFlags.IsOutsideBoundaries))
                 {
-                    var internalOverOverSizeChunkX = r.ReadByte();
-                    var internalOverOverSizeChunkY = r.ReadByte();
-                    var internalOverOverSizeChunkZ = r.ReadByte();
+                    block.TMUnlimiterData.OverOverSizeChunk = r.ReadByte3();
                 }
 
-                /*blockData.InternalIsInverted = blockFlags.HasFlag(BlockFlags.IsInverted);
-                blockData.InternalIsDynamic = blockFlags.HasFlag(BlockFlags.IsDynamic);
-                blockData.InternalIsInvisible = blockFlags.HasFlag(BlockFlags.IsInvisible);
-                blockData.InternalIsCollisionDisabled = blockFlags.HasFlag(BlockFlags.IsCollisionDisabled);
-                blockData.InternalIsSpawnPointFixEnabled = blockFlags.HasFlag(BlockFlags.IsSpawnPointFixEnabled);*/
+                block.TMUnlimiterData.IsInverted = flags.HasFlag(BlockFlags.IsInverted);
+                block.TMUnlimiterData.IsVanillaTerrain = flags.HasFlag(BlockFlags.IsVanillaTerrain);
+                block.TMUnlimiterData.IsSpawnPointFixEnabled = flags.HasFlag(BlockFlags.IsSpawnPointFixEnabled);
+                block.TMUnlimiterData.IsDynamic = flags.HasFlag(BlockFlags.IsDynamic);
+                block.TMUnlimiterData.IsInvisible = flags.HasFlag(BlockFlags.IsInvisible);
+                block.TMUnlimiterData.IsCollisionDisabled = flags.HasFlag(BlockFlags.IsCollisionDisabled);
+                block.TMUnlimiterData.IsClassicMode = flags.HasFlag(BlockFlags.IsClassicMode);
+                block.TMUnlimiterData.IsClassicTerrain = flags.HasFlag(BlockFlags.IsClassicTerrain);
 
-                if (flags.HasFlag(BlockFlags.IsVanillaTerrain))
+                if (block.TMUnlimiterData.IsVanillaTerrain)
                 {
                     continue;
                 }
 
                 if (flags.HasFlag(BlockFlags.IsMoved))
                 {
-                    var internalBlockOffset = r.ReadVec3();
+                    block.TMUnlimiterData.Offset = r.ReadVec3();
                 }
 
                 if (flags.HasFlag(BlockFlags.IsRotated))
                 {
-                    var internalBlockRotation = r.ReadVec3();
+                    block.TMUnlimiterData.Rotation = r.ReadVec3();
                 }
 
                 if (flags.HasFlag(BlockFlags.IsScaled))
                 {
-                    var internalBlockScale = r.ReadVec3();
+                    block.TMUnlimiterData.Scale = r.ReadVec3();
                 }
 
                 if (flags.HasFlag(BlockFlags.HasIdentifier))
                 {
-                    var internalBlockGroup = r.ReadString();
+                    block.TMUnlimiterData.Group = r.ReadString();
                 }
             }
 
             U01 = r.ReadInt32();
         }
 
-        private static byte[] Decrypt(byte[] cryptedChunkData)
+        private void WriteDecrypted(CGameCtnChallenge n, GbxWriter w)
+        {
+            var challengeFlags = (TMUnlimiter.ChallengeFlags)0;
+            if (n.TMUnlimiterData is not null)
+            {
+                challengeFlags |= (TMUnlimiter.ChallengeFlags)((int)n.TMUnlimiterData.SkyDecorationVisibility & 0x105);
+                if (n.TMUnlimiterData.IsDecorationMoved) challengeFlags |= TMUnlimiter.ChallengeFlags.IsDecorationMoved;
+                if (n.TMUnlimiterData.IsDecorationScaled) challengeFlags |= TMUnlimiter.ChallengeFlags.IsDecorationScaled;
+                if (n.TMUnlimiterData.IsTrackBaseEmpty) challengeFlags |= TMUnlimiter.ChallengeFlags.IsTrackBaseEmpty;
+                if (n.TMUnlimiterData.IsVanillaMode) challengeFlags |= TMUnlimiter.ChallengeFlags.IsVanillaMode;
+                if (n.TMUnlimiterData.IsPylonsDisabled) challengeFlags |= TMUnlimiter.ChallengeFlags.IsPylonsDisabled;
+            }
+
+            w.Write((ushort)challengeFlags);
+
+            if (n.TMUnlimiterData is not null && n.TMUnlimiterData.SkyDecorationVisibility != TMUnlimiter.DecorationVisibility.Nothing)
+            {
+                if (n.TMUnlimiterData.IsDecorationMoved)
+                {
+                    w.Write(n.TMUnlimiterData.DecorationOffset);
+                }
+
+                if (n.TMUnlimiterData.IsDecorationScaled)
+                {
+                    w.Write(n.TMUnlimiterData.DecorationScale);
+                }
+            }
+
+            var blocks = n.blocks ?? throw new InvalidOperationException("Blocks are null.");
+
+            w.Write(blocks.Count(x => x.TMUnlimiterData is not null));
+
+            foreach (var (block, i) in blocks
+                .Select((block, i) => (block, i))
+                .Where(x => x.block.TMUnlimiterData is not null))
+            {
+                w.Write(i);
+
+                var flags = (BlockFlags)0;
+                if (block.TMUnlimiterData!.IsOutsideBoundaries) flags |= BlockFlags.IsOutsideBoundaries;
+                if (block.TMUnlimiterData.IsMoved) flags |= BlockFlags.IsMoved;
+                if (block.TMUnlimiterData.IsRotated) flags |= BlockFlags.IsRotated;
+                if (block.TMUnlimiterData.IsScaled) flags |= BlockFlags.IsScaled;
+                if (block.TMUnlimiterData.IsInverted) flags |= BlockFlags.IsInverted;
+                if (block.TMUnlimiterData.IsVanillaTerrain) flags |= BlockFlags.IsVanillaTerrain;
+                if (block.TMUnlimiterData.IsSpawnPointFixEnabled) flags |= BlockFlags.IsSpawnPointFixEnabled;
+                if (block.TMUnlimiterData.IsDynamic) flags |= BlockFlags.IsDynamic;
+                if (block.TMUnlimiterData.IsInvisible) flags |= BlockFlags.IsInvisible;
+                if (block.TMUnlimiterData.IsCollisionDisabled) flags |= BlockFlags.IsCollisionDisabled;
+                if (block.TMUnlimiterData.IsClassicMode) flags |= BlockFlags.IsClassicMode;
+                if (block.TMUnlimiterData.IsClassicTerrain) flags |= BlockFlags.IsClassicTerrain;
+                if (block.TMUnlimiterData.HasIdentifier) flags |= BlockFlags.HasIdentifier;
+
+                w.Write((ushort)flags);
+
+                if (block.TMUnlimiterData.IsVanillaTerrain)
+                {
+                    continue;
+                }
+
+                if (block.TMUnlimiterData.IsMoved)
+                {
+                    w.Write(block.TMUnlimiterData.Offset);
+                }
+
+                if (block.TMUnlimiterData.IsRotated)
+                {
+                    w.Write(block.TMUnlimiterData.Rotation);
+                }
+
+                if (block.TMUnlimiterData.IsScaled)
+                {
+                    w.Write(block.TMUnlimiterData.Scale);
+                }
+
+                if (block.TMUnlimiterData.HasIdentifier)
+                {
+                    w.Write(block.TMUnlimiterData.Group);
+                }
+            }
+
+            w.Write(U01);
+        }
+
+        private static byte[] Crypt(byte[] cryptedChunkData)
         {
             for (uint offset = 0; offset < cryptedChunkData.Length; offset++)
             {

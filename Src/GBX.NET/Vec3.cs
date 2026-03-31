@@ -14,6 +14,7 @@ public readonly record struct Vec3(float X, float Y, float Z)
     /// Vector with all components set to zero.
     /// </summary>
     public static readonly Vec3 Zero = new();
+    public static readonly Vec3 One = new(1, 1, 1);
 
     /// <summary>
     /// Returns a string representation of the <see cref="Vec3"/> vector.
