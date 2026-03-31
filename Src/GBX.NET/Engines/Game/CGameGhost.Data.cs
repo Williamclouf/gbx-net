@@ -52,11 +52,6 @@ public partial class CGameGhost
                 case 1: ReadNew(r); break;
                 default: throw new NotSupportedException($"Version {v} is not supported.");
             }
-
-            if (r.BaseStream.Position != r.BaseStream.Length)
-            {
-                throw new InvalidDataException($"Not all data was read. {r.BaseStream.Length - r.BaseStream.Position} bytes remaining.");
-            }
         }
 
         public void Write(GbxWriter w, int v = 0)
@@ -100,14 +95,19 @@ public partial class CGameGhost
 
             for (int i = 1; i < Offsets.Length; i++)
             {
-                var offset = Offsets[i - 1];
+                var nextOffset = Offsets[i];
 
-                Samples.Add(ReadSample(new TimeInt32((i - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes(offset - prevOffset)));
+                Samples.Add(ReadSample(new TimeInt32((i - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes(nextOffset - prevOffset)));
 
-                prevOffset = offset;
+                prevOffset = nextOffset;
             }
 
             Samples.Add(ReadSample(new TimeInt32((Offsets.Length - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes((int)r.BaseStream.Length - Offsets[Offsets.Length - 1])));
+
+            if (r.BaseStream.Position != r.BaseStream.Length)
+            {
+                throw new InvalidDataException($"Not all data was read. {r.BaseStream.Length - r.BaseStream.Position} bytes remaining.");
+            }
         }
 
         internal void WriteSamplesOld(GbxWriter w)
@@ -162,6 +162,11 @@ public partial class CGameGhost
 
             // CGameGhostTMData::ArchiveStateTimes
             stateTimes = r.ReadArray<int>();
+
+            if (r.BaseStream.Position != r.BaseStream.Length)
+            {
+                throw new InvalidDataException($"Not all data was read. {r.BaseStream.Length - r.BaseStream.Position} bytes remaining.");
+            }
 
             Samples = [];
 

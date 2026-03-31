@@ -699,7 +699,7 @@ public partial class CSceneVehicleCar
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
             var mag = MathF.Sqrt(vec.X * vec.X + vec.Y * vec.Y + vec.Z * vec.Z);
 #else
-    var mag = (float)Math.Sqrt(vec.X * vec.X + vec.Y * vec.Y + vec.Z * vec.Z);
+            var mag = (float)Math.Sqrt(vec.X * vec.X + vec.Y * vec.Y + vec.Z * vec.Z);
 #endif
 
             short mag16;
