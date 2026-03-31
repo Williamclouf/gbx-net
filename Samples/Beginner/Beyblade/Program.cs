@@ -60,7 +60,7 @@ static void Beyblade(CGameCtnGhost ghost)
         .EntList.SelectMany(x => x.Samples)
         .OfType<CSceneVehicleVis.EntRecordDelta>();
 
-    foreach (var sample in samples?.Skip(1) ?? [])
+    foreach (var sample in samples?.Skip(2) ?? [])
     {
         var delta = (Quat)Quaternion.CreateFromYawPitchRoll(angularSpeed, 0, 0);
 
