@@ -4,6 +4,8 @@ public partial class CSceneVehicleCar
 {
     public sealed class Sample : CGameGhost.Data.Sample, ISampleRawData
     {
+        private uint velocity;
+        private uint angularVelocity;
         private ushort speedForward;
         private ushort speedSideward;
         private ushort rpm;
@@ -33,6 +35,8 @@ public partial class CSceneVehicleCar
         private byte? u40;
         private (Vec3, Quat, byte)[]? u35_1;
 
+        uint ISampleRawData.Velocity { get => velocity; set => velocity = value; }
+        uint ISampleRawData.AngularVelocity { get => angularVelocity; set => angularVelocity = value; }
         ushort ISampleRawData.SpeedForward { get => speedForward; set => speedForward = value; }
         ushort ISampleRawData.SpeedSideward { get => speedSideward; set => speedSideward = value; }
         ushort ISampleRawData.RPM { get => rpm; set => rpm = value; }
@@ -60,6 +64,18 @@ public partial class CSceneVehicleCar
         byte? ISampleRawData.U37 { get => u37; set => u37 = value; }
         byte? ISampleRawData.U38 { get => u38; set => u38 = value; }
         byte? ISampleRawData.U40 { get => u40; set => u40 = value; }
+
+        public override Vec3 Velocity
+        {
+            get => ToVec3_4(velocity);
+            set => velocity = FromVec3_4(value);
+        }
+
+        public override Vec3 AngularVelocity
+        {
+            get => ToVec3_4(angularVelocity);
+            set => angularVelocity = FromVec3_4(value);
+        }
 
         public float SpeedForward
         {
@@ -379,8 +395,8 @@ public partial class CSceneVehicleCar
                 return;
             }
 
-            Velocity = r.ReadVec3_4();
-            AngularVelocity = r.ReadVec3_4();
+            velocity = r.ReadUInt32();
+            angularVelocity = r.ReadUInt32();
 
             // CSceneVehicleVis_RestoreStaticState
             if (version >= 7)
@@ -538,8 +554,8 @@ public partial class CSceneVehicleCar
             w.Write(Position);
             w.WriteQuat6(Rotation);
 
-            w.WriteVec3_4(Velocity);
-            w.WriteVec3_4(AngularVelocity);
+            w.Write(velocity);
+            w.Write(angularVelocity);
 
             if (version >= 7)
             {
@@ -640,6 +656,91 @@ public partial class CSceneVehicleCar
                 b |= (byte)((int)AdditionalMath.Clamp(Math.Round(value.Value.W * 3f), 0, 3) << 6);
                 flagByte = b;
             }
+        }
+
+        private static Vec3 ToVec3_4(uint packed)
+        {
+            // Extract the parts using bitwise masking and shifting
+            var mag16 = (short)(packed & 0xFFFF);
+            var headingByte = (sbyte)((packed >> 16) & 0xFF);
+            var pitchByte = (sbyte)((packed >> 24) & 0xFF);
+
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+            var mag = mag16 == short.MinValue
+                ? 0f
+                : MathF.Exp(mag16 / 1000f);
+
+            var axisHeading = headingByte * MathF.PI / sbyte.MaxValue;
+            var axisPitch = pitchByte * (MathF.PI / 2f) / sbyte.MaxValue;
+
+            return new Vec3(
+                MathF.Cos(axisHeading) * MathF.Cos(axisPitch) * mag,
+                MathF.Sin(axisHeading) * MathF.Cos(axisPitch) * mag,
+                MathF.Sin(axisPitch) * mag
+            );
+#else
+            var mag = mag16 == short.MinValue
+                ? 0f
+                : (float)Math.Exp(mag16 / 1000.0);
+
+            var axisHeading = headingByte * Math.PI / sbyte.MaxValue;
+            var axisPitch = pitchByte * (Math.PI / 2.0) / sbyte.MaxValue;
+
+            return new Vec3(
+                (float)(Math.Cos(axisHeading) * Math.Cos(axisPitch)) * mag, 
+                (float)(Math.Sin(axisHeading) * Math.Cos(axisPitch)) * mag, 
+                (float)Math.Sin(axisPitch) * mag
+            );
+#endif
+        }
+
+        private static uint FromVec3_4(Vec3 vec)
+        {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+            var mag = MathF.Sqrt(vec.X * vec.X + vec.Y * vec.Y + vec.Z * vec.Z);
+#else
+    var mag = (float)Math.Sqrt(vec.X * vec.X + vec.Y * vec.Y + vec.Z * vec.Z);
+#endif
+
+            short mag16;
+            sbyte headingByte = 0;
+            sbyte pitchByte = 0;
+
+            if (mag < 1e-6f) // Handle zero/near-zero magnitude
+            {
+                mag16 = short.MinValue;
+            }
+            else
+            {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+                // Inverse of Exp is Log
+                var logMag = MathF.Log(mag) * 1000f;
+                mag16 = (short)Math.Clamp(MathF.Round(logMag), short.MinValue + 1, short.MaxValue);
+
+                // Inverse trigonometric functions to find angles
+                var axisPitch = MathF.Asin(vec.Z / mag);
+                var axisHeading = MathF.Atan2(vec.Y, vec.X);
+
+                pitchByte = (sbyte)Math.Clamp(MathF.Round(axisPitch * sbyte.MaxValue / (MathF.PI / 2f)), sbyte.MinValue, sbyte.MaxValue);
+                headingByte = (sbyte)Math.Clamp(MathF.Round(axisHeading * sbyte.MaxValue / MathF.PI), sbyte.MinValue, sbyte.MaxValue);
+#else
+                var logMag = Math.Log(mag) * 1000.0;
+                mag16 = (short)Math.Max(short.MinValue + 1, Math.Min(short.MaxValue, Math.Round(logMag)));
+
+                var axisPitch = Math.Asin(vec.Z / mag);
+                var axisHeading = Math.Atan2(vec.Y, vec.X);
+
+                pitchByte = (sbyte)Math.Max(sbyte.MinValue, Math.Min(sbyte.MaxValue, Math.Round(axisPitch * sbyte.MaxValue / (Math.PI / 2.0))));
+                headingByte = (sbyte)Math.Max(sbyte.MinValue, Math.Min(sbyte.MaxValue, Math.Round(axisHeading * sbyte.MaxValue / Math.PI)));
+#endif
+            }
+
+            // Re-pack into a 32-bit unsigned integer
+            uint packed = (ushort)mag16;
+            packed |= (uint)unchecked((byte)headingByte) << 16;
+            packed |= (uint)unchecked((byte)pitchByte) << 24;
+
+            return packed;
         }
     }
 }

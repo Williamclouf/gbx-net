@@ -4,6 +4,8 @@ public partial class CSceneVehicleCar
 {
     public interface ISampleRawData
     {
+        uint Velocity { get; set; }
+        uint AngularVelocity { get; set; }
         ushort SpeedForward { get; set; }
         ushort SpeedSideward { get; set; }
         ushort RPM { get; set; }
