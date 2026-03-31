@@ -1,5 +1,6 @@
 ﻿using GBX.NET;
 using GBX.NET.Engines.Game;
+using GBX.NET.Engines.Scene;
 using GBX.NET.LZO;
 using GBX.NET.ZLib;
 using System.Numerics;
@@ -44,7 +45,22 @@ static void Beyblade(CGameCtnGhost ghost)
 
     float angularSpeed = 15f;
 
+    // TM1-2
     foreach (var sample in ghost.SampleData.Samples.Skip(1))
+    {
+        var delta = (Quat)Quaternion.CreateFromYawPitchRoll(angularSpeed, 0, 0);
+
+        spin *= delta;
+
+        sample.Rotation *= spin;
+    }
+
+    // TM2020
+    var samples = ghost.RecordData?
+        .EntList.SelectMany(x => x.Samples)
+        .OfType<CSceneVehicleVis.EntRecordDelta>();
+
+    foreach (var sample in samples?.Skip(1) ?? [])
     {
         var delta = (Quat)Quaternion.CreateFromYawPitchRoll(angularSpeed, 0, 0);
 
