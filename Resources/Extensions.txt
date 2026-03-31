@@ -1,302 +1,378 @@
-CControlEffectCombined ControlEffect.Gbx
-CControlEffectMaster ControlEffectMaster.Gbx
-CControlEffectMotion ControlEffect.Gbx
-CControlEffectMoveFrame ControlEffectMoveFrame.Gbx
-CControlEffectSimi ControlEffect.Gbx
-CControlFrame Frame.Gbx
-CControlFrameAnimated FrameAnimated.Gbx
-CControlFrameStyled FrameStyled.Gbx
-CControlLayout ControlLayout.Gbx
-CControlListItem ListItem.Gbx
-CControlPager Pager.Gbx
-CControlStyle ControlStyle.Gbx
-CControlStyleSheet StyleSheet.Gbx
-CControlUrlLinks ControlUrlLinks.Gbx
-CFunc Func.Gbx
-CFuncClouds FuncClouds.Gbx
-CFuncCloudsParam FuncCloudsParam.Gbx
-CFuncCloudsSolids FuncCloudsSolids.Gbx
-CFuncColorGradient FuncColorGradient.Gbx
-CFuncFullColorGradient FuncFullColorGradient.Gbx
-CFuncKeys FuncKey.Gbx
-CFuncKeysPath KeysPath.Gbx
-CFuncKeysReal FuncKeysReals.Gbx
-CFuncKeysTransQuat KeysTransQuat.Gbx
-CFuncPathMesh PathMesh.Gbx
-CFuncPuffLull FuncPuffLull.Gbx
-CFuncShaderLayerUV FuncShader.Gbx
-CFuncShaders FuncShader.Gbx
-CFuncTreeRotate FuncTree.Gbx
-CFuncWeather FuncWeather.Gbx
-CGameActionFxResources GameActionFxResources.Gbx
-CGameActionModel Action.Gbx
-CGameAdvertising GameAdvertisement.Gbx
-CGameArmorModel Armor.gbx
-CGameBadgeStickerSlots StickerSlots.Gbx
-CGameBlockItem BlockItem.Gbx
-CGameCaptureZoneModel CaptureZone.gbx
-CGameControlCamera CtrlCam.Gbx
-CGameControlCameraFirstPerson CtrlCamFirstPerson.gbx
-CGameControlCameraFree CtrlCamFree.gbx
-CGameControlCameraOrbital3d CtrlCamOrbital3d.gbx
-CGameControlCameraThirdPerson CtrlCamThirdPerson.gbx
-CGameControlCameraTrackManiaRace2 CtrlCamTmRace2.gbx
-CGameControlCameraTrackManiaRace3 CtrlCamTmRace3.gbx
-CGameControlCard Frame.Gbx
-CGameControlCardBuddy Frame.Gbx
-CGameControlCardCtnArticle Frame.Gbx
-CGameControlCardCtnChallengeInfo Frame.Gbx
-CGameControlCardCtnChapter Frame.Gbx
-CGameControlCardCtnGhostInfo Frame.Gbx
-CGameControlCardCtnNetServerInfo Frame.Gbx
-CGameControlCardCtnReplayRecordInfo Frame.Gbx
-CGameControlCardCtnVehicle Frame.Gbx
-CGameControlCardGeneric Frame.Gbx
-CGameControlCardLadderRanking Frame.Gbx
-CGameControlCardLeague Frame.Gbx
-CGameControlCardManager CtnCtlCardMng.Gbx
-CGameControlCardMessageFrame.Gbx
-CGameControlCardProfile Frame.Gbx
-CGameControlDataType CtnDispType.Gbx
-CGameControlGridCard GameGridCards.Gbx
-CGameCoverFlowDesc GameCoverFlow.Gbx
-CGameCtnAnchorPoint AnchorPoint.gbx
-CGameCtnApp GameCtnApp.Gbx
-CGameCtnBlockInfoClassic EDClassic.Gbx
-CGameCtnBlockInfoClip EDClip.Gbx
-CGameCtnBlockInfoFlat EDFlat.Gbx
-CGameCtnBlockInfoFrontier EDFrontier.Gbx
-CGameCtnBlockInfoPylon EDPylon.Gbx
-CGameCtnBlockInfoRectAsym EDRectAsym.Gbx
-CGameCtnBlockInfoRoad EDRoad.Gbx
-CGameCtnBlockInfoSlope EDSlope.Gbx
-CGameCtnBlockInfoTransition EDTransition.Gbx
-CGameCtnCampaign GameCtnCampaign.Gbx
-CGameCtnChallenge Map.Gbx
-CGameCtnCollection Collection.Gbx
-CGameCtnDecoration Decoration.Gbx
-CGameCtnDecorationAudio DecorationAudio.Gbx
-CGameCtnDecorationMaterialModifiers DecorationMaterialModifiers.Gbx
-CGameCtnDecorationMood DecorationMood.Gbx
-CGameCtnDecorationSize DecorationSize.Gbx
-CGameCtnDecorationTerrainModifier TMTerrainModifier.Gbx
-CGameCtnMacroBlockInfo MacroBlock.Gbx
-CGameCtnMacroDecals MacroDecals.Gbx
-CGameCtnMediaBlock3dStereo GameCtnMediaBlock3dStereo.gbx
-CGameCtnMediaBlockBloomHdr GameCtnMediaBlockBloomHdr.gbx
-CGameCtnMediaBlockCameraCustom CtnMediaBlockCamCustom.gbx
-CGameCtnMediaBlockCameraEffectShake CtnMediaBlockCamFxShake.gbx
-CGameCtnMediaBlockCameraGame GameCtnMediaBlockCamGame.gbx
-CGameCtnMediaBlockCameraPath CtnMediaBlockCamPath.gbx
-CGameCtnMediaBlockColorGrading GameCtnMediaBlockColorGrading.gbx
-CGameCtnMediaBlockColoringBase GameCtnMediaBlockColoringBase.gbx
-CGameCtnMediaBlockColoringCapturable GameCtnMediaBlockColoringCapturable.gbx
-CGameCtnMediaBlockDOF GameCtnMediaBlockDOF.gbx
-CGameCtnMediaBlockDecal2d GameCtnMediaBlockDecal2d.gbx
-CGameCtnMediaBlockDirtyLens GameCtnMediaBlockDirtyLens.gbx
-CGameCtnMediaBlockFog GameCtnMediaBlockFog.gbx
-CGameCtnMediaBlockFxBloom GameCtnMediaBlockFxBloom.gbx
-CGameCtnMediaBlockFxBlurDepth GameCtnMediaBlockFxBlurDepth.gbx
-CGameCtnMediaBlockFxBlurMotion GameCtnMediaBlockFxBlurMotion.gbx
-CGameCtnMediaBlockFxCameraBlend GameCtnMediaBlockFxCameraBlend.gbx
-CGameCtnMediaBlockFxCameraMap GameCtnMediaBlockFxCameraMap.gbx
-CGameCtnMediaBlockFxColors GameCtnMediaBlockFxColors.gbx
-CGameCtnMediaBlockGhost GameCtnMediaBlockGhost.gbx
-CGameCtnMediaBlockImage GameCtnMediaBlockImage.gbx
-CGameCtnMediaBlockInterface GameCtnMediaBlockInterface.gbx
-CGameCtnMediaBlockManialink GameCtnMediaBlockManialink.Gbx
-CGameCtnMediaBlockMusicEffect CtnMediaBlockMusicFx.gbx
-CGameCtnMediaBlockObject GameCtnMediaBlockObject.gbx
-CGameCtnMediaBlockSound GameCtnMediaBlockSound.gbx
-CGameCtnMediaBlockText GameCtnMediaBlockText.gbx
-CGameCtnMediaBlockToneMapping GameCtnMediaBlockToneMapping.gbx
-CGameCtnMediaBlockTrails GameCtnMediaBlockTrails.gbx
-CGameCtnMediaBlockTransitionFade CtnMediaBlockTransFade.gbx
-CGameCtnMediaBlockTriangles GameCtnMediaBlockTriangles.gbx
-CGameCtnMediaBlockTriangles2D GameCtnMediaBlockTriangles2D.gbx
-CGameCtnMediaBlockTriangles3D GameCtnMediaBlockTriangles3D.gbx
-CGameCtnMediaBlockUi GameCtnMediaBlockUi.gbx
-CGameCtnMediaBlockVehicleLight GameCtnMediaBlockVehicleLight.gbx
-CGameCtnMediaClip Clip.gbx
-CGameCtnMediaClipGroup GameCtnMediaClipGroup.gbx
-CGameCtnMediaTrack GameCtnMediaTrack.gbx
-CGameCtnPainterSetting PainterSetting.Gbx
-CGameCtnParticleParam ParticleParam.Gbx
-CGameCtnReplayRecord TMReplay.Gbx
-CGameCtnZone TMZone.Gbx
-CGameCtnZoneFlat ZoneFlat.Gbx
-CGameCtnZoneFrontier ZoneFrontier.Gbx
-CGameCtnZoneFusionInfo
-CGameCtnZoneGenealogy ZoneGenealogy.Gbx
-CGameCtnZoneTransition ZoneTransition.Gbx
-CGameCustomBlockModel Block.Gbx
-CGameEditorModel Editor.Gbx
-CGameGateModel Gate.gbx
-CGameGhost Ghost.Gbx
-CGameItemModel Item.Gbx
-CGameLeague League.Gbx
-CGameManiaPlanet ManiaPlanet.Gbx
-CGameManiaTitle Title.Gbx
-CGameMenu Menu.Gbx
-CGameMenuColorEffect ColorEffect.Gbx
-CGameMenuFrame Frame.Gbx
-CGameMenuScaleEffect ScaleEffect.Gbx
-CGameModuleMenuModel Module.Gbx
-CGameModuleMenuPageModel Module.Gbx
-CGameModulePlaygroundAltimeterModel Module.Gbx
-CGameModulePlaygroundChronoModel Module.Gbx
-CGameModulePlaygroundHudModel Module.Gbx
-CGameModulePlaygroundInventoryModel Module.Gbx
-CGameModulePlaygroundScoresTableModel Module.Gbx
-CGameModulePlaygroundSpeedMeterModel Module.Gbx
-CGameModulePlaygroundStoreModel Module.Gbx
-CGameModulePlaygroundTeamStateModel Module.Gbx
-CGameModulePlaygroundThrottleModel Module.Gbx
-CGameObjectPhyModel GameObjectPhyModel.Gbx
-CGameObjectVisModel GameObjectVisModel.Gbx
-CGamePixelArtModel PixelArt.Gbx
-CGamePlaygroundControlMessages Frame.Gbx
-CGamePlaygroundControlScores Frame.Gbx
-CGamePlaygroundControlSmPlayers Frame.Gbx
-CGamePodiumInfo GamePodiumInfo.Gbx
-CGameResources GameResources.Gbx
-CGameSkinnedNod GameSkinnedNod.gbx
-CGameSpawnModel Spawn.gbx
-CGameTeleporterModel Teleporter.gbx
-CGameTurbineModel Turbine.gbx
-CGameVehicleModel
-CGameVskObjectInfo ObjInfo.Gbx
-CHmsLightMap LightMap.Gbx
-CHmsLightMapMood LightMapMood.Gbx
-CInputReplay InputReplay.Gbx
-CMotionCmdBaseParams MotionBase.Gbx
-CMotionShader MotionTrackShader.Gbx
-CMwCmdBlockMain Script.Gbx
-CMwRefBuffer RefBuffer.Gbx
-CMwRefBufferSelect BufferSelect.Gbx
-COalDevice OpenALDevice.Gbx
-CPlugAnimLocSimple AnimLocSimple.Gbx
-CPlugAudioBalance AudioBalance.Gbx
-CPlugAudioEnvironment AudioEnvironment.Gbx
-CPlugBeamEmitterModel BeamModel.Gbx
-CPlugBeamEmitterSubModel BeamModel.Gbx
-CPlugBitmap Texture.Gbx
-CPlugBitmapDecals BitmapDecals.Gbx
-CPlugBitmapPacker TexturePack.Gbx
-CPlugBulletModel Bullet.Gbx
-CPlugCamShakeModel CamShakeModel.gbx
-CPlugCharVisModel PlugCharVisModel.Gbx
-CPlugCrystal Crystal.Gbx
-CPlugDecalModel Decal.Gbx
-CPlugDecoratorSolid DecoSolid.Gbx
-CPlugDecoratorTree DecoTree.Gbx
-CPlugEntitySpawner EntitySpawner.Gbx
-CPlugFileDds dds
-CPlugFileExr exr
-CPlugFileFidCache ScanCache.Gbx
-CPlugFileHdr hdr
-CPlugFilePHlsl PHlsl.Txt
-CPlugFilePng png
-CPlugFileSvg .Svg
-CPlugFileText txt
-CPlugFileTextScript Script.txt
-CPlugFileTga tga
-CPlugFileVHlsl VHlsl.Txt
-CPlugFileZip zip
-CPlugFont Font.Gbx
-CPlugFontBitmap Font.Gbx
-CPlugFurWind FurWind.Gbx
-CPlugGpuCompileCache GpuCache.Gbx
-CPlugMaterial Material.Gbx
-CPlugMaterialFx MaterialFx.Gbx
-CPlugMaterialFxDynaBump MaterialFx.Gbx
-CPlugMaterialFxDynaMobil MaterialFx.Gbx
-CPlugMaterialFxFur MaterialFx.Gbx
-CPlugMaterialFxs MaterialFx.Gbx
-CPlugMaterialUserInst Mat.Gbx
-CPlugModel Model.Gbx
-CPlugModelFences ModelFences.Gbx
-CPlugModelFur ModelFur.Gbx
-CPlugModelShading PlugModelShading.Gbx
-CPlugMusic Music.Gbx
-CPlugParticleEmitterModel ParticleModel.Gbx
-CPlugParticleEmitterSubModel ParticleEmitterSubModel.Gbx
-CPlugPointsInSphereOpt PointsInSphere.Gbx
-CPlugPoissonDiscDistribution PoissonDiscDistribution.Gbx
-CPlugProbe PlugProbe.Gbx
-CPlugShaderSprite Shader.Gbx
-CPlugShaderSpritePath Shader.Gbx
-CPlugShieldModel Shield.Gbx
-CPlugSound Sound.Gbx
-CPlugSoundEngine SoundEngine.Gbx
-CPlugSoundEngine2 SoundEngine.Gbx
-CPlugSoundGauge SoundGauge.Gbx
-CPlugSoundMood SoundMood.Gbx
-CPlugSoundMulti Sound.Gbx
-CPlugSoundSurface SoundSurface.Gbx
-CPlugSphericalHarmonics SphericalHarmonics.Gbx
-CPlugTrainModel Train.Gbx
-CPlugTrainWagonModel Wagon.gbx
-CPlugTrainWagonModelCustom WagonCustom.Gbx
-CPlugTreeGenSolid GenSolid.Gbx
-CPlugTreeGenText Text.Gbx
-CPlugTurret Turret.Gbx
-CPlugVehicleCameraHmdExternalModel CamHmdExt.gbx
-CPlugVehicleCameraInternalModel VehicleCameraInternalModel.gbx
-CPlugVehicleCameraRace2Model VehicleCameraRace2Model.gbx
-CPlugVehicleCameraRace3Model VehicleCameraRace3Model.gbx
-CPlugVehicleCameraRaceModel VehicleCameraRaceModel.gbx
-CPlugVehicleCarPhyTuning VehicleTuning.Gbx
-CPlugVehicleMaterial VehicleMaterial.Gbx
-CPlugVehiclePhyTunings VehicleTunings.Gbx
-CPlugViewDepLocator ViewDepLocator.Gbx
-CPlugVisEntFxModel VisEntFx.Gbx
-CPlugVisual Visual.Gbx
-CPlugWeatherModel WeatherModel.Gbx
-CScene2d Scene2d.Gbx
-CScene3d Scene3d.Gbx
-CSceneConfig SceneConfig.Gbx
-CSceneFx SceneFx.Gbx
-CSceneFxBloom SceneFx.Gbx
-CSceneFxBloomHdr SceneFx.Gbx
-CSceneFxCameraBlend SceneFx.Gbx
-CSceneFxCellEdge SceneFx.Gbx
-CSceneFxColors SceneFx.Gbx
-CSceneFxDistor2d SceneFx.Gbx
-CSceneFxEdgeBlender SceneFx.Gbx
-CSceneFxFlares SceneFx.Gbx
-CSceneFxHeadTrack SceneFx.Gbx
-CSceneFxMotionBlur SceneFx.Gbx
-CSceneFxNod SceneFxNod.Gbx
-CSceneFxOccZCmp SceneFx.Gbx
-CSceneFxOverlay SceneFx.Gbx
-CSceneFxStereoscopy SceneFx.Gbx
-CSceneFxSuperSample SceneFx.Gbx
-CSceneFxToneMapping SceneFx.Gbx
-CSceneLight SceneLight.Gbx
-CSceneMgrWeather SceneFx.Gbx
-CSceneMobil Mobil.Gbx
-CSceneMobilCharVis Character.Gbx
-CSceneMobilClouds MobilClouds.Gbx
-CSceneMood SceneMood.Gbx
-CSceneObjectLink Link.Gbx
-CSceneToy Toy.Gbx
-CSceneToySea Sea.Gbx
-CSceneToySeaHoule SeaHoule.Gbx
-CSceneToySeaHouleFixe SeaHouleFixe.Gbx
-CSceneToySeaHouleTable SeaHouleTable.Gbx
-CSceneVehicleCarMarksModel CarMarksModel.Gbx
-CSceneVehicleCarMarksModelSub CarMarksModelSub.Gbx
-CShootMania TitleCore.Gbx
-CSmArenaResource SmArenaResource.Gbx
-CSystemConfig SystemConfig.Gbx
-CSystemDependenciesList RefBuffer.Gbx
-CTrackMania ManiaPlanet.Gbx
-CTrackManiaControlCard Frame.Gbx
-CTrackManiaControlCheckPointList .Frame.Gbx
-CTrackManiaControlMatchSettingsCard Frame.Gbx
-CTrackManiaControlPlayerInfoCard Frame.Gbx
-CTrackManiaCore TitleCore.Gbx
-CTrackManiaMenus TrackManiaMenus.Gbx
-CTrackManiaResource TrackManiaResource.Gbx
-CVisionResourceFile VisionResourceFile.Gbx
+01026000 CMwRefBuffer RefBuffer.Gbx FidCache.Gbx
+01067000 CMwCmdBlockMain Script.Gbx
+010C1000 CMwRefBufferSelect BufferSelect.Gbx
+03001000 CGameManiaTitle Title.Gbx
+03009000 CGameMenu Menu.Gbx
+0300B000 CGameMenuFrame Frame.Gbx
+03013000 CGameManiaPlanet ManiaPlanet.Gbx
+03019000 CGameMenuColorEffect ColorEffect.Gbx
+03024000 CGameCtnMediaBlock3dStereo GameCtnMediaBlock3dStereo.Gbx
+03029000 CGameCtnMediaBlockTriangles GameCtnMediaBlockTriangles.Gbx
+0302D000 CGameResources GameResources.Gbx TMInterface.Gbx
+03032000 CGameMenuScaleEffect ScaleEffect.Gbx
+03033000 CGameCtnCollection Collection.Gbx TMCollection.Gbx TMElementColl.Gbx
+03035000 CGameVskObjectInfo ObjInfo.Gbx
+03038000 CGameCtnDecoration Decoration.Gbx TMDecoration.Gbx
+03039000 CGameCtnDecorationAudio DecorationAudio.Gbx TMDecorationAudio.Gbx
+0303A000 CGameCtnDecorationMood DecorationMood.Gbx TMDecorationMood.Gbx
+0303B000 CGameCtnDecorationSize DecorationSize.Gbx TMDecorationSize.Gbx
+0303C000 CGameCtnDecorationTerrainModifier TMTerrainModifier.Gbx
+0303D000 CGameAdvertising GameAdvertisement.Gbx
+0303F000 CGameGhost Ghost.Gbx
+03041000 CGameControlCameraFirstPerson CtrlCamFirstPerson.Gbx
+03042000 CGameControlCameraThirdPerson CtrlCamThirdPerson.Gbx
+03043000 CGameCtnChallenge Map.Gbx Challenge.Gbx
+03046000 CGameCtnParticleParam ParticleParam.Gbx
+03048000 CGameCtnPainterSetting PainterSetting.Gbx
+0304B000 CGameCtnMediaBlockTriangles2D GameCtnMediaBlockTriangles2D.Gbx
+0304C000 CGameCtnMediaBlockTriangles3D GameCtnMediaBlockTriangles3D.Gbx
+0304F000 CGameCtnBlockInfoFlat EDFlat.Gbx TMEDFlat.Gbx
+03050000 CGameCtnBlockInfoFrontier EDFrontier.Gbx TMEDFrontier.Gbx
+03051000 CGameCtnBlockInfoClassic EDClassic.Gbx TMEDClassic.Gbx
+03052000 CGameCtnBlockInfoRoad EDRoad.Gbx TMEDRoad.Gbx
+03053000 CGameCtnBlockInfoClip EDClip.Gbx TMEDClip.Gbx
+03054000 CGameCtnBlockInfoSlope EDSlope.Gbx TMEDSlope.Gbx
+03055000 CGameCtnBlockInfoPylon EDPylon.Gbx TMEDPylon.Gbx
+03056000 CGameCtnBlockInfoRectAsym EDRectAsym.Gbx TMEDRectAsym.Gbx
+0305C000 CGameCtnZone TMZone.Gbx
+0305D000 CGameCtnZoneFlat ZoneFlat.Gbx TMZoneFlat.Gbx
+0305E000 CGameCtnZoneFrontier ZoneFrontier.Gbx TMZoneFrontier.Gbx
+0305F000 CGameSkinnedNod GameSkinnedNod.Gbx
+0306B000 CGameControlCamera CtrlCam.Gbx
+0306D000 CGameControlCameraFree CtrlCamFree.Gbx
+0306E000 CGameControlCameraOrbital3d CtrlCamOrbital3d.Gbx
+03072000 CGameControlCameraTarget CtrlCamTarget.Gbx
+03078000 CGameCtnMediaTrack GameCtnMediaTrack.Gbx
+03079000 CGameCtnMediaClip Clip.Gbx
+0307A000 CGameCtnMediaClipGroup GameCtnMediaClipGroup.Gbx
+0307D000 CGameCtnMediaBlockUi GameCtnMediaBlockUi.Gbx
+03080000 CGameCtnMediaBlockFxColors GameCtnMediaBlockFxColors.Gbx
+03081000 CGameCtnMediaBlockFxBlurDepth GameCtnMediaBlockFxBlurDepth.Gbx
+03082000 CGameCtnMediaBlockFxBlurMotion GameCtnMediaBlockFxBlurMotion.Gbx
+03083000 CGameCtnMediaBlockFxBloom GameCtnMediaBlockFxBloom.Gbx
+03084000 CGameCtnMediaBlockCameraGame GameCtnMediaBlockCamGame.Gbx
+0308C000 CGamePlayerProfile Profile.Gbx
+0308D000 CGamePlayerScore Scores.Gbx
+0308E000 CGameLeague League.Gbx
+03090000 CGameCtnCampaign GameCtnCampaign.Gbx ConstructionCampaign.Gbx Campaign.Gbx
+03092000 CGameCtnGhost Ghost.Gbx
+03093000 CGameCtnReplayRecord Replay.Gbx TMReplay.Gbx
+0309A000 CGameControlCard Frame.Gbx
+0309B000 CGameControlCardManager CtnCtlCardMng.Gbx
+0309C000 CGameControlDataType CtnDispType.Gbx
+030A1000 CGameCtnMediaBlockCameraPath CtnMediaBlockCamPath.Gbx
+030A2000 CGameCtnMediaBlockCameraCustom CtnMediaBlockCamCustom.Gbx
+030A4000 CGameCtnMediaBlockCameraEffectShake CtnMediaBlockCamFxShake.Gbx
+030A5000 CGameCtnMediaBlockImage GameCtnMediaBlockImage.Gbx
+030A6000 CGameCtnMediaBlockMusicEffect CtnMediaBlockMusicFx.Gbx
+030A7000 CGameCtnMediaBlockSound GameCtnMediaBlockSound.Gbx
+030A8000 CGameCtnMediaBlockText GameCtnMediaBlockText.Gbx
+030A9000 CGameCtnMediaBlockTrails GameCtnMediaBlockTrails.Gbx
+030AB000 CGameCtnMediaBlockTransitionFade CtnMediaBlockTransFade.Gbx
+030BA000 CGameControlGridCard GameGridCards.Gbx
+030BC000 CGameControlCardCtnChallengeInfo Frame.Gbx
+030BD000 CGameControlCardGeneric Frame.Gbx
+030BE000 CGameControlCardLeague Frame.Gbx
+030BF000 CGameControlCardCtnNetServerInfo Frame.Gbx
+030C1000 CGameControlCardLadderRanking Frame.Gbx
+030C2000 CGameControlCardMessage Frame.Gbx
+030C7000 CGameControlCardProfile Frame.Gbx
+030C8000 CGameControlCardCtnReplayRecordInfo Frame.Gbx
+030CE000 CGameRemoteBufferDataInfoSearchs Frame.Gbx
+030D3000 CGameCtnApp GameCtnApp.Gbx
+030D5000 CGameControlCardCtnArticle Frame.Gbx
+030D8000 CGameControlCardCtnChapter Frame.Gbx
+030DA000 CGameControlCardCtnGhostInfo Frame.Gbx
+030DD000 CGameControlCardCtnVehicle Frame.Gbx
+030E0000 CGameScriptDebuggerWorkspace ScriptWorkspace.Gbx
+030E5000 CGameCtnMediaBlockGhost GameCtnMediaBlockGhost.Gbx
+030F3000 CGamePlaygroundControlScores Frame.Gbx
+0310C000 CGameCtnAnchorPoint AnchorPoint.Gbx
+0310D000 CGameCtnMacroBlockInfo Macroblock.Gbx
+03114000 CGameCtnMacroDecals MacroDecals.Gbx
+0311D000 CGameCtnZoneGenealogy ZoneGenealogy.Gbx
+03126000 CGameCtnMediaBlockDOF GameCtnMediaBlockDOF.Gbx
+03127000 CGameCtnMediaBlockToneMapping GameCtnMediaBlockToneMapping.Gbx
+03128000 CGameCtnMediaBlockBloomHdr GameCtnMediaBlockBloomHdr.Gbx
+0312A000 CGameCtnMediaBlockManialink GameCtnMediaBlockManialink.Gbx
+03133000 CGameCtnMediaBlockVehicleLight GameCtnMediaBlockVehicleLight.Gbx
+03136000 CGamePlaygroundControlSmPlayers Frame.Gbx
+03137000 CGamePlaygroundControlMessages Frame.Gbx
+03139000 CGameCtnMediaBlockFxCameraMap GameCtnMediaBlockFxCameraMap.Gbx
+0314C000 CGameCtnBlockInfoTransition EDTransition.Gbx
+0314D000 CGameCtnZoneTransition ZoneTransition.Gbx
+03152000 CGameControlCardBuddy Frame.Gbx
+03165000 CGameCtnMediaBlockDirtyLens GameCtnMediaBlockDirtyLens.Gbx
+03168000 CGamePodiumInfo GamePodiumInfo.Gbx
+0316C000 CGameCtnMediaBlockColoringCapturable GameCtnMediaBlockColoringCapturable.Gbx
+0316D000 CGameCtnMediaBlockFxCameraBlend GameCtnMediaBlockFxCameraBlend.Gbx
+0316F000 CGameCoverFlowDesc GameCoverFlow.Gbx
+03172000 CGameCtnMediaBlockColoringBase GameCtnMediaBlockColoringBase.Gbx
+03186000 CGameCtnMediaBlockColorGrading GameCtnMediaBlockColorGrading.Gbx
+03195000 CGameCtnMediaBlockInterface GameCtnMediaBlockInterface.Gbx
+03196000 CGameCtnMediaBlockObject GameCtnMediaBlockObject.Gbx
+03199000 CGameCtnMediaBlockFog GameCtnMediaBlockFog.Gbx
+031AA000 CGameCtnMediaBlockDecal2d GameCtnMediaBlockDecal2d.Gbx
+031CC000 CGameUserProfile Profile.Gbx
+031CE000 CGameControlCameraTrackManiaRace3 CtrlCamTmRace3.Gbx
+031CF000 CGameControlCameraTrackManiaRace2 CtrlCamTmRace2.Gbx
+031D6000 CGameBadgeStickerSlots StickerSlots.Gbx
+03271000 CGameCtnDecorationMaterialModifiers DecorationMaterialModifiers.Gbx
+03340000 CGameCtnBlockInfoClipVertical EDVerticalClip.Gbx
+0335B000 CGameCtnBlockInfoClipHorizontal EDHorizontalClip.Gbx
+04008000 GxFogBlender FogBlender.Gbx
+05002000 CFuncKeys FuncKey.Gbx
+05004000 CFuncKeysTransQuat KeysTransQuat.Gbx
+0500A000 CFuncKeysPath KeysPath.Gbx
+0500E000 CFuncEnum FuncEnum.Gbx
+05010000 CFunc Func.Gbx
+05014000 CFuncShaders FuncShader.Gbx
+05015000 CFuncShaderLayerUV FuncShader.Gbx
+0501A000 CFuncKeysReal FuncKeysReals.Gbx
+0501E000 CFuncTreeRotate FuncTree.Gbx
+05020000 CFuncPathMesh PathMesh.Gbx
+05033000 CFuncShaderTweakKeysTranss FuncShaderTweakKeysTranss.Gbx
+05034000 CFuncWeather FuncWeather.Gbx
+05035000 CFuncPuffLull FuncPuffLull.Gbx
+05038000 CFuncColorGradient FuncColorGradient.Gbx
+05039000 CFuncFullColorGradient FuncFullColorGradient.Gbx
+0503A000 CFuncClouds FuncClouds.Gbx
+05046000 CFuncCloudsParam FuncCloudsParam.Gbx
+05047000 CFuncCloudsSolids FuncCloudsSolids.Gbx
+06021000 CHmsLightMap LightMap.Gbx PackLightMap.Gbx
+06023000 CHmsLightMapMood LightMapMood.Gbx PackLightMapMood.Gbx
+06026000 CHmsAmbientOcc AmbientOcc.Gbx
+07004000 CControlUiElement UiElement.Gbx
+07006000 CControlLabel Toy.Gbx
+0700C000 CControlLayout ControlLayout.Gbx
+0700D000 CControlListItem ListItem.Gbx
+0700E000 CControlUiDockable UiElement.Gbx
+07010000 CControlEffectSimi ControlEffect.Gbx
+07011000 CControlEffectMotion ControlEffect.Gbx
+07016000 CControlFrame Frame.Gbx
+07017000 CControlStyle ControlStyle.Gbx
+07019000 CControlUrlLinks ControlUrlLinks.Gbx Toy.Gbx
+0701C000 CControlEffectMaster ControlEffectMaster.Gbx
+07023000 CControlEffectCombined ControlEffect.Gbx
+07025000 CControlEffectMoveFrame ControlEffectMoveFrame.Gbx
+07026000 CControlFrameStyled FrameStyled.Gbx
+07027000 CControlStyleSheet StyleSheet.Gbx
+07030000 CControlPager Pager.Gbx
+07032000 CControlFrameAnimated FrameAnimated.Gbx
+0802B000 CMotionShader MotionTrackShader.Gbx
+0802D000 CMotionCmdBaseParams MotionBase.Gbx
+09003000 CPlugCrystal Crystal.Gbx
+09005000 CPlugSolid Solid.Gbx
+09006000 CPlugVisual Visual.Gbx
+0900C000 CPlugSurface Shape.Gbx HitShape.Gbx
+0900E000 CPlugModelShading PlugModelShading.Gbx
+09011000 CPlugBitmap Texture.Gbx
+0901A000 CPlugSound Sound.Gbx Music.Gbx SoundMulti.Gbx
+0901B000 CPlugSoundMood SoundMood.Gbx Sound.Gbx
+0901C000 CPlugMusic Music.Gbx
+0901D000 CPlugLight Light.Gbx
+09023000 CPlugFileTga tga
+09024000 CPlugFileDds dds
+09026000 CPlugShaderApply Shader.Gbx ShaderMaterial.Gbx ShaderApply.Gbx
+09029000 CPlugSoundEngine2 SoundEngine.Gbx
+0902F000 CPlugFileGen ImageGen.Gbx
+09034000 CPlugAudioBalance AudioBalance.Gbx
+09036000 CPlugBitmapPacker TexturePack.Gbx
+09039000 CPlugAudioEnvironment AudioEnvironment.Gbx
+0903D000 CPlugFilePng png
+0903F000 CPlugTreeGenText Text.Gbx
+09041000 CPlugFileText txt
+09049000 CPlugFileFidCache ScanCache.Gbx
+0904D000 CPlugFont Font.Gbx
+0904E000 CPlugFontBitmap Font.Gbx
+09052000 CPlugSoundGauge SoundGauge.Gbx
+09053000 CPlugGpuCompileCache GpuCache.Gbx
+09054000 CPlugFileTextScript Script.txt
+0905E000 CPlugSoundSurface SoundSurface.Gbx
+09064000 CPlugSoundMulti Sound.Gbx SoundMulti.Gbx
+09066000 CPlugPointsInSphereOpt PointsInSphere.Gbx
+09068000 CPlugShaderSprite Shader.Gbx
+09069000 CPlugShaderSpritePath Shader.Gbx
+0906C000 CPlugFileSvg .Svg
+09074000 CPlugFileVHlsl VHlsl.Txt
+09077000 CPlugFilePHlsl PHlsl.Txt
+09078000 CPlugBitmapDecals BitmapDecals.Gbx
+09079000 CPlugMaterial Material.Gbx
+0907A000 CPlugMaterialFx MaterialFx.Gbx
+0907C000 CPlugMaterialFxFur MaterialFx.Gbx
+0907D000 CPlugMaterialFxs MaterialFx.Gbx
+09081000 CPlugMaterialFxDynaBump MaterialFx.Gbx
+09082000 CPlugMaterialFxDynaMobil MaterialFx.Gbx
+09084000 CPlugFileZip zip
+0908E000 CPlugSoundEngine SoundEngine.Gbx Sound.Gbx
+09092000 CPlugModel Model.Gbx
+09094000 CPlugFileGpuFxD3d VehicleGearBox.Gbx
+0909A000 CPlugTreeGenSolid GenSolid.Gbx
+0909D000 CPlugModelFur ModelFur.Gbx
+090A0000 CPlugViewDepLocator ViewDepLocator.Gbx
+090A2000 CPlugDecoratorTree DecoTree.Gbx
+090A3000 CPlugDecoratorSolid DecoSolid.Gbx
+090A4000 CPlugModelFences ModelFences.Gbx
+090A6000 CPlugFurWind FurWind.Gbx
+090A7000 CPlugDecalModel Decal.Gbx
+090AA000 CPlugSphericalHarmonics SphericalHarmonics.Gbx
+090AB000 CPlugBitmapArray TextureArray.Gbx
+090AD000 CPlugFileExr exr
+090AE000 CPlugPoissonDiscDistribution PoissonDiscDistribution.Gbx
+090AF000 CPlugFileHdr hdr
+090B0000 CPlugAnimFile Anim.Gbx
+090B2000 CPlugParticleEmitterSubModel ParticleEmitterSubModel.Gbx
+090B3000 CPlugParticleEmitterModel ParticleModel.Gbx
+090B4000 CPlugBeamEmitterModel BeamModel.Gbx
+090B7000 CPlugParticleMaterialImpactModel ParticleMaterialImpactModel.Gbx
+090B8000 CPlugBitmapApplyArray SamplerArray.Gbx
+090BA000 CPlugSkel Skel.Gbx
+090BB000 CPlugSolid2Model Mesh.Gbx Solid2.Gbx
+090BF000 CPlugWeatherModel WeatherModel.Gbx MotionManagerWeathers.Gbx
+090C1000 CPlugFxLensFlareArray FxLensFlareArray.Gbx
+090C7000 CPlugCharVisModel PlugCharVisModel.Gbx
+090CC000 CPlugShieldEmitterModel ShieldModel.Gbx
+090CD000 CPlugBulletModel Bullet.Gbx
+090D3000 CPlugFogMatter FogMatter.Gbx
+090D5000 CPlugFogVolumeBox FogBox.Gbx
+090D8000 CPlugFxLightning FxLightning.Gbx
+090D9000 CPlugFxWindOnDecal FxWindOnDecal.Gbx
+090E1000 CPlugFxWindOnTreeSprite FxWindOnTreeSprite.Gbx
+090E5000 CPlugFlockModel PlugFlockModel.Gbx MotionEmitterFlockModel.Gbx
+090E7000 CPlugVehicleVisModel VehicleVisModel.Gbx
+090E8000 CPlugVehicleVisModelShared VehicleVisModel.Gbx VehicleStruct.Gbx
+090EC000 CPlugVehiclePhyTunings VehicleTunings.Gbx
+090ED000 CPlugVehicleCarPhyTuning VehicleTuning.Gbx
+090EF000 CPlugVehicleCameraRace3Model VehicleCameraRace3Model.Gbx Cam.Gbx
+090F1000 CPlugVehicleMaterial VehicleMaterial.Gbx
+090F4000 CPlugGameSkin GameSkin.Gbx
+090F5000 CPlugFxHdrScales_Tech3 FxHdrScales_Tech3.Gbx
+090F6000 CPlugVehicleCameraRace2Model VehicleCameraRace2Model.Gbx Cam.Gbx
+090F7000 CPlugVehicleCameraInternalModel VehicleCameraInternalModel.Gbx CtrlCam.Gbx Cam.Gbx
+090F8000 CPlugAnimLocSimple AnimLocSimple.Gbx
+090FD000 CPlugMaterialUserInst Mat.Gbx
+09105000 CPlugBeamEmitterSubModel BeamModel.Gbx
+09106000 CPlugProbe PlugProbe.Gbx
+0910B000 CPlugCamShakeModel CamShakeModel.Gbx
+0910F000 CPlugTurret Turret.Gbx
+09111000 CPlugShieldModel Shield.Gbx
+09112000 CPlugVehicleCameraRaceModel VehicleCameraRaceModel.Gbx
+09113000 CPlugVehicleCameraHmdExternalModel CamHmdExt.Gbx
+09115000 CPlugVisEntFxModel VisEntFx.Gbx
+09119000 CPlugPath Path.Gbx
+0911B000 CPlugTrainModel Train.Gbx
+0911C000 CPlugTrainWagonModel Wagon.Gbx
+09121000 CPlugTrainWagonModelCustom WagonCustom.Gbx
+09123000 CPlugEntitySpawner EntitySpawner.Gbx
+09144000 CPlugDynaObjectModel DynaObject.Gbx
+09145000 CPlugPrefab Prefab.Gbx
+09149000 CPlugFxAnimFromTexture1dArray FxAnimFromTex1DArray.Gbx
+09153000 CPlugVFXFile VFX.Gbx
+09159000 CPlugStaticObjectModel StaticObject.Gbx
+0915C000 CPlugFxSystem FxSystem.Gbx FxSys.Gbx
+09160000 CPlugPlacementPatch PlacementPatch.Gbx
+09180000 CPlugClouds FuncClouds.Gbx
+09181000 CPlugDayTime FuncDayTime.Gbx
+09182000 CPlugCloudsParam FuncCloudsParam.Gbx
+09183000 CPlugCloudsSolids FuncCloudsSolids.Gbx
+09185000 CPlugCurveSimpleNod FuncKeysReals.Gbx
+09187000 NPlugItemPlacement_SClass ItemPlacementClass.Gbx
+0A002000 CScene2d Scene2d.Gbx
+0A003000 CScene3d Scene3d.Gbx
+0A00B000 CSceneLight SceneLight.Gbx
+0A011000 CSceneMobil Mobil.Gbx
+0A012000 CSceneToy Toy.Gbx
+0A014000 CSceneObjectLink Link.Gbx
+0A01C000 CScene3d Scene3d.Gbx
+0A02B000 CSceneVehicleCar Vehicle.Gbx TrackManiaVehicle.Gbx
+0A02C000 CSceneMobilClouds MobilClouds.Gbx
+0A034000 CSceneFxColors SceneFx.Gbx
+0A035000 CSceneFxSuperSample SceneFx.Gbx
+0A038000 CSceneFxFlares SceneFx.Gbx
+0A03A000 CSceneFxNod SceneFxNod.Gbx
+0A03B000 CSceneFxBloom SceneFx.Gbx
+0A03D000 CSceneFxToneMapping SceneFx.Gbx
+0A040000 CSceneConfig SceneConfig.Gbx
+0A042000 CSceneMood SceneMood.Gbx
+0A043000 CSceneFxStereoscopy SceneFx.Gbx
+0A044000 CSceneFxHeadTrack SceneFx.Gbx
+0A072000 CSceneFx SceneFx.Gbx
+0A074000 CSceneFxOverlay SceneFx.Gbx
+0A077000 CSceneFxDepthOfField SceneFx.Gbx
+0A078000 CSceneFxMotionBlur SceneFx.Gbx
+0A079000 CSceneFxCameraBlend SceneFx.Gbx
+0A07A000 CSceneFxGrayAccum SceneFx.Gbx
+0A07B000 CSceneFxDistor2d SceneFx.Gbx
+0A07D000 CSceneFxEdgeBlender SceneFx.Gbx
+0A07E000 CSceneFxOccZCmp SceneFx.Gbx
+0A07F000 CSceneFxBloomHdr SceneFx.Gbx
+0A080000 CSceneVehicleGlider Toy.Gbx
+0A081000 CSceneVehicleCarMarksModel CarMarksModel.Gbx
+0A082000 CSceneVehicleCarMarksModelSub CarMarksModelSub.Gbx
+0A084000 CSceneFxCellEdge SceneFx.Gbx
+0A08B000 CSceneMgrWeather SceneFx.Gbx
+0A101000 CSceneToySea Sea.Gbx
+0A103000 CSceneToyVehicleTrackMania TrackManiaVehicle.Gbx
+0A10A000 CSceneToySeaHoule SeaHoule.Gbx
+0A10C000 CSceneToySeaHouleTable SeaHouleTable.Gbx
+0A10D000 CSceneToySeaHouleFixe SeaHouleFixe.Gbx
+0A401000 CSceneMobilCharVis Character.Gbx
+0B005000 CSystemConfig SystemConfig.Gbx
+0B010000 CSystemDependenciesList RefBuffer.Gbx
+0C012000 CVisionResourceFile VisionResourceFile.Gbx
+0C030000 CVisPostFx_ToneMapping SceneFx.Gbx
+0C031000 CVisPostFx_MotionBlur SceneFx.Gbx
+0C032000 CVisPostFx_BloomHdr SceneFx.Gbx
+10022000 COalDevice OpenALDevice.Gbx
+11001000 CScriptTraitsPersistent ScriptCache.Gbx
+1300D000 CInputReplay InputsReplay.Gbx InputReplay.Gbx
+24001000 CTrackMania ManiaPlanet.Gbx TrackMania.Gbx
+24013000 CTrackManiaCore TitleCore.Gbx
+24018000 CTrackManiaRace1P TMRace.Gbx
+2402E000 CTrackManiaMenus TrackManiaMenus.Gbx
+24037000 CTrackManiaRaceNetRounds TMRace.Gbx
+24042000 CTrackManiaRace2PTurnBased TMRace.Gbx
+24045000 CTrackManiaRaceNetTimeAttack TMRace.Gbx
+24055000 CTrackManiaRace1PSpecial TMRace.Gbx
+24056000 CTrackManiaRaceNetLaps TMRace.Gbx
+2406E000 CTrackManiaControlCheckPointList .Frame.Gbx
+24078000 CTrackManiaRace1PGhosts TMRace.Gbx
+24079000 CTrackManiaRace1PCrazy TMRace.Gbx
+24085000 CGameControlCameraTrackManiaRace CtrlCamTmRace.Gbx
+24086000 CGameControlCameraTrackManiaRace2 CtrlCamTmRace2.Gbx
+24087000 CGameControlCameraTrackManiaRace3 CtrlCamTmRace3.Gbx
+2408D000 CTrackManiaControlPlayerInfoCard Frame.Gbx
+2408F000 CTrackManiaControlCard Frame.Gbx
+240C4000 CTrackManiaControlMatchSettingsCard Frame.Gbx
+240D6000 CTrackManiaResource TrackManiaResource.Gbx
+2D000000 CShootMania TitleCore.Gbx
+2D020000 CSmArenaResource SmArenaResource.Gbx
+2E002000 CGameItemModel Item.Gbx ObjectInfo.Gbx Block.Gbx TMVehicle.Gbx TrackManiaVehicle.Gbx ConstructionVehicle.Gbx
+2E003000 CGameModulePlaygroundAltimeterModel Module.Gbx
+2E004000 CGameModulePlaygroundThrottleModel Module.Gbx
+2E006000 CGameObjectPhyModel GameObjectPhyModel.Gbx
+2E007000 CGameObjectVisModel GameObjectVisModel.Gbx
+2E008000 CGameActionModel Action.Gbx
+2E00A000 CGameActionFxResources GameActionFxResources.Gbx
+2E00B000 CGameGateModel Gate.Gbx
+2E00C000 CGameTeleporterModel Teleporter.Gbx
+2E00D000 CGameArmorModel Armor.Gbx
+2E00E000 CGameSpawnModel Spawn.Gbx
+2E00F000 CGameCaptureZoneModel CaptureZone.Gbx
+2E010000 CGameTurbineModel Turbine.Gbx
+2E014000 CGameModuleMenuModel Module.Gbx
+2E016000 CGameModulePlaygroundInventoryModel Module.Gbx
+2E017000 CGameModulePlaygroundScoresTableModel Module.Gbx
+2E018000 CGameModulePlaygroundStoreModel Module.Gbx
+2E019000 CGameModulePlaygroundHudModel Module.Gbx
+2E01A000 CGameModuleMenuPageModel Module.Gbx
+2E01B000 CGameEditorModel Editor.Gbx
+2E01E000 CGameModulePlaygroundChronoModel Module.Gbx
+2E01F000 CGameModulePlaygroundSpeedMeterModel Module.Gbx
+2E020000 CGameItemPlacementParam PlaceParam.Gbx
+2E021000 CGameModulePlaygroundPlayerStateModel Module.Gbx
+2E022000 CGameModulePlaygroundTeamStateModel Module.Gbx
+2E024000 CGamePixelArtModel PixelArt.Gbx
+2E025000 CGameBlockItem BlockItem.Gbx
+2E028000 CGameCustomBlockModel Block.Gbx
+2F0CA000 NPlugDyna_SKinematicConstraint KinematicConstraint.Gbx

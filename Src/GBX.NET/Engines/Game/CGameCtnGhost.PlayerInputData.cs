@@ -756,6 +756,11 @@ public partial class CGameCtnGhost
             }
         }
 
+        public override string ToString()
+        {
+            return $"PlayerInputData ({Inputs.Count} inputs, version: {version})";
+        }
+
         public enum EStrafe : byte
         {
             None,

@@ -9,9 +9,6 @@ Gbx.LZO = new GBX.NET.LZO.Lzo();
 #if (EnableZlib)
 Gbx.ZLib = new GBX.NET.ZLib.ZLib();
 #endif
-#if (EnableCrc32)
-Gbx.CRC32 = new GBX.NET.Hashing.CRC32();
-#endif
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");

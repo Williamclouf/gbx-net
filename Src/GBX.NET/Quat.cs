@@ -5,6 +5,7 @@ namespace GBX.NET;
 public readonly record struct Quat(float X, float Y, float Z, float W)
 {
     public static readonly Quat Zero = new();
+    public static readonly Quat Identity = new(0, 0, 0, 1);
 
     public Quat(Vec3 xyz, float w) : this(xyz.X, xyz.Y, xyz.Z, w) { }
 
@@ -42,7 +43,11 @@ public readonly record struct Quat(float X, float Y, float Z, float W)
     public static Quat operator -(Quat a) => new(-a.X, -a.Y, -a.Z, -a.W);
     public static Quat operator -(Quat a, Quat b) => new(a.X - b.X, a.Y - b.Y, a.Z - b.Z, a.W - b.W);
 
-    public static Quat operator *(Quat a, Quat b) => new(a.X * b.X, a.Y * b.Y, a.Z * b.Z, a.W * a.W);
+    public static Quat operator *(Quat a, Quat b) => new(
+        a.W * b.X + a.X * b.W + a.Y * b.Z - a.Z * b.Y,
+        a.W * b.Y - a.X * b.Z + a.Y * b.W + a.Z * b.X,
+        a.W * b.Z + a.X * b.Y - a.Y * b.X + a.Z * b.W,
+        a.W * b.W - a.X * b.X - a.Y * b.Y - a.Z * b.Z);
     public static Quat operator *(Quat a, float b) => new(a.X * b, a.Y * b, a.Z * b, a.W * b);
 
     public static Quat operator *(float a, Quat b) => b * a;

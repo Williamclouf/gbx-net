@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Components.Authorization;
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 
 GBX.NET.Gbx.LZO = new GBX.NET.LZO.Lzo();
-GBX.NET.Gbx.CRC32 = new GBX.NET.Hashing.CRC32();
 GBX.NET.Gbx.ZLib = new GBX.NET.ZLib.ZLib();
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);

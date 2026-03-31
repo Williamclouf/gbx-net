@@ -1,5 +1,4 @@
 ﻿using GBX.NET.Managers;
-using Microsoft.Extensions.Logging;
 
 namespace GBX.NET.Engines.Plug;
 
@@ -13,18 +12,37 @@ public partial class CPlugEntRecordData : IReadableWritable
     private List<NoticeRecordListElem> bulkNoticeList = [];
     private List<CustomModulesDeltaList> customModulesDeltaLists = [];
 
-    public CompressedData CompressedData { get; set; } = new(0, []);
+    private ZlibData? compressedData;
+    public ZlibData? CompressedData { get => compressedData; set => compressedData = value; }
+
+#if NET9_0_OR_GREATER
+    private readonly Lock CompressedDataLock = new();
+#else
+    private readonly object CompressedDataLock = new();
+#endif
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
     public TimeInt32 Start
     {
         get
         {
-            if (Gbx.ZLib is null && start is null && CompressedData?.Data.Length > 0)
+            // Record data is not compressed in version 4 and below
+            if (start.HasValue || GetVersion() < 5) return start.GetValueOrDefault();
+            if (CompressedData is null || CompressedData.Parsed) return start.GetValueOrDefault();
+
+            lock (CompressedDataLock)
             {
-                throw new ZLibNotDefinedException();
+                if (start.HasValue) return start.Value;
+                ParseRecordData(); // sets start and CompressedData.Parsed to true
+                return start.GetValueOrDefault();
             }
-            return start ?? TimeInt32.Zero;
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                start = value;
+            }
         }
     }
 
@@ -33,11 +51,23 @@ public partial class CPlugEntRecordData : IReadableWritable
     {
         get
         {
-            if (Gbx.ZLib is null && end is null && CompressedData?.Data.Length > 0)
+            // Record data is not compressed in version 4 and below
+            if (end.HasValue || GetVersion() < 5) return end.GetValueOrDefault();
+            if (CompressedData is null || CompressedData.Parsed) return end.GetValueOrDefault();
+
+            lock (CompressedDataLock)
             {
-                throw new ZLibNotDefinedException();
+                if (end.HasValue) return end.Value;
+                ParseRecordData(); // sets end and CompressedData.Parsed to true
+                return end.GetValueOrDefault();
             }
-            return end ?? TimeInt32.Zero;
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                end = value;
+            }
         }
     }
 
@@ -46,14 +76,24 @@ public partial class CPlugEntRecordData : IReadableWritable
     {
         get
         {
-            if (Gbx.ZLib is null && (entRecordDescs is null || entRecordDescs.Length == 0) && CompressedData?.Data.Length > 0)
-            {
-                throw new ZLibNotDefinedException();
-            }
-            return entRecordDescs ?? [];
-        }
+            // Record data is not compressed in version 4 and below
+            if (entRecordDescs.Length > 0 || GetVersion() < 5) return entRecordDescs;
+            if (CompressedData is null || CompressedData.Parsed) return entRecordDescs;
 
-        set => entRecordDescs = value;
+            lock (CompressedDataLock)
+            {
+                if (entRecordDescs.Length > 0) return entRecordDescs;
+                ParseRecordData(); // sets entRecordDescs and CompressedData.Parsed to true
+                return entRecordDescs;
+            }
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                entRecordDescs = value;
+            }
+        }
     }
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
@@ -61,14 +101,24 @@ public partial class CPlugEntRecordData : IReadableWritable
     {
         get
         {
-            if (Gbx.ZLib is null && (noticeRecordDescs is null || noticeRecordDescs.Length == 0) && CompressedData?.Data.Length > 0)
-            {
-                throw new ZLibNotDefinedException();
-            }
-            return noticeRecordDescs ?? [];
-        }
+            // Record data is not compressed in version 4 and below
+            if (noticeRecordDescs.Length > 0 || GetVersion() < 5) return noticeRecordDescs;
+            if (CompressedData is null || CompressedData.Parsed) return noticeRecordDescs;
 
-        set => noticeRecordDescs = value;
+            lock (CompressedDataLock)
+            {
+                if (noticeRecordDescs.Length > 0) return noticeRecordDescs;
+                ParseRecordData(); // sets noticeRecordDescs and CompressedData.Parsed to true
+                return noticeRecordDescs;
+            }
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                noticeRecordDescs = value;
+            }
+        }
     }
 
     /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
@@ -76,11 +126,22 @@ public partial class CPlugEntRecordData : IReadableWritable
     {
         get
         {
-            if (Gbx.ZLib is null && (entList is null || entList.Count == 0) && CompressedData?.Data.Length > 0)
+            if (entList.Count > 0 || GetVersion() < 5) return entList;
+            if (CompressedData is null || CompressedData.Parsed) return entList;
+
+            lock (CompressedDataLock)
             {
-                throw new ZLibNotDefinedException();
+                if (entList.Count > 0) return entList;
+                ParseRecordData(); // sets entList and CompressedData.Parsed to true
+                return entList;
             }
-            return entList ?? [];
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                entList = value;
+            }
         }
     }
 
@@ -89,11 +150,22 @@ public partial class CPlugEntRecordData : IReadableWritable
     {
         get
         {
-            if (Gbx.ZLib is null && (bulkNoticeList is null || bulkNoticeList.Count == 0) && CompressedData?.Data.Length > 0)
+            if (bulkNoticeList.Count > 0 || GetVersion() < 5) return bulkNoticeList;
+            if (CompressedData is null || CompressedData.Parsed) return bulkNoticeList;
+
+            lock (CompressedDataLock)
             {
-                throw new ZLibNotDefinedException();
+                if (bulkNoticeList.Count > 0) return bulkNoticeList;
+                ParseRecordData(); // sets bulkNoticeList and CompressedData.Parsed to true
+                return bulkNoticeList;
             }
-            return bulkNoticeList ?? [];
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                bulkNoticeList = value;
+            }
         }
     }
 
@@ -102,15 +174,26 @@ public partial class CPlugEntRecordData : IReadableWritable
     {
         get
         {
-            if (Gbx.ZLib is null && (customModulesDeltaLists is null || customModulesDeltaLists.Count == 0) && CompressedData?.Data.Length > 0)
+            if (customModulesDeltaLists.Count > 0 || GetVersion() < 7) return customModulesDeltaLists;
+            if (CompressedData is null || CompressedData.Parsed) return customModulesDeltaLists;
+
+            lock (CompressedDataLock)
             {
-                throw new ZLibNotDefinedException();
+                if (customModulesDeltaLists.Count > 0) return customModulesDeltaLists;
+                ParseRecordData(); // sets customModulesDeltaLists and CompressedData.Parsed to true
+                return customModulesDeltaLists;
             }
-            return customModulesDeltaLists ?? [];
+        }
+        set
+        {
+            lock (CompressedDataLock)
+            {
+                customModulesDeltaLists = value;
+            }
         }
     }
 
-    void IReadableWritable.ReadWrite(GbxReaderWriter rw, int v)
+    public void ReadWrite(GbxReaderWriter rw, int v = 0)
     {
         if (v >= 1)
         {
@@ -140,8 +223,41 @@ public partial class CPlugEntRecordData : IReadableWritable
 
         if (rw.Writer is not null)
         {
-            throw new NotSupportedException("Write is not supported");
+            WriteEntList(rw.Writer, v);
+
+            if (v >= 3)
+            {
+                WriteBulkNoticeList(rw.Writer);
+                WriteCustomModulesDeltaLists(rw.Writer, v);
+            }
         }
+    }
+
+    private void ParseRecordData()
+    {
+        if (CompressedData is null) throw new InvalidOperationException("CompressedData not available");
+
+        try
+        {
+            var version = GetVersion();
+
+            using var r = CompressedData.OpenDecompressedReader();
+            using var rw = new GbxReaderWriter(r);
+
+            ReadWrite(rw, version);
+
+            CompressedData.Parsed = true;
+        }
+        catch (Exception ex)
+        {
+            CompressedData.Exception = ex;
+            throw;
+        }
+    }
+
+    private int GetVersion()
+    {
+        return Chunks.Get<Chunk0911F000>()?.Version ?? throw new InvalidOperationException("Version not found (Chunk0911F000 chunk is missing)");
     }
 
     public partial class Chunk0911F000 : IVersionable
@@ -154,42 +270,11 @@ public partial class CPlugEntRecordData : IReadableWritable
 
             if (Version < 5)
             {
-                ((IReadableWritable)n).ReadWrite(rw, Version);
+                n.ReadWrite(rw, Version);
                 return;
             }
 
-            if (rw.Reader is GbxReader r)
-            {
-                var uncompressedSize = r.ReadInt32();
-                var data = r.ReadData();
-                n.CompressedData = new(uncompressedSize, data);
-
-                if (Gbx.ZLib is null)
-                {
-                    r.Logger?.LogWarning("CPlugEntRecordData was not read due to missing ZLib.");
-                }
-                else
-                {
-                    try
-                    {
-                        using var uncompressedMs = n.CompressedData.OpenDecompressedMemoryStream();
-                        using var rBuffer = new GbxReader(uncompressedMs);
-                        using var rwBuffer = new GbxReaderWriter(rBuffer);
-
-                        ((IReadableWritable)n).ReadWrite(rwBuffer, Version);
-                    }
-                    catch (Exception ex)
-                    {
-                        r.Logger?.LogError(ex, "Failed to read CPlugEntRecordData");
-                    }
-                }
-            }
-
-            if (rw.Writer is GbxWriter w)
-            {
-                w.Write(n.CompressedData.UncompressedSize);
-                w.WriteData(n.CompressedData.Data);
-            }
+            rw.ZlibData(ref n.compressedData, n, lazyLoad: true, Version);
         }
     }
 
@@ -332,15 +417,132 @@ public partial class CPlugEntRecordData : IReadableWritable
         if (data.Length > 0)
         {
             using var ms = new MemoryStream(data);
-            using var rr = new GbxReader(ms);
-
-            delta.Read(ms, rr);
-
-            var sampleProgress = (int)ms.Position;
+            delta.Read(ms);
         }
 
         return delta;
     }
+
+    private void WriteEntList(GbxWriter w, int version)
+    {
+        w.Write(entList.Count > 0, asByte: true);
+
+        for (var i = 0; i < entList.Count; i++)
+        {
+            var elem = entList[i];
+
+            w.Write(elem.Type);
+            w.Write(elem.U01);
+            w.Write(elem.U02);
+            w.Write(elem.U03);
+
+            if (version >= 6)
+            {
+                w.Write(elem.U04);
+            }
+
+            var desc = entRecordDescs[elem.Type];
+            if (version < 11)
+            {
+                WriteEntRecordDeltas(w, elem.Samples);
+            }
+            else
+            {
+                WriteEncodedDeltas(w, elem.Samples);
+            }
+
+            var hasNext = i < entList.Count - 1;
+            w.Write(hasNext, asByte: true);
+
+            if (version >= 2)
+            {
+                WriteEntRecordDeltas2(w, elem.Samples2);
+            }
+        }
+    }
+
+    private static void WriteEncodedDeltas(GbxWriter w, List<EntRecordDelta> samples)
+    {
+        w.Write(samples.Count);
+
+        if (samples.Count == 0)
+        {
+            return;
+        }
+
+        var sampleSize = samples.Count > 0 ? samples[0].Data.Length : 0;
+        w.Write(sampleSize);
+
+        var prevTime = TimeInt32.Zero;
+        foreach (var sample in samples)
+        {
+            w.Write(sample.Time - prevTime);
+            sample.Write();
+            prevTime = sample.Time;
+        }
+
+        for (var i = 0; i < sampleSize; i++)
+        {
+            byte accumulator = 0;
+            for (var b = 0; b < samples.Count; b++)
+            {
+                var value = samples[b].Data[i];
+                var delta = (byte)(value - accumulator);
+                w.Write(delta);
+                accumulator = value;
+            }
+        }
+    }
+
+    private static void WriteEntRecordDeltas2(GbxWriter w, List<EntRecordDelta2> samples)
+    {
+        foreach (var sample in samples)
+        {
+            w.Write(true, asByte: true);
+            w.Write(sample.Type);
+            w.Write(sample.Time);
+            w.WriteData(sample.Data);
+        }
+        w.Write(false, asByte: true);
+    }
+
+    private static void WriteEntRecordDeltas(GbxWriter w, List<EntRecordDelta> samples)
+    {
+        foreach (var sample in samples)
+        {
+            w.Write(true, asByte: true);
+            w.Write(sample.Time);
+            sample.Write();
+            w.WriteData(sample.Data);
+        }
+        w.Write(false, asByte: true);
+    }
+
+    private static IEnumerable<NoticeRecordListElem> ReadBulkNoticeList(GbxReader r)
+    {
+        while (r.ReadBoolean(asByte: true))
+        {
+            yield return new()
+            {
+                U01 = r.ReadInt32(),
+                U02 = r.ReadInt32(),
+                Data = r.ReadData()
+            };
+        }
+    }
+
+    private void WriteBulkNoticeList(GbxWriter w)
+    {
+        foreach (var elem in bulkNoticeList)
+        {
+            w.Write(true, asByte: true);
+            w.Write(elem.U01);
+            w.Write(elem.U02);
+            w.WriteData(elem.Data);
+        }
+        w.Write(false, asByte: true);
+    }
+
     private static IEnumerable<CustomModulesDeltaList> ReadCustomModulesDeltaLists(GbxReader r, int version)
     {
         var deltaListCount = version >= 8 ? r.ReadInt32() : 1;
@@ -386,16 +588,48 @@ public partial class CPlugEntRecordData : IReadableWritable
         };
     }
 
-    private static IEnumerable<NoticeRecordListElem> ReadBulkNoticeList(GbxReader r)
+    private void WriteCustomModulesDeltaLists(GbxWriter w, int version)
     {
-        while (r.ReadBoolean(asByte: true))
+        var deltaListCount = version >= 8 ? customModulesDeltaLists.Count : (customModulesDeltaLists.Count > 0 ? 1 : 0);
+
+        if (version >= 8)
         {
-            yield return new()
+            w.Write(deltaListCount);
+        }
+
+        if (deltaListCount == 0)
+        {
+            return;
+        }
+
+        if (version >= 7)
+        {
+            var count = version >= 8 ? deltaListCount : 1;
+            for (var i = 0; i < count; i++)
             {
-                U01 = r.ReadInt32(),
-                U02 = r.ReadInt32(),
-                Data = r.ReadData()
-            };
+                WriteCustomModulesDeltaList(w, customModulesDeltaLists[i], version);
+            }
+        }
+    }
+
+    private static void WriteCustomModulesDeltaList(GbxWriter w, CustomModulesDeltaList deltaList, int version)
+    {
+        foreach (var delta in deltaList.Deltas)
+        {
+            w.Write(true, asByte: true);
+            w.Write(delta.U01);
+            w.WriteData(delta.Data);
+
+            if (version >= 9)
+            {
+                w.WriteData(delta.U02);
+            }
+        }
+        w.Write(false, asByte: true);
+
+        if (version >= 10)
+        {
+            w.Write(deltaList.Period ?? 0);
         }
     }
 
@@ -448,10 +682,8 @@ public partial class CPlugEntRecordData : IReadableWritable
             Data = data;
         }
 
-        public virtual void Read(MemoryStream ms, GbxReader r)
-        {
-            
-        }
+        internal virtual void Read(MemoryStream ms) { }
+        internal virtual void Write() { }
 
         public override string ToString()
         {

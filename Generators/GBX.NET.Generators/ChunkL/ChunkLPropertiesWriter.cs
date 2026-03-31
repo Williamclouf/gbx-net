@@ -2,6 +2,7 @@
 using GBX.NET.Generators.Extensions;
 using GBX.NET.Generators.Models;
 using Microsoft.CodeAnalysis;
+using System.Globalization;
 using System.Text;
 
 namespace GBX.NET.Generators.ChunkL;
@@ -82,14 +83,52 @@ internal class ChunkLPropertiesWriter
             yield break;
         }
 
-        foreach (var item in classInfo.HeaderChunks.Concat(classInfo.Chunks))
+        var allChunks = classInfo.HeaderChunks.Concat(classInfo.Chunks).ToList();
+
+        foreach (var item in allChunks)
         {
-            if (item.Value.ChunkLDefinition is not null && !item.Value.ChunkLDefinition.Properties.ContainsKey("demonstration"))
+            var derivedChunkDef = item.Value.ChunkLDefinition;
+
+            if (derivedChunkDef is null || derivedChunkDef.Properties.ContainsKey("demonstration"))
             {
-                foreach (var member in item.Value.ChunkLDefinition.Members)
+                continue;
+            }
+
+            foreach (var member in derivedChunkDef.Members)
+            {
+                yield return (member, derivedChunkDef);
+            }
+
+            var visitedBases = new HashSet<uint> { item.Value.Id };
+            var currentHierarchyDef = derivedChunkDef;
+
+            while (currentHierarchyDef.Properties.TryGetValue("base", out var baseChunkIdStr))
+            {
+                if (baseChunkIdStr.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
                 {
-                    yield return (member, item.Value.ChunkLDefinition);
+                    baseChunkIdStr = baseChunkIdStr.Substring(2);
                 }
+
+                if (!uint.TryParse(baseChunkIdStr, NumberStyles.HexNumber, null, out var parsedBaseId))
+                {
+                    break;
+                }
+
+                var baseChunkId = classInfo.Id.GetValueOrDefault() | parsedBaseId;
+                var baseChunk = allChunks.FirstOrDefault(x => x.Value.Id == baseChunkId).Value;
+                var baseChunkDef = baseChunk?.ChunkLDefinition;
+
+                if (baseChunkDef is null || baseChunk is null || !visitedBases.Add(baseChunk.Id) || baseChunkDef.Properties.ContainsKey("demonstration"))
+                {
+                    break;
+                }
+
+                foreach (var member in baseChunkDef.Members)
+                {
+                    yield return (member, derivedChunkDef);
+                }
+
+                currentHierarchyDef = baseChunkDef;
             }
         }
     }

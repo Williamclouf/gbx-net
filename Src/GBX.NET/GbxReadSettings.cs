@@ -4,10 +4,32 @@ namespace GBX.NET;
 
 public readonly record struct GbxReadSettings
 {
+    /// <summary>
+    /// Maximum allowed size for arrays, lists, and other data structures. Default is 256 MB, but for backend it is recommended to set it to a lower value, like 16 MB, to prevent potential DoS attacks with maliciously crafted Gbx files.
+    /// </summary>
+    public int? MaxDataSize { get; init; }
+    
+    /// <summary>
+    /// Maximum allowed size for user data. Default is 16 MB, but for backend it is recommended to set it to a lower value, like 2 MB, to prevent potential DoS attacks with maliciously crafted Gbx files.
+    /// </summary>
+    public int? MaxUserDataSize { get; init; }
+
+    /// <summary>
+    /// Maximum allowed size for uncompressed body. Default is 256 MB, but for backend it is recommended to set it to a lower value, like 64 MB, to prevent potential DoS attacks with maliciously crafted Gbx files.
+    /// </summary>
+    public int? MaxUncompressedBodySize { get; init; }
+
+    /// <summary>
+    /// Maximum allowed size for compressed body. Default is 256 MB, but for backend it is recommended to set it to a lower value, like 32 MB, to prevent potential DoS attacks with maliciously crafted Gbx files.
+    /// </summary>
+    public int? MaxCompressedBodySize { get; init; }
+
+    /// <summary>
+    /// Maximum allowed size for skippable chunks. Default is 16 MB, but for backend it is recommended to set it to a lower value, like 4 MB, to prevent potential DoS attacks with maliciously crafted Gbx files.
+    /// </summary>
+    public int? MaxSkippableChunkSize { get; init; }
+
     public bool SkipUserData { get; init; }
-    public bool SkipUnclearedUserData { get; init; }
-    public bool SkipUnclearedHeaderChunkBuffers { get; init; }
-    public bool SkipUnclearedSkippableChunkBuffers { get; init; }
     public SerializationMode DeserializationMode { get; init; }
 
     /// <summary>
@@ -21,8 +43,6 @@ public readonly record struct GbxReadSettings
     /// </summary>
     public bool CloseStream { get; init; }
 
-    public int? MaxUncompressedBodySize { get; init; }
-    public int? MaxUserDataSize { get; init; }
     public ILogger? Logger { get; init; }
 
     /// <summary>

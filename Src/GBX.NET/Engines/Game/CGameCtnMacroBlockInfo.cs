@@ -2,41 +2,27 @@
 
 public partial class CGameCtnMacroBlockInfo
 {
+    private CScriptTraitsMetadata? scriptMetadata;
+    private CGameCtnMediaClipGroup? clipGroupInGame;
+    private CGameCtnMediaClipGroup? clipGroupEndRace;
+
     [AppliedWithChunk<Chunk0310D00B>]
-    public CScriptTraitsMetadata? ScriptMetadata { get; set; }
+    public CScriptTraitsMetadata? ScriptMetadata { get => scriptMetadata; set => scriptMetadata = value; }
 
     [AppliedWithChunk<Chunk0310D011>]
-    public CGameCtnMediaClipGroup? ClipGroupInGame { get; set; }
+    public CGameCtnMediaClipGroup? ClipGroupInGame { get => clipGroupInGame; set => clipGroupInGame = value; }
 
     [AppliedWithChunk<Chunk0310D011>]
-    public CGameCtnMediaClipGroup? ClipGroupEndRace { get; set; }
+    public CGameCtnMediaClipGroup? ClipGroupEndRace { get => clipGroupEndRace; set => clipGroupEndRace = value; }
 
     public partial class Chunk0310D00B
     {
-        public int U01;
-
-        public override void Read(CGameCtnMacroBlockInfo n, GbxReader r)
+        public override void ReadWrite(CGameCtnMacroBlockInfo n, GbxReaderWriter rw)
         {
-            U01 = r.ReadInt32(); // always 0
-            var size = r.ReadInt32();
-
-            using var _ = new Encapsulation(r);
-
-            n.ScriptMetadata = r.ReadNode<CScriptTraitsMetadata>();
-        }
-
-        public override void Write(CGameCtnMacroBlockInfo n, GbxWriter w)
-        {
-            w.Write(U01);
-
-            using var ms = new MemoryStream();
-            using var wBuffer = new GbxWriter(ms);
-            using var _ = new Encapsulation(wBuffer);
-
-            wBuffer.WriteNode(n.ScriptMetadata);
-
-            w.Write((int)ms.Length);
-            ms.WriteTo(w.BaseStream);
+            rw.Encapsulated(rw =>
+            {
+                rw.Node<CScriptTraitsMetadata>(ref n.scriptMetadata);
+            });
         }
     }
 
@@ -44,47 +30,21 @@ public partial class CGameCtnMacroBlockInfo
     {
         public int Version { get; set; }
 
-        public int U01;
-
         public Int3 U02;
         public Int3 U03;
 
-        public override void Read(CGameCtnMacroBlockInfo n, GbxReader r)
+        public override void ReadWrite(CGameCtnMacroBlockInfo n, GbxReaderWriter rw)
         {
-            Version = r.ReadInt32();
-
-            U01 = r.ReadInt32();
-            var size = r.ReadInt32();
-
-            using var _ = new Encapsulation(r);
-
-            // SMediaTrackSpawns
-            U02 = r.ReadInt3();
-            U03 = r.ReadInt3();
-
-            n.ClipGroupInGame = r.ReadNodeRef<CGameCtnMediaClipGroup>();
-            n.ClipGroupEndRace = r.ReadNodeRef<CGameCtnMediaClipGroup>();
-            //
-        }
-
-        public override void Write(CGameCtnMacroBlockInfo n, GbxWriter w)
-        {
-            w.Write(Version);
-
-            w.Write(U01);
-
-            using var ms = new MemoryStream();
-            using var wBuffer = new GbxWriter(ms);
-            using var _ = new Encapsulation(wBuffer);
-
-            wBuffer.Write(U02);
-            wBuffer.Write(U03);
-
-            wBuffer.WriteNodeRef(n.ClipGroupInGame);
-            wBuffer.WriteNodeRef(n.ClipGroupEndRace);
-
-            w.Write((int)ms.Length);
-            w.Write(ms.ToArray());
+            rw.VersionInt32(this);
+            rw.Encapsulated(rw =>
+            {
+                // SMediaTrackSpawns
+                rw.Int3(ref U02);
+                rw.Int3(ref U03);
+                rw.NodeRef<CGameCtnMediaClipGroup>(ref n.clipGroupInGame);
+                rw.NodeRef<CGameCtnMediaClipGroup>(ref n.clipGroupEndRace);
+                //
+            });
         }
     }
 }

@@ -355,7 +355,7 @@ public class OldClassChunkGenerator : IIncrementalGenerator
                 finalType += $"<{mappedGenericType}>";
             }
 
-            if (isArray && primaryType is not "data" or "bytes")
+            if (isArray && primaryType is not "data" and "bytes")
             {
                 finalType += "[]";
             }

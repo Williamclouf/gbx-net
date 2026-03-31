@@ -32,6 +32,12 @@ public partial class CGameObjectVisModel
     private CPlugAnimLocSimple? locAnim;
     public CPlugAnimLocSimple? LocAnim { get => locAnim; set => locAnim = value; }
 
+    private CPlugSolid? solid;
+    public CPlugSolid? Solid { get => solid; set => solid = value; }
+
+    private string? solidRef;
+    public string? SolidRef { get => solidRef; set => solidRef = value; }
+
     public partial class Chunk2E007001 : IVersionable
     {
         public int Version { get; set; }
@@ -53,7 +59,6 @@ public partial class CGameObjectVisModel
         public CMwNod? U15;
         public CMwNod? U16;
         public GbxRefTableFile? U16File;
-        public string? U17;
         public float? U18;
         public float? U19;
         public float? U20;
@@ -129,11 +134,11 @@ public partial class CGameObjectVisModel
 
                         if (Version >= 14)
                         {
-                            rw.String(ref U17);
+                            rw.String(ref n.solidRef);
 
-                            if (string.IsNullOrEmpty(U17))
+                            if (string.IsNullOrEmpty(n.solidRef))
                             {
-                                rw.NodeRef(ref U22); // CPlugSolid
+                                rw.NodeRef<CPlugSolid>(ref n.solid); // CPlugSolid
                             }
 
                             if (Version >= 16)

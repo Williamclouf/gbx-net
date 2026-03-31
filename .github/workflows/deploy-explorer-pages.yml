@@ -43,7 +43,7 @@ jobs:
         run: dotnet workload install wasm-tools
           
       - name: Publish
-        run: dotnet build && dotnet publish Tools/GbxExplorerOld/Client -c Release --nologo -o publish /p:ContinuousIntegrationBuild=true
+        run: dotnet build Tools/GbxExplorerOld/Client && dotnet publish Tools/GbxExplorerOld/Client -c Release --nologo -o publish /p:ContinuousIntegrationBuild=true
         
       - name: Change base in index.html and service-worker.js to repository name
         run: |

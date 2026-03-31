@@ -39,7 +39,10 @@ internal static partial class GbxCompressionUtils
         {
             var uncompressedSize = r.ReadInt32();
             uncompressedData = new byte[uncompressedSize];
-            Gbx.LZO.Decompress(await r.ReadDataAsync(cancellationToken), uncompressedData);
+
+            var prevCompressedData = await r.ReadDataAsync(cancellationToken);
+
+            Gbx.LZO.Decompress(prevCompressedData, uncompressedData);
         }
         else
         {
@@ -90,8 +93,7 @@ internal static partial class GbxCompressionUtils
         await CopyRestOfTheHeaderAsync(version, r, w, cancellationToken);
 
         var uncompressedSize = r.ReadInt32();
-        var compressedSize = r.ReadInt32();
-        var compressedData = await r.ReadBytesAsync(compressedSize, cancellationToken);
+        var compressedData = await r.ReadDataAsync(cancellationToken);
 
         var buffer = new byte[uncompressedSize];
         Gbx.LZO.Decompress(compressedData, buffer);
@@ -149,9 +151,7 @@ internal static partial class GbxCompressionUtils
                 return GbxCompression.Compressed;
             case (byte)'C':
                 var uncompressedSize = r.ReadInt32();
-                var compressedSize = r.ReadInt32();
-                compressedData = await r.ReadBytesAsync(compressedSize, cancellationToken);
-
+                compressedData = await r.ReadDataAsync(cancellationToken);
                 var buffer = new byte[uncompressedSize];
                 Gbx.LZO.Decompress(compressedData, buffer);
                 await w.WriteAsync(buffer, cancellationToken);
@@ -208,7 +208,8 @@ internal static partial class GbxCompressionUtils
 
         if (version >= 6)
         {
-            await w.WriteDataAsync(await r.ReadDataAsync(cancellationToken), cancellationToken); // User data
+            var userData = await r.ReadDataAsync(cancellationToken);
+            await w.WriteDataAsync(userData, cancellationToken); // User data
         }
 
         w.Write(r.ReadInt32()); // Num nodes

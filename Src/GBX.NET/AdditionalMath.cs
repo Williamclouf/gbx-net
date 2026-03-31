@@ -75,4 +75,9 @@ public static class AdditionalMath
     {
         return a + t * (b - a);
     }
+
+    public static double Clamp(double value, double min, double max)
+    {
+        return Math.Max(min, Math.Min(max, value));
+    }
 }

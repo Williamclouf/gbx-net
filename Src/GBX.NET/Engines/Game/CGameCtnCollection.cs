@@ -23,12 +23,12 @@ public partial class CGameCtnCollection
     {
         public override void ReadWrite(CGameCtnCollection n, GbxReaderWriter rw)
         {
-            if (rw.Boolean(n.iconFid is not null))
+            if (rw.Boolean(n.iconFid is not null || n.iconFidFile is not null))
             {
                 rw.NodeRef<CPlugBitmap>(ref n.iconFid, ref n.iconFidFile);
             }
 
-            if (rw.Boolean(n.iconSmallFid is not null))
+            if (rw.Boolean(n.iconSmallFid is not null || n.iconSmallFidFile is not null))
             {
                 rw.NodeRef<CPlugBitmap>(ref n.iconSmallFid, ref n.iconSmallFidFile);
             }

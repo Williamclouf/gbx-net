@@ -20,3 +20,7 @@ CPlugVehicleCameraInternalModel 0x090F7000
      float BulletTimeFovSmoothDelta_m_Delta
      int BulletTimeFovSmoothDelta_m_TimeDown
      int BulletTimeFovSmoothDelta_m_TimeUp
+     v8+
+      float SuperBulletTimeFovSmoothMultiplier
+      int SuperBulletTimeFovSmoothMultiplier_m_TimeUp
+      int SuperBulletTimeFovSmoothMultiplier_m_TimeDown

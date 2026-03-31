@@ -1,14 +1,35 @@
 CSystemConfig 0x0B005000
 
+0x002 (skippable) [TM10, TMPU]
+ string
+
+0x004 (skippable) [TM10, TMPU]
+ bool AudioEnabled
+ float AudioSoundVolume
+ float AudioMusicVolume
+ int
+ int
+ bool AudioAllowEFX
+ int
+ int
+ int
+
 0x005 (skippable)
  int
  int
  int
 
-0x008 (skippable) [TMF, MP3, MP4]
+0x007 (skippable) [TM10, TMPU]
+ string
+ string
+ string
+ bool
+ filetime
+
+0x008 (skippable) [TM10, TMPU, TMO, TMSX, TMNESWC, TMU, VSK5, TMF, MP3, MP4]
  string DesiredLanguageId
 
-0x009 (skippable) [TMF, MP3, MP4]
+0x009 (skippable) [TM10, TMPU, TMO, TMSX, TMNESWC, TMU, VSK5, TMF, MP3, MP4]
  string U01
  string U01
  string U01
@@ -16,20 +37,98 @@ CSystemConfig 0x0B005000
  string U01
  string U01
 
-0x00B (skippable, base: 0x005) [TMF, MP3, MP4]
+0x00A (skippable) [TM10, TMPU]
+ int2
+ int
+ int
+ int
+ int
+ int
+ bool
+ bool
+ int
+ int
+ int
+ bool
+
+0x00B (skippable, base: 0x005) [TM10, TMPU, TMO, TMSX, TMNESWC, TMU, VSK5, TMF, MP3, MP4]
  base
  int U04
 
-0x020 (skippable) [TMF, MP3, MP4]
+0x00C (skippable) [TM10, TMPU]
+ bool IsIgnorePlayerSkins
+
+0x00D (skippable) [TM10, TMPU]
+ string
+ string
+ bool NetworkUseProxy
+ string
+ string
+ string
+ int NetworkServerPort
+ int NetworkClientPort
+ bool NetworkForceUseLocalAddress
+ string NetworkForceServerAddress
+ int
+
+0x00E (skippable) [TM10, TMPU]
+ int TmCarQuality
+ int
+ int TmOpponents
+
+0x00F (skippable) [TM10, TMPU]
+ float
+ float
+
+0x012 (skippable) [TMO, TMSX, TMNESWC]
+ string
+ string
+ string
+ bool
+ int
+
+0x01D (skippable) [TMO, TMSX, TMNESWC, TMU, VSK5]
+ bool IsIgnorePlayerSkins
+ bool IsSkipRollingDemo
+
+0x020 (skippable) [TMO, TMSX, TMNESWC, TMU, VSK5, TMF, MP3, MP4]
  bool IsSafeMode
  CSystemConfigDisplay Display (direct)
 
-0x02B (skippable) [TMF, MP3, MP4]
+0x022 (skippable) [TMO, TMSX, TMNESWC, TMU, VSK5]
+ float
+ float
+ bool InputsAlternateMethod
+ bool InputsFreezeUnusedAxes
+
+0x027 (skippable) [TMO, TMSX]
+ bool
+
+0x028 (skippable) [TMO, TMSX, TMNESWC, TMU, VSK5]
+ bool AudioEnabled
+ float AudioSoundVolume
+ float AudioMusicVolume
+ int
+ int
+ int
+ bool AudioAllowEFX
+ bool AudioDisableDoppler
+ int AudioGlobalQuality
+
+0x02B (skippable) [TMO, TMSX, TMNESWC, TMU, VSK5, TMF, MP3, MP4]
  int
  bool Advertising_DisabledByUser
  float Advertising_TunningCoef
 
-0x030 (skippable) [TMF]
+0x02C (skippable) [TMO, TMSX]
+ int TmCarQuality
+ int
+ int
+ int TmOpponents
+ int TmMaxOpponents
+ bool
+
+0x030 (skippable) [TMO, TMSX, TMNESWC, TMU, VSK5, TMF]
  bool FileTransferEnableDownload
  bool FileTransferEnableUpload
  int
@@ -41,7 +140,18 @@ CSystemConfig 0x0B005000
  string BlackListUrl
  bool EnableCrashLogUpload
 
-0x034 (skippable) [TMF]
+0x031 (skippable) [TMO, TMSX]
+ bool NetworkUseProxy
+ string
+ string
+ int NetworkServerPort
+ int NetworkClientPort
+ bool NetworkForceUseLocalAddress
+ string NetworkForceServerAddress
+ int
+ bool NetworkUseNatUPnP
+
+0x034 (skippable) [TMNESWC, TMU, VSK5, TMF]
  int TmCarQuality
  int
  int
@@ -50,11 +160,31 @@ CSystemConfig 0x0B005000
  bool
  int TmBackgroundQuality
 
-0x035 (skippable)
+0x035 (skippable) [TMNESWC, TMU, VSK5]
  bool
  bool NetworkTestInternetConnection
 
-0x039 (skippable) [TMF]
+0x036 (skippable) [TMNESWC]
+ bool NetworkUseProxy
+ string
+ string
+ int NetworkServerPort
+ int NetworkP2PServerPort
+ int NetworkClientPort
+ int NetworkServerBroadcastLength
+ bool NetworkForceUseLocalAddress
+ string NetworkForceServerAddress
+ int
+ bool NetworkUseNatUPnP
+
+0x037 (skippable) [TMU, VSK5]
+ string
+
+0x038 (skippable) [TMU, VSK5]
+ bool GameProfileEnableMulti
+ id GameProfileName
+
+0x039 (skippable) [TMU, VSK5, TMF]
  bool NetworkUseProxy
  string
  string
@@ -192,6 +322,25 @@ CSystemConfig 0x0B005000
  bool AudioSoundHdr
  bool
 
+0x057 (skippable)
+ bool NetworkUseProxy
+ string
+ string
+ int NetworkServerPort
+ int NetworkP2PServerPort
+ int NetworkClientPort
+ int NetworkServerBroadcastLength
+ bool NetworkForceUseLocalAddress
+ string NetworkForceServerAddress
+ int NetworkDownload
+ int NetworkUpload
+ bool NetworkUseNatUPnP
+ bool NetworkTestInternetConnection
+ string NetworkLastUsedMSAddress
+ string NetworkLastUsedMSPath
+ int[]
+ int NetworkSpeed
+
 0x058 (skippable) [MP3, MP4]
  int
 
@@ -246,8 +395,8 @@ CSystemConfig 0x0B005000
 0x05E (skippable) [MP3, MP4]
  version
  bool NetworkUseProxy
- string
- string
+ string NetworkProxyLogin
+ string NetworkProxyPassword
  int NetworkServerPort
  int NetworkP2PServerPort
  int NetworkClientPort

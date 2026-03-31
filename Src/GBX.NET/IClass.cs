@@ -25,20 +25,6 @@ public interface IClass
     /// <param name="rw">A reader/writer.</param>
     void ReadWrite(GbxReaderWriter rw);
 
-    /// <summary>
-    /// Safe method to create a new header chunk and add it to the chunk set, if it is valid. Returns null if the chunk ID is not supported in the context of the class.
-    /// </summary>
-    /// <param name="chunkId">ID of the header chunk.</param>
-    /// <returns>A new header chunk instance, or null if the ID is not supported in the context of the class.</returns>
-    IHeaderChunk? CreateHeaderChunk(uint chunkId);
-
-    /// <summary>
-    /// Safe method to create a new chunk and add it to the chunk set, if it is valid. Returns null if the chunk ID is not supported in the context of the class.
-    /// </summary>
-    /// <param name="chunkId">ID of the chunk.</param>
-    /// <returns>A new chunk instance, or null if the ID is not supported in the context of the class.</returns>
-    IChunk? CreateChunk(uint chunkId);
-
     IClass DeepClone();
 
     GameVersion GameVersion { get; }
@@ -50,4 +36,9 @@ public interface IClass
 
     void Save(Stream stream, GbxWriteSettings settings = default);
     void Save(string fileName, GbxWriteSettings settings = default);
+
+    T CreateChunk<T>() where T : IChunk, new();
+    T? GetChunk<T>() where T : IChunk;
+    bool RemoveChunk<T>() where T : IChunk;
+    bool ContainsChunk<T>() where T : IChunk;
 }
