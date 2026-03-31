@@ -477,6 +477,7 @@ public partial class CPlugEntRecordData : IReadableWritable
         foreach (var sample in samples)
         {
             w.Write(sample.Time - prevTime);
+            sample.Write();
             prevTime = sample.Time;
         }
 

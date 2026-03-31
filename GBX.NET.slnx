@@ -44,6 +44,7 @@
     <Project Path="Samples/Advanced/ItemPacker/ItemPacker.csproj" />
   </Folder>
   <Folder Name="/Samples/Beginner/">
+    <Project Path="Samples/Beginner/Beyblade/Beyblade.csproj" Id="9bd1dd59-9f3b-4d9d-86dd-706463278526" />
     <Project Path="Samples/Beginner/EnvimixForTM2020/EnvimixForTM2020.csproj" />
     <Project Path="Samples/Beginner/FixDesertUpdatePillarsAfterConversion/FixDesertUpdatePillarsAfterConversion.csproj" />
     <Project Path="Samples/Beginner/FullMapInfo/FullMapInfo.csproj" />

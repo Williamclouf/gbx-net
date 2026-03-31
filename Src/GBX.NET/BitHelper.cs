@@ -49,6 +49,12 @@ internal static class BitHelper
         return (flags >> bitPosition & 1) != 0;
     }
 
+    public static bool? GetBit(byte? flags, int bitPosition)
+    {
+        if (flags is null) return null;
+        return (flags.Value >> bitPosition & 1) != 0;
+    }
+
     /// <summary>
     /// Sets or clears a specific bit in a 64-bit unsigned integer.
     /// </summary>
@@ -96,6 +102,13 @@ internal static class BitHelper
     {
         var mask = (byte)(1 << bitPosition);
         return enable ? (byte)(value | mask) : (byte)(value & ~mask);
+    }
+
+    public static byte? SetBit(byte? value, int bitPosition, bool? enable)
+    {
+        if (value is null || enable is null) return null;
+        var mask = (byte)(1 << bitPosition);
+        return enable.Value ? (byte)(value.Value | mask) : (byte)(value.Value & ~mask);
     }
 
     /// <summary>

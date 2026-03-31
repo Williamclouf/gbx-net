@@ -6,7 +6,7 @@ public partial class CGameGhost
 {
     public partial class Data : IReadable, IWritable
     {
-        private int[]? stateTimes;
+        private int[] stateTimes = [];
 
         /// <summary>
         /// How much time is between each sample.
@@ -95,14 +95,19 @@ public partial class CGameGhost
 
             for (int i = 1; i < Offsets.Length; i++)
             {
-                var offset = Offsets[i - 1];
+                var nextOffset = Offsets[i];
 
-                Samples.Add(ReadSample(new TimeInt32((i - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes(offset - prevOffset)));
+                Samples.Add(ReadSample(new TimeInt32((i - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes(nextOffset - prevOffset)));
 
-                prevOffset = offset;
+                prevOffset = nextOffset;
             }
 
             Samples.Add(ReadSample(new TimeInt32((Offsets.Length - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes((int)r.BaseStream.Length - Offsets[Offsets.Length - 1])));
+
+            if (r.BaseStream.Position != r.BaseStream.Length)
+            {
+                throw new InvalidDataException($"Not all data was read. {r.BaseStream.Length - r.BaseStream.Position} bytes remaining.");
+            }
         }
 
         internal void WriteSamplesOld(GbxWriter w)
@@ -156,11 +161,11 @@ public partial class CGameGhost
             }
 
             // CGameGhostTMData::ArchiveStateTimes
-            stateTimes = null;
+            stateTimes = r.ReadArray<int>();
 
-            if (!IsFixedTimeStep)
+            if (r.BaseStream.Position != r.BaseStream.Length)
             {
-                stateTimes = r.ReadArray<int>();
+                throw new InvalidDataException($"Not all data was read. {r.BaseStream.Length - r.BaseStream.Position} bytes remaining.");
             }
 
             Samples = [];
@@ -183,7 +188,7 @@ public partial class CGameGhost
                     _ => stateBufferR.ReadBytes(sizePerSample)
                 };
 
-                if (stateTimes is null)
+                if (stateTimes.Length == 0)
                 {
                     currentTime = new TimeInt32(i * SamplePeriod.Milliseconds);
                 }
@@ -254,25 +259,13 @@ public partial class CGameGhost
 
                     if (sizePerSample == -1)
                     {
-                        w.WriteArray<int>(sampleSizes);
+                        w.WriteArray<int>(sampleSizes, numSamples - 1);
                     }
                 }
             }
 
-            // Write CGameGhostTMData::ArchiveStateTimes
-            if (!IsFixedTimeStep)
-            {
-                if (stateTimes is not null)
-                {
-                    // If times were discarded or built dynamically, we construct an array of 0s 
-                    // or re-generate based on delta times if you choose to track sample.Time natively.
-                    w.WriteArray(new int[numSamples]);
-                }
-                else
-                {
-                    w.WriteArray(stateTimes);
-                }
-            }
+            // CGameGhostTMData::ArchiveStateTimes
+            w.WriteArray(stateTimes);
         }
 
         private Sample ReadSample(TimeInt32 time, byte[] sampleData)
