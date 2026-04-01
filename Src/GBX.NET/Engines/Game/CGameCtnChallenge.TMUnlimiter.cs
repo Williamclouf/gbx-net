@@ -1225,20 +1225,6 @@ public partial class CGameCtnChallenge
             LegacyScript
         }
 
-        public enum BlockType
-        {
-            GameBlock,
-            ExternalBlock
-        }
-
-        public enum EDecorationVisibility
-        {
-            Everything,
-            Sky,
-            Background,
-            Nothing
-        }
-
         public enum ParameterOperation
         {
             Execute,
