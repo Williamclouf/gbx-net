@@ -31,799 +31,32 @@ public partial class CGameCtnChallenge
         public bool IsTrackBaseEmpty { get; set; }
         public bool IsVanillaMode { get; set; }
         public bool IsPylonsDisabled { get; set; }
+        public bool EnableVehicleCollisions { get; set; }
+        public bool EnableRandomStartLine { get; set; }
+        public bool EnableServerCommunication { get; set; }
+        public bool IgnoreMultiplayerTimeSyncForMotionBlocks { get; set; }
+
+        public List<ParameterSet> ParameterSets { get; set; } = [];
+        public List<TriggerGroup> TriggerGroups { get; set; } = [];
+        public List<BlockGroup> BlockGroups { get; set; } = [];
+
+        public List<AngelScriptModule> AngelScriptModules { get; set; } = [];
+        public List<EmbeddedBlock> EmbeddedBlocks { get; set; } = [];
+        public List<MaterialModelRef> MaterialModelRefs { get; set; } = [];
+        public ReplacementTextureFlags ReplacementTexture { get; set; } = new();
+        public List<EmbeddedImage> EmbeddedImages { get; set; } = [];
+        public List<Ident> VehicleIdentifiers { get; set; } = [];
 
         public enum DecorationVisibility
         {
-            Default,
+            Everything,
             SkyOnly,
-            Nothing = 1 << 2,
+            Background,
+            Nothing,
             Warp = 1 << 8
         }
 
-        [Flags]
-        internal enum ChallengeFlags
-        {
-            DecorationVisibility_SkyOnly = 1 << 0,
-            IsDecorationMoved = 1 << 1,
-            DecorationVisibility_Nothing = 1 << 2,
-            IsDecorationScaled = 1 << 3,
-            IsTrackBaseEmpty = 1 << 4,
-            IsVanillaMode = 1 << 5,
-            DecorationVisibility_Warp = 1 << 8,
-            IsPylonsDisabled = 1 << 9,
-            ReservedBit = 1 << 15,
-        };
-    }
-
-    public partial class Chunk03043055
-    {
-        public Chunk3F001001? TMUnlimiterChunk;
-
-        // empty => sets classic clips to true? related to TMCanyon?
-        // if unskippable = odd unlimiter chunk
-
-        public override void Read(CGameCtnChallenge n, GbxReader r)
-        {
-            if (TMUnlimiterChunk is null)
-            {
-                return;
-            }
-
-            n.TMUnlimiterData = new TMUnlimiter();
-
-            var versionByte = r.ReadByte();
-            TMUnlimiterChunk.Version = versionByte switch
-            {
-                1 => 4,
-                2 => 5,
-                _ => throw new NotSupportedException($"Unlimiter chunk version {versionByte} not supported.")
-            };
-
-            n.TMUnlimiterData.DecorationOffset = r.ReadInt3();
-            n.TMUnlimiterData.SkyDecorationVisibility = (TMUnlimiter.DecorationVisibility)r.ReadByte();
-
-            var blockCount = r.ReadInt32();
-
-            if (n.blocks is null) throw new InvalidOperationException("Blocks are null.");
-
-            for (var i = 0; i < blockCount; i++)
-            {
-                var block = n.blocks[r.ReadInt32()];
-
-                block.TMUnlimiterData = new CGameCtnBlock.TMUnlimiter
-                {
-                    OverOverSizeChunk = r.ReadByte3(),
-                    IsInverted = r.ReadBoolean(asByte: true),
-                    Offset = r.ReadInt3(),
-                    Rotation = TMUnlimiterChunk.Version >= 5 ? r.ReadInt3() : r.ReadByte3()
-                };
-            }
-
-            var mediaClipMappingCount = r.ReadInt32();
-            n.tempOldTMUnlimiterClipData = new(mediaClipMappingCount);
-
-            for (var i = 0; i < mediaClipMappingCount; i++)
-            {
-                // this appears before the mediatracker chunk, so this has to be stored in a private dictionary
-                var mediaClipIndex = r.ReadInt32();
-                var resourceType = r.ReadByte();
-
-                CGameCtnMediaClip.TMUnlimiter.LegacyResource resource;
-
-                switch (resourceType)
-                {
-                    case 0: // Parameter Set
-                        var parameterSet = new CGameCtnMediaClip.TMUnlimiter.LegacyParameterSet
-                        {
-                            Parameters = new CGameCtnMediaClip.TMUnlimiter.Parameter[4]
-                        };
-
-                        for (var parameterIndex = 0; parameterIndex < parameterSet.Parameters.Length; parameterIndex++)
-                        {
-                            parameterSet.Parameters[parameterIndex] = new CGameCtnMediaClip.TMUnlimiter.Parameter
-                            {
-                                CatalogIndex = r.ReadByte(),
-                                FunctionIndex = r.ReadByte(),
-                                Value = r.ReadSingle()
-                            };
-                        }
-
-                        resource = parameterSet;
-
-                        break;
-                    case 1: // Legacy Script
-                        resource = new CGameCtnMediaClip.TMUnlimiter.LegacyScript
-                        {
-                            ByteCode = r.ReadData()
-                        };
-                        break;
-                    default: // Unknown
-                        throw new NotSupportedException($"Media clip mapping resource type {resourceType} not supported.");
-                }
-
-                n.tempOldTMUnlimiterClipData[mediaClipIndex] = new CGameCtnMediaClip.TMUnlimiter
-                {
-                    Resource = resource
-                };
-            }
-
-            if (r.ReadUInt32() != 0xFACADE01)
-            {
-                throw new InvalidDataException("Unlimiter chunk did not end properly.");
-            }
-        }
-
-        public override void Write(CGameCtnChallenge n, GbxWriter w)
-        {
-            if (TMUnlimiterChunk is null)
-            {
-                return;
-            }
-
-            w.Write((byte)(TMUnlimiterChunk.Version == 4 ? 1 : 2));
-
-            w.Write(n.TMUnlimiterData?.DecorationOffset ?? Vec3.Zero);
-            w.Write((byte)(n.TMUnlimiterData?.SkyDecorationVisibility ?? TMUnlimiter.DecorationVisibility.Default));
-
-            var blocks = n.blocks ?? throw new InvalidOperationException("Blocks are null.");
-
-            w.Write(blocks.Count(x => x.TMUnlimiterData is not null));
-
-            foreach (var (block, i) in blocks
-                .Select((block, i) => (block, i))
-                .Where(x => x.block.TMUnlimiterData is not null))
-            {
-                w.Write(i);
-                w.Write(block.TMUnlimiterData!.OverOverSizeChunk);
-                w.Write(block.TMUnlimiterData.IsInverted, asByte: true);
-                w.Write(block.TMUnlimiterData.Offset);
-
-                if (TMUnlimiterChunk.Version >= 5)
-                {
-                    w.Write(block.TMUnlimiterData.Rotation);
-                }
-                else
-                {
-                    w.Write((Byte3)(Int3)(block.TMUnlimiterData.Rotation));
-                }
-            }
-
-            w.Write(n.clipGroupInGame?.Clips.Count(x => x.Clip.TMUnlimiterData is not null) ?? 0);
-
-            foreach (var (clip, i) in n.clipGroupInGame?.Clips
-                .Select((clip, i) => (clip.Clip, i))
-                .Where(x => x.Clip.TMUnlimiterData is not null) ?? [])
-            {
-                w.Write(i);
-
-                switch (clip.TMUnlimiterData!.Resource)
-                {
-                    case CGameCtnMediaClip.TMUnlimiter.LegacyParameterSet parameterSet:
-                        w.Write((byte)0); // Parameter Set
-                        foreach (var parameter in parameterSet.Parameters)
-                        {
-                            w.Write(parameter.CatalogIndex);
-                            w.Write(parameter.FunctionIndex);
-                            w.Write(parameter.Value);
-                        }
-                        break;
-
-                    case CGameCtnMediaClip.TMUnlimiter.LegacyScript legacyScript:
-                        w.Write((byte)1); // Legacy Script
-                        w.WriteData(legacyScript.ByteCode);
-                        break;
-                    default:
-                        throw new InvalidOperationException("Unsupported TM Unlimiter media clip resource type.");
-                }
-            }
-
-            w.Write(0xFACADE01);
-        }
-    }
-
-    public partial class Chunk3F001000 : IVersionable
-    {
-        public int Version { get; set; }
-
-        public int U01;
-
-        [Flags]
-        private enum BlockFlags
-        {
-            IsOutsideBoundaries = 1 << 0,
-            IsMoved = 1 << 1,
-            IsRotated = 1 << 2,
-            IsScaled = 1 << 3,
-            IsInverted = 1 << 4,
-            IsVanillaTerrain = 1 << 5,
-            IsSpawnPointFixEnabled = 1 << 6,
-            IsDynamic = 1 << 7,
-            IsInvisible = 1 << 8,
-            IsCollisionDisabled = 1 << 9,
-            IsClassicMode = 1 << 10,
-            IsClassicTerrain = 1 << 11,
-            HasIdentifier = 1 << 14,
-            Reserved = 1 << 15,
-        }
-
-        public override void Read(CGameCtnChallenge n, GbxReader r)
-        {
-            using var ms = new MemoryStream(Crypt(r.ReadToEnd()));
-            using var decryptedReader = new GbxReader(ms);
-            decryptedReader.LoadFrom(r);
-            ReadDecrypted(n, decryptedReader);
-        }
-
-        public override void Write(CGameCtnChallenge n, GbxWriter w)
-        {
-            using var ms = new MemoryStream();
-            using var decryptedWriter = new GbxWriter(ms);
-            decryptedWriter.LoadFrom(w);
-            WriteDecrypted(n, decryptedWriter);
-
-            w.Write(Crypt(ms.ToArray()));
-        }
-
-        private void ReadDecrypted(CGameCtnChallenge n, GbxReader r)
-        {
-            n.TMUnlimiterData = new TMUnlimiter();
-
-            var challengeFlags = (TMUnlimiter.ChallengeFlags)r.ReadUInt16();
-            n.TMUnlimiterData.SkyDecorationVisibility = (TMUnlimiter.DecorationVisibility)((int)challengeFlags & 0x105);
-            var isDecorationMoved = (challengeFlags & TMUnlimiter.ChallengeFlags.IsDecorationMoved) != 0;
-            var isDecorationScaled = (challengeFlags & TMUnlimiter.ChallengeFlags.IsDecorationScaled) != 0;
-            n.TMUnlimiterData.IsTrackBaseEmpty = (challengeFlags & TMUnlimiter.ChallengeFlags.IsTrackBaseEmpty) != 0;
-            n.TMUnlimiterData.IsVanillaMode = (challengeFlags & TMUnlimiter.ChallengeFlags.IsVanillaMode) != 0;
-            n.TMUnlimiterData.IsPylonsDisabled = (challengeFlags & TMUnlimiter.ChallengeFlags.IsPylonsDisabled) != 0;
-
-            if (n.TMUnlimiterData.SkyDecorationVisibility != TMUnlimiter.DecorationVisibility.Nothing)
-            {
-                if (isDecorationMoved)
-                {
-                    n.TMUnlimiterData.DecorationOffset = r.ReadVec3();
-                }
-
-                if (isDecorationScaled)
-                {
-                    n.TMUnlimiterData.DecorationScale = r.ReadVec3();
-                }
-            }
-
-            var blockCount = r.ReadInt32();
-
-            if (n.blocks is null) throw new InvalidOperationException("Blocks are null.");
-
-            for (var i = 0; i < blockCount; i++)
-            {
-                var block = n.blocks![r.ReadInt32()];
-                block.TMUnlimiterData = new CGameCtnBlock.TMUnlimiter();
-                var flags = (BlockFlags)r.ReadUInt16();
-
-                if (flags.HasFlag(BlockFlags.IsOutsideBoundaries))
-                {
-                    block.TMUnlimiterData.OverOverSizeChunk = r.ReadByte3();
-                }
-
-                block.TMUnlimiterData.IsInverted = flags.HasFlag(BlockFlags.IsInverted);
-                block.TMUnlimiterData.IsVanillaTerrain = flags.HasFlag(BlockFlags.IsVanillaTerrain);
-                block.TMUnlimiterData.IsSpawnPointFixEnabled = flags.HasFlag(BlockFlags.IsSpawnPointFixEnabled);
-                block.TMUnlimiterData.IsDynamic = flags.HasFlag(BlockFlags.IsDynamic);
-                block.TMUnlimiterData.IsInvisible = flags.HasFlag(BlockFlags.IsInvisible);
-                block.TMUnlimiterData.IsCollisionDisabled = flags.HasFlag(BlockFlags.IsCollisionDisabled);
-                block.TMUnlimiterData.IsClassicMode = flags.HasFlag(BlockFlags.IsClassicMode);
-                block.TMUnlimiterData.IsClassicTerrain = flags.HasFlag(BlockFlags.IsClassicTerrain);
-
-                if (block.TMUnlimiterData.IsVanillaTerrain)
-                {
-                    continue;
-                }
-
-                if (flags.HasFlag(BlockFlags.IsMoved))
-                {
-                    block.TMUnlimiterData.Offset = r.ReadVec3();
-                }
-
-                if (flags.HasFlag(BlockFlags.IsRotated))
-                {
-                    block.TMUnlimiterData.Rotation = r.ReadVec3();
-                }
-
-                if (flags.HasFlag(BlockFlags.IsScaled))
-                {
-                    block.TMUnlimiterData.Scale = r.ReadVec3();
-                }
-
-                if (flags.HasFlag(BlockFlags.HasIdentifier))
-                {
-                    block.TMUnlimiterData.Group = r.ReadString();
-                }
-            }
-
-            U01 = r.ReadInt32();
-        }
-
-        private void WriteDecrypted(CGameCtnChallenge n, GbxWriter w)
-        {
-            var challengeFlags = (TMUnlimiter.ChallengeFlags)0;
-            if (n.TMUnlimiterData is not null)
-            {
-                challengeFlags |= (TMUnlimiter.ChallengeFlags)((int)n.TMUnlimiterData.SkyDecorationVisibility & 0x105);
-                if (n.TMUnlimiterData.IsDecorationMoved) challengeFlags |= TMUnlimiter.ChallengeFlags.IsDecorationMoved;
-                if (n.TMUnlimiterData.IsDecorationScaled) challengeFlags |= TMUnlimiter.ChallengeFlags.IsDecorationScaled;
-                if (n.TMUnlimiterData.IsTrackBaseEmpty) challengeFlags |= TMUnlimiter.ChallengeFlags.IsTrackBaseEmpty;
-                if (n.TMUnlimiterData.IsVanillaMode) challengeFlags |= TMUnlimiter.ChallengeFlags.IsVanillaMode;
-                if (n.TMUnlimiterData.IsPylonsDisabled) challengeFlags |= TMUnlimiter.ChallengeFlags.IsPylonsDisabled;
-            }
-
-            w.Write((ushort)challengeFlags);
-
-            if (n.TMUnlimiterData is not null && n.TMUnlimiterData.SkyDecorationVisibility != TMUnlimiter.DecorationVisibility.Nothing)
-            {
-                if (n.TMUnlimiterData.IsDecorationMoved)
-                {
-                    w.Write(n.TMUnlimiterData.DecorationOffset);
-                }
-
-                if (n.TMUnlimiterData.IsDecorationScaled)
-                {
-                    w.Write(n.TMUnlimiterData.DecorationScale);
-                }
-            }
-
-            var blocks = n.blocks ?? throw new InvalidOperationException("Blocks are null.");
-
-            w.Write(blocks.Count(x => x.TMUnlimiterData is not null));
-
-            foreach (var (block, i) in blocks
-                .Select((block, i) => (block, i))
-                .Where(x => x.block.TMUnlimiterData is not null))
-            {
-                w.Write(i);
-
-                var flags = (BlockFlags)0;
-                if (block.TMUnlimiterData!.IsOutsideBoundaries) flags |= BlockFlags.IsOutsideBoundaries;
-                if (block.TMUnlimiterData.IsMoved) flags |= BlockFlags.IsMoved;
-                if (block.TMUnlimiterData.IsRotated) flags |= BlockFlags.IsRotated;
-                if (block.TMUnlimiterData.IsScaled) flags |= BlockFlags.IsScaled;
-                if (block.TMUnlimiterData.IsInverted) flags |= BlockFlags.IsInverted;
-                if (block.TMUnlimiterData.IsVanillaTerrain) flags |= BlockFlags.IsVanillaTerrain;
-                if (block.TMUnlimiterData.IsSpawnPointFixEnabled) flags |= BlockFlags.IsSpawnPointFixEnabled;
-                if (block.TMUnlimiterData.IsDynamic) flags |= BlockFlags.IsDynamic;
-                if (block.TMUnlimiterData.IsInvisible) flags |= BlockFlags.IsInvisible;
-                if (block.TMUnlimiterData.IsCollisionDisabled) flags |= BlockFlags.IsCollisionDisabled;
-                if (block.TMUnlimiterData.IsClassicMode) flags |= BlockFlags.IsClassicMode;
-                if (block.TMUnlimiterData.IsClassicTerrain) flags |= BlockFlags.IsClassicTerrain;
-                if (block.TMUnlimiterData.HasIdentifier) flags |= BlockFlags.HasIdentifier;
-
-                w.Write((ushort)flags);
-
-                if (block.TMUnlimiterData.IsVanillaTerrain)
-                {
-                    continue;
-                }
-
-                if (block.TMUnlimiterData.IsMoved)
-                {
-                    w.Write(block.TMUnlimiterData.Offset);
-                }
-
-                if (block.TMUnlimiterData.IsRotated)
-                {
-                    w.Write(block.TMUnlimiterData.Rotation);
-                }
-
-                if (block.TMUnlimiterData.IsScaled)
-                {
-                    w.Write(block.TMUnlimiterData.Scale);
-                }
-
-                if (block.TMUnlimiterData.HasIdentifier)
-                {
-                    w.Write(block.TMUnlimiterData.Group);
-                }
-            }
-
-            w.Write(U01);
-        }
-
-        private static byte[] Crypt(byte[] cryptedChunkData)
-        {
-            for (uint offset = 0; offset < cryptedChunkData.Length; offset++)
-            {
-                uint data = cryptedChunkData[offset];
-                uint hash = (uint)(cryptedChunkData.Length * ((cryptedChunkData.Length * 2) - offset));
-
-                hash ^= 0xEAD9C8B3;
-                hash += offset * 3 % 0x7F;
-
-                if (offset % 5 < 2)
-                {
-                    hash = ~hash;
-                }
-
-                cryptedChunkData[offset] = (byte)~(data ^ hash);
-            }
-
-            return cryptedChunkData;
-        }
-    }
-
-    public partial class Chunk3F001001 : IVersionable
-    {
-        public int Version { get; set; }
-
-        public ushort Flags { get; set; }
-
-        public EDecorationVisibility DecorationVisibility
-        {
-            get => (EDecorationVisibility)(Flags & 3);
-            set => Flags = (ushort)((Flags & ~3) | (ushort)value);
-        }
-
-        private Vec3 decorationScale = new(1, 1, 1);
-        public Vec3 DecorationScale { get => decorationScale; set => decorationScale = value; }
-
-        private List<LegacyScript> legacyScripts = [];
-        public List<LegacyScript> LegacyScripts { get => legacyScripts; set => legacyScripts = value; }
-
-        private List<ParameterSet> parameterSets = [];
-        public List<ParameterSet> ParameterSets { get => parameterSets; set => parameterSets = value; }
-
-        private List<MediaClipMapping> mediaClipMappings = [];
-        public List<MediaClipMapping> MediaClipMappings { get => mediaClipMappings; set => mediaClipMappings = value; }
-
-        private List<AngelScriptModule> angelScriptModules = [];
-        public List<AngelScriptModule> AngelScriptModules { get => angelScriptModules; set => angelScriptModules = value; }
-
-        private List<TriggerGroup> triggerGroups = [];
-        public List<TriggerGroup> TriggerGroups { get => triggerGroups; set => triggerGroups = value; }
-
-        private List<BlockGroup> blockGroups = [];
-        public List<BlockGroup> BlockGroups { get => blockGroups; set => blockGroups = value; }
-
-        private List<EmbeddedBlock> embeddedBlocks = [];
-        public List<EmbeddedBlock> EmbeddedBlocks { get => embeddedBlocks; set => embeddedBlocks = value; }
-
-        private List<MaterialModelRef> materialModelRefs = [];
-        public List<MaterialModelRef> MaterialModelRefs { get => materialModelRefs; set => materialModelRefs = value; }
-
-        private ReplacementTextureFlags replacementTexture = new();
-        public ReplacementTextureFlags ReplacementTexture { get => replacementTexture; set => replacementTexture = value; }
-
-        private List<EmbeddedImage> embeddedImages = [];
-        public List<EmbeddedImage> EmbeddedImages { get => embeddedImages; set => embeddedImages = value; }
-
-        private List<Ident> vehicleIdentifiers = [];
-        public List<Ident> VehicleIdentifiers { get => vehicleIdentifiers; set => vehicleIdentifiers = value; }
-
-        public override void ReadWrite(CGameCtnChallenge n, GbxReaderWriter rw) => ReadWrite(n, rw, ver: 0);
-
-        protected void ReadWrite(CGameCtnChallenge n, GbxReaderWriter rw, int ver)
-        {
-            rw.VersionByte(this);
-
-            if (Version == 0)
-            {
-                return;
-            }
-
-            ReadWriteWithoutVersion(n, rw, ver);
-        }
-
-        public void ReadWriteWithoutVersion(CGameCtnChallenge n, GbxReaderWriter rw, int ver)
-        {
-            if (Version == 4)
-            {
-                Flags = rw.Byte((byte)Flags);
-
-                if ((Flags & 1) != 0)
-                {
-                    n.TMUnlimiterData.DecorationOffset = rw.Int3((Int3)n.TMUnlimiterData.DecorationOffset);
-                }
-
-                rw.ListReadableWritable(ref legacyScripts);
-
-                if (rw.Reader is not null) ParameterSets = rw.Reader.ReadListReadable<ParameterSet>();
-                rw.Writer?.WriteListWritable(ParameterSets);
-
-                rw.ListReadableWritable(ref mediaClipMappings);
-
-                if (rw.Reader is not null)
-                {
-                    var count = rw.Reader.ReadInt32();
-                    for (var i = 0; i < count; i++)
-                    {
-                        var data = rw.Reader.ReadBytes(30);
-                        var blockType = (BlockType)rw.Reader.ReadByte();
-                        var name = rw.Reader.ReadId();
-
-                        switch (blockType)
-                        {
-                            case BlockType.GameBlock:
-                                var blockIndex = rw.Reader.ReadInt32();
-                                break;
-                            case BlockType.ExternalBlock:
-                                var externalBlock = rw.Reader.ReadIdent();
-                                break;
-                        }
-                    }
-                }
-            }
-
-            if (Version == 7)
-            {
-                Flags = rw.UInt16(Flags);
-
-                if (DecorationVisibility != EDecorationVisibility.Nothing)
-                {
-                    if ((Flags & 4) != 0) // decorationOffsetApplied
-                    {
-                        n.TMUnlimiterData.DecorationOffset = rw.Vec3(n.TMUnlimiterData.DecorationOffset);
-                    }
-
-                    if ((Flags & 8) != 0) // decorationScaleApplied
-                    {
-                        rw.Vec3(ref decorationScale);
-                    }
-                }
-
-                rw.ListReadableWritable<AngelScriptModule>(ref angelScriptModules);
-
-                if (rw.Reader is not null) ParameterSets = rw.Reader.ReadListReadable<ParameterSet>();
-                rw.Writer?.WriteListWritable(ParameterSets);
-
-                rw.ListReadableWritable<TriggerGroup>(ref triggerGroups);
-                rw.ListReadableWritable<BlockGroup>(ref blockGroups);
-                var embeddedBlockCount = rw.Int32(embeddedBlocks.Count);
-
-                rw.ListReadableWritable<MaterialModelRef>(ref materialModelRefs);
-
-                if (rw.Reader is not null)
-                {
-                    var tempRefTable = new GbxRefTable();
-
-                    foreach (var materialModelRef in materialModelRefs)
-                    {
-                        rw.Reader.NodeDict[materialModelRef.InstanceIndex] = new GbxRefTableFile(tempRefTable, 0, useFile: false, materialModelRef.MaterialModelRelativePath);
-                    }
-                }
-                
-                rw.ReadableWritable(ref replacementTexture);
-                
-                if (rw.Reader is not null)
-                {
-                    var tempRefTable = new GbxRefTable();
-
-                    if (replacementTexture.SpecularInstanceIndex.HasValue)
-                    {
-                        rw.Reader.NodeDict[replacementTexture.SpecularInstanceIndex.Value] = new GbxRefTableFile(tempRefTable, 0, useFile: true, "Specular");
-                    }
-
-                    if (replacementTexture.NormalInstanceIndex.HasValue)
-                    {
-                        rw.Reader.NodeDict[replacementTexture.NormalInstanceIndex.Value] = new GbxRefTableFile(tempRefTable, 0, useFile: true, "Normal");
-                    }
-
-                    if (replacementTexture.WhiteInstanceIndex.HasValue)
-                    {
-                        rw.Reader.NodeDict[replacementTexture.WhiteInstanceIndex.Value] = new GbxRefTableFile(tempRefTable, 0, useFile: true, "White");
-                    }
-
-                    if (replacementTexture.BlackInstanceIndex.HasValue)
-                    {
-                        rw.Reader.NodeDict[replacementTexture.BlackInstanceIndex.Value] = new GbxRefTableFile(tempRefTable, 0, useFile: true, "Black");
-                    }
-                }
-
-                rw.ListReadableWritable<EmbeddedImage>(ref embeddedImages);
-
-                if (rw.Reader is not null)
-                {
-                    var tempRefTable = new GbxRefTable();
-
-                    foreach (var embeddedImage in embeddedImages)
-                    {
-                        var file = new GbxRefTableFile(tempRefTable, 0, useFile: true, embeddedImage.RelativePath);
-
-                        foreach (var bitmapPair in embeddedImage.BitmapPairs)
-                        {
-                            rw.Reader.NodeDict[bitmapPair.InstanceIndex] = file;
-                        }
-                    }
-                }
-
-                rw.ListReadableWritable<EmbeddedBlock>(ref embeddedBlocks, embeddedBlockCount, version: ver);
-                rw.ListIdent(ref vehicleIdentifiers);
-
-                if (rw.Reader is not null)
-                {
-                    ReadBlocks(n, rw.Reader);
-                }
-            }
-        }
-
-        private void ReadBlocks(CGameCtnChallenge n, GbxReader r)
-        {
-            var blockCount = r.ReadInt32();
-            n.Blocks = [];
-
-            for (var i = 0; i < blockCount; i++)
-            {
-                var blockType = r.ReadByte();
-
-                switch (blockType)
-                {
-                    case 0:
-                        {
-                            var block = new CGameCtnBlock
-                            {
-                                BlockModel = (r.ReadIdAsString(), r.ReadId(), ""),
-                                Coord = r.ReadInt3(),
-                                Direction = (Direction)r.ReadByte(),
-                                Flags = r.ReadInt32()
-                            };
-
-                            if ((Flags & (1 << 15)) != 0) // hasAuthorAndSkin
-                            {
-                                block.Author = r.ReadIdAsString();
-                                block.Skin = r.ReadNodeRef<CGameCtnBlockSkin>();
-                            }
-
-                            n.Blocks.Add(block);
-                            break;
-                        }
-
-                    case 1:
-                        {
-                            var coord = r.ReadInt3();
-                            var direction = (Direction)r.ReadByte();
-                            var triggerGroupIndexes = r.ReadArray<int>();
-                            break;
-                        }
-
-                    case 2:
-                        {
-                            var name = r.ReadIdAsString();
-                            var author = r.ReadIdAsString();
-                            var coord = r.ReadInt3();
-                            var direction = (Direction)r.ReadByte();
-                            var flags = r.ReadInt32();
-                            break;
-                        }
-
-                    case 3:
-                        {
-                            var embeddedBlockIndex = r.ReadInt32();
-                            var coord = r.ReadInt3();
-                            var direction = (Direction)r.ReadByte();
-                            var flags = r.ReadInt32();
-                            break;
-                        }
-                }
-
-                switch (blockType)
-                {
-                    case 0:
-                    case 2:
-                    case 3:
-                        {
-                            var flags2 = r.ReadUInt16();
-
-                            if ((flags2 & 1) != 0) // isOffsetApplied  
-                            {
-                                var offset = r.ReadVec3();
-                            }
-
-                            if ((flags2 & (1 << 1)) != 0) // isRotationApplied  
-                            {
-                                var rotation = r.ReadVec3();
-                            }
-
-                            if ((flags2 & (1 << 2)) != 0) // isScaleApplied  
-                            {
-                                var scale = r.ReadVec3();
-                            }
-
-                            if ((flags2 & (1 << 3)) != 0) // isMotionApplied  
-                            {
-                                var flags3 = r.ReadByte();
-
-                                if ((flags3 & (1 << 3)) == 0) // not isManuallyControlled  
-                                {
-                                    var motionPointsCount = r.ReadInt32();
-                                    for (var j = 0; j < motionPointsCount; j++)
-                                    {
-                                        var time = r.ReadTimeInt32();
-                                        var motionOffset = r.ReadVec3();
-                                        var motionRotation = r.ReadVec3();
-                                    }
-                                }
-                            }
-
-                            if ((flags2 & (1 << 4)) != 0) // isOriginOffsetApplied  
-                            {
-                                var originOffset = r.ReadVec3();
-                            }
-
-                            if ((flags2 & (1 << 5)) != 0) // isInBlockGroups  
-                            {
-                                var blockGroupIndexesCount = r.ReadInt32();
-                                var blockGroupIndexes = new List<uint>(blockGroupIndexesCount);
-                                for (var j = 0; j < blockGroupIndexesCount; j++)
-                                {
-                                    blockGroupIndexes.Add(r.ReadUInt32());
-                                }
-                            }
-
-                            var spawnPointAlterMethod = (flags2 >> 9) & 3;
-                            if (spawnPointAlterMethod == 1) // manual  
-                            {
-                                var spawnOffset = r.ReadVec3();
-                                var spawnRotation = r.ReadVec3();
-                            }
-
-                            break;
-                        }
-
-                    case 1:
-                        {
-                            var flags2 = r.ReadByte();
-
-                            const byte isOffsetApplied = 1 << 0;
-                            const byte isRotationApplied = 1 << 1;
-                            const byte isScaleApplied = 1 << 2;
-                            const byte isMotionApplied = 1 << 3;
-                            const byte isInBlockGroups = 1 << 4;
-
-                            if ((flags2 & isOffsetApplied) != 0)
-                            {
-                                var offset = r.ReadVec3();
-                            }
-
-                            if ((flags2 & isRotationApplied) != 0)
-                            {
-                                var rotation = r.ReadVec3();
-                            }
-
-                            if ((flags2 & isScaleApplied) != 0)
-                            {
-                                var scale = r.ReadVec3();
-                            }
-
-                            if ((flags2 & isMotionApplied) != 0)
-                            {
-                                var flags3 = r.ReadByte();
-                                const byte isManuallyControlled = 1 << 3;
-
-                                if ((flags3 & isManuallyControlled) == 0)
-                                {
-                                    var motionPointsCount = r.ReadInt32();
-                                    for (var j = 0; j < motionPointsCount; j++)
-                                    {
-                                        var time = r.ReadTimeInt32();
-                                        var motionOffset = r.ReadVec3();
-                                        var motionRotation = r.ReadVec3();
-                                    }
-                                }
-                            }
-
-                            if ((flags2 & isInBlockGroups) != 0)
-                            {
-                                var blockGroupIndexesCount = r.ReadInt32();
-                                var blockGroupIndexes = new List<uint>(blockGroupIndexesCount);
-                                for (var j = 0; j < blockGroupIndexesCount; j++)
-                                {
-                                    blockGroupIndexes.Add(r.ReadUInt32());
-                                }
-                            }
-
-                            break;
-                        }
-                }
-            }
-        }
-
-        public class EmbeddedBlock : IReadableWritable
+        public class EmbeddedBlock : IReadable, IWritable
         {
             public string Id { get; set; } = string.Empty;
             public string Author { get; set; } = string.Empty;
@@ -869,99 +102,190 @@ public partial class CGameCtnChallenge
                 return $"{Id} by {Author} (Type: {WaypointType}, BlockType: {BlockType})";
             }
 
-            public void ReadWrite(GbxReaderWriter rw, int v = 0)
+            public void Read(GbxReader r, int v = 0)
             {
-                Id = rw.Id(Id);
-                Author = rw.Id(Author);
+                Id = r.ReadIdAsString();
+                Author = r.ReadIdAsString();
 
                 if (v == 0)
                 {
-                    U01 = rw.UInt32(U01);
+                    U01 = r.ReadUInt32();
                 }
                 else
                 {
-                    Flags = rw.Byte(Flags);
+                    Flags = r.ReadByte();
 
                     if ((Flags & 0b01000000) != 0) // has icon
                     {
-                        IconWidth = rw.Byte(IconWidth);
-                        IconHeight = rw.Byte(IconHeight);
-                        IconData = rw.Data(IconData, IconWidth.GetValueOrDefault() * IconHeight.GetValueOrDefault() * 4);
+                        IconWidth = r.ReadByte();
+                        IconHeight = r.ReadByte();
+                        IconData = r.ReadBytes(IconWidth.GetValueOrDefault() * IconHeight.GetValueOrDefault() * 4);
                     }
                 }
 
                 if (v == 0)
                 {
-                    WaypointType = rw.EnumByte<CGameItemModel.EWaypointType>(WaypointType);
-                    BlockType = rw.Byte(BlockType);
+                    WaypointType = (CGameItemModel.EWaypointType)r.ReadByte();
+                    BlockType = r.ReadByte();
                 }
 
                 var packedVersion = (int)WaypointType | (v << 4);
 
                 if (BlockType is 2 or 3) // classic or road
                 {
-                    GroundSubVariations0 = rw.ListReadableWritable<SubVariation>(GroundSubVariations0, byteLengthPrefix: true, packedVersion);
-                    AirSubVariations0 = rw.ListReadableWritable<SubVariation>(AirSubVariations0, byteLengthPrefix: true, packedVersion);
+                    GroundSubVariations0 = r.ReadListReadable<SubVariation>(byteLengthPrefix: true, packedVersion);
+                    AirSubVariations0 = r.ReadListReadable<SubVariation>(byteLengthPrefix: true, packedVersion);
                 }
 
                 if (BlockType == 3) // road
                 {
-                    GroundSubVariations1 = rw.ListReadableWritable<SubVariation>(GroundSubVariations1, byteLengthPrefix: true, packedVersion);
-                    AirSubVariations1 = rw.ListReadableWritable<SubVariation>(AirSubVariations1, byteLengthPrefix: true, packedVersion);
-                    GroundSubVariations2 = rw.ListReadableWritable<SubVariation>(GroundSubVariations2, byteLengthPrefix: true, packedVersion);
-                    AirSubVariations2 = rw.ListReadableWritable<SubVariation>(AirSubVariations2, byteLengthPrefix: true, packedVersion);
-                    GroundSubVariations3 = rw.ListReadableWritable<SubVariation>(GroundSubVariations3, byteLengthPrefix: true, packedVersion);
-                    AirSubVariations3 = rw.ListReadableWritable<SubVariation>(AirSubVariations3, byteLengthPrefix: true, packedVersion);
-                    GroundSubVariations4 = rw.ListReadableWritable<SubVariation>(GroundSubVariations4, byteLengthPrefix: true, packedVersion);
-                    AirSubVariations4 = rw.ListReadableWritable<SubVariation>(AirSubVariations4, byteLengthPrefix: true, packedVersion);
-                    GroundSubVariations5 = rw.ListReadableWritable<SubVariation>(GroundSubVariations5, byteLengthPrefix: true, packedVersion);
-                    AirSubVariations5 = rw.ListReadableWritable<SubVariation>(AirSubVariations5, byteLengthPrefix: true, packedVersion);
+                    GroundSubVariations1 = r.ReadListReadable<SubVariation>(byteLengthPrefix: true, packedVersion);
+                    AirSubVariations1 = r.ReadListReadable<SubVariation>(byteLengthPrefix: true, packedVersion);
+                    GroundSubVariations2 = r.ReadListReadable<SubVariation>(byteLengthPrefix: true, packedVersion);
+                    AirSubVariations2 = r.ReadListReadable<SubVariation>(byteLengthPrefix: true, packedVersion);
+                    GroundSubVariations3 = r.ReadListReadable<SubVariation>(byteLengthPrefix: true, packedVersion);
+                    AirSubVariations3 = r.ReadListReadable<SubVariation>(byteLengthPrefix: true, packedVersion);
+                    GroundSubVariations4 = r.ReadListReadable<SubVariation>(byteLengthPrefix: true, packedVersion);
+                    AirSubVariations4 = r.ReadListReadable<SubVariation>(byteLengthPrefix: true, packedVersion);
+                    GroundSubVariations5 = r.ReadListReadable<SubVariation>(byteLengthPrefix: true, packedVersion);
+                    AirSubVariations5 = r.ReadListReadable<SubVariation>(byteLengthPrefix: true, packedVersion);
                 }
 
-                SpawnOffsetGround = rw.Vec3(SpawnOffsetGround);
-                SpawnRotationGround = rw.Vec3(SpawnRotationGround);
-                SpawnOffsetAir = rw.Vec3(SpawnOffsetAir);
-                SpawnRotationAir = rw.Vec3(SpawnRotationAir);
+                SpawnOffsetGround = r.ReadVec3();
+                SpawnRotationGround = r.ReadVec3();
+                SpawnOffsetAir = r.ReadVec3();
+                SpawnRotationAir = r.ReadVec3();
 
                 if (v >= 1)
                 {
-                    var groundBlockUnitInfosCount = rw.Int32(GroundBlockUnitInfos?.Count ?? 0);
-                    var airBlockUnitInfosCount = rw.Int32(AirBlockUnitInfos?.Count ?? 0);
+                    var groundBlockUnitInfosCount = r.ReadInt32();
+                    var airBlockUnitInfosCount = r.ReadInt32();
 
-                    GroundBlockUnitInfos = rw.List<Int3>(GroundBlockUnitInfos, groundBlockUnitInfosCount);
-                    AirBlockUnitInfos = rw.List<Int3>(AirBlockUnitInfos, airBlockUnitInfosCount);
+                    GroundBlockUnitInfos = r.ReadList<Int3>(groundBlockUnitInfosCount);
+                    AirBlockUnitInfos = r.ReadList<Int3>(airBlockUnitInfosCount);
+                }
+            }
+
+            public void Write(GbxWriter w, int v = 0)
+            {
+                w.Write(Id);
+                w.Write(Author);
+
+                if (v == 0)
+                {
+                    w.Write(U01);
+                }
+                else
+                {
+                    w.Write(Flags);
+
+                    if ((Flags & 0b01000000) != 0) // has icon
+                    {
+                        w.Write(IconWidth.GetValueOrDefault());
+                        w.Write(IconHeight.GetValueOrDefault());
+                        w.Write(IconData ?? []);
+                    }
+                }
+
+                if (v == 0)
+                {
+                    w.Write((byte)WaypointType);
+                    w.Write(BlockType);
+                }
+
+                var packedVersion = (int)WaypointType | (v << 4);
+
+                if (BlockType is 2 or 3) // classic or road
+                {
+                    w.WriteListWritable(GroundSubVariations0, byteLengthPrefix: true, packedVersion);
+                    w.WriteListWritable(AirSubVariations0, byteLengthPrefix: true, packedVersion);
+                }
+
+                if (BlockType == 3) // road
+                {
+                    w.WriteListWritable(GroundSubVariations1, byteLengthPrefix: true, packedVersion);
+                    w.WriteListWritable(AirSubVariations1, byteLengthPrefix: true, packedVersion);
+                    w.WriteListWritable(GroundSubVariations2, byteLengthPrefix: true, packedVersion);
+                    w.WriteListWritable(AirSubVariations2, byteLengthPrefix: true, packedVersion);
+                    w.WriteListWritable(GroundSubVariations3, byteLengthPrefix: true, packedVersion);
+                    w.WriteListWritable(AirSubVariations3, byteLengthPrefix: true, packedVersion);
+                    w.WriteListWritable(GroundSubVariations4, byteLengthPrefix: true, packedVersion);
+                    w.WriteListWritable(AirSubVariations4, byteLengthPrefix: true, packedVersion);
+                    w.WriteListWritable(GroundSubVariations5, byteLengthPrefix: true, packedVersion);
+                    w.WriteListWritable(AirSubVariations5, byteLengthPrefix: true, packedVersion);
+                }
+
+                w.Write(SpawnOffsetGround);
+                w.Write(SpawnRotationGround);
+                w.Write(SpawnOffsetAir);
+                w.Write(SpawnRotationAir);
+
+                if (v >= 1)
+                {
+                    w.Write(GroundBlockUnitInfos?.Count ?? 0);
+                    w.Write(AirBlockUnitInfos?.Count ?? 0);
+
+                    foreach (var groundBlockUnitInfo in GroundBlockUnitInfos ?? [])
+                    {
+                        w.Write(groundBlockUnitInfo);
+                    }
+
+                    foreach (var airBlockUnitInfo in AirBlockUnitInfos ?? [])
+                    {
+                        w.Write(airBlockUnitInfo);
+                    }
                 }
             }
         }
 
-        public class SubVariation : IReadableWritable
+        public class SubVariation : IReadable, IWritable
         {
             public CPlugTree? Tree { get; set; }
             public CPlugTree? TriggerTree { get; set; }
             public byte? PreLightGenTileCountU { get; set; }
 
-            public void ReadWrite(GbxReaderWriter rw, int v = 0)
+            public void Read(GbxReader r, int v = 0)
             {
                 var waypointType = (CGameItemModel.EWaypointType)(v & 0xF);
                 var ver = (v >> 4) & 0xF;
 
-                Tree = rw.NodeRef<CPlugTree>(Tree);
+                Tree = r.ReadNodeRef<CPlugTree>();
 
                 if (waypointType is CGameItemModel.EWaypointType.Finish
                                  or CGameItemModel.EWaypointType.Checkpoint
                                  or CGameItemModel.EWaypointType.StartFinish)
                 {
-                    TriggerTree = rw.NodeRef<CPlugTree>(TriggerTree);
+                    TriggerTree = r.ReadNodeRef<CPlugTree>();
                 }
-                
+
                 if (ver >= 2)
                 {
-                    PreLightGenTileCountU = rw.Byte(PreLightGenTileCountU);
+                    PreLightGenTileCountU = r.ReadByte();
+                }
+            }
+
+            public void Write(GbxWriter w, int v = 0)
+            {
+                var waypointType = (CGameItemModel.EWaypointType)(v & 0xF);
+                var ver = (v >> 4) & 0xF;
+
+                w.WriteNodeRef(Tree);
+
+                if (waypointType is CGameItemModel.EWaypointType.Finish
+                                 or CGameItemModel.EWaypointType.Checkpoint
+                                 or CGameItemModel.EWaypointType.StartFinish)
+                {
+                    w.WriteNodeRef(TriggerTree);
+                }
+
+                if (ver >= 2)
+                {
+                    w.Write(PreLightGenTileCountU.GetValueOrDefault());
                 }
             }
         }
 
-        public class ReplacementTextureFlags : IReadableWritable
+        public class ReplacementTextureFlags : IReadable, IWritable
         {
             public const byte SpecularBit = 0;
             public const byte NormalBit = 1;
@@ -980,45 +304,46 @@ public partial class CGameCtnChallenge
             public int? WhiteInstanceIndex { get; set; }
             public int? BlackInstanceIndex { get; set; }
 
-            public void ReadWrite(GbxReaderWriter rw, int v = 0)
+            public void Read(GbxReader r, int v = 0)
             {
-                Flags = rw.Byte(Flags);
+                Flags = r.ReadByte();
 
-                if (HasSpecular)
-                {
-                    SpecularInstanceIndex = rw.Int32(SpecularInstanceIndex);
-                }
+                if (HasSpecular) SpecularInstanceIndex = r.ReadInt32();
+                if (HasNormal) NormalInstanceIndex = r.ReadInt32();
+                if (HasWhite) WhiteInstanceIndex = r.ReadInt32();
+                if (HasBlack) BlackInstanceIndex = r.ReadInt32();
+            }
 
-                if (HasNormal)
-                {
-                    NormalInstanceIndex = rw.Int32(NormalInstanceIndex);
-                }
+            public void Write(GbxWriter w, int v = 0)
+            {
+                w.Write(Flags);
 
-                if (HasWhite)
-                {
-                    WhiteInstanceIndex = rw.Int32(WhiteInstanceIndex);
-                }
-
-                if (HasBlack)
-                {
-                    BlackInstanceIndex = rw.Int32(BlackInstanceIndex);
-                }
+                if (HasSpecular) w.Write(SpecularInstanceIndex.GetValueOrDefault());
+                if (HasNormal) w.Write(NormalInstanceIndex.GetValueOrDefault());
+                if (HasWhite) w.Write(WhiteInstanceIndex.GetValueOrDefault());
+                if (HasBlack) w.Write(BlackInstanceIndex.GetValueOrDefault());
             }
         }
 
-        public class MaterialModelRef : IReadableWritable
+        public class MaterialModelRef : IReadable, IWritable
         {
             public int InstanceIndex { get; set; }
             public string MaterialModelRelativePath { get; set; } = string.Empty;
 
-            public void ReadWrite(GbxReaderWriter rw, int v = 0)
+            public void Read(GbxReader r, int v = 0)
             {
-                InstanceIndex = rw.Int32(InstanceIndex);
-                MaterialModelRelativePath = rw.String(MaterialModelRelativePath);
+                InstanceIndex = r.ReadInt32();
+                MaterialModelRelativePath = r.ReadString();
+            }
+
+            public void Write(GbxWriter w, int v = 0)
+            {
+                w.Write(InstanceIndex);
+                w.Write(MaterialModelRelativePath);
             }
         }
 
-        public class EmbeddedImage : IReadableWritable
+        public class EmbeddedImage : IReadable, IWritable
         {
             public uint ClassId { get; set; }
             public string RelativePath { get; set; } = string.Empty;
@@ -1026,129 +351,270 @@ public partial class CGameCtnChallenge
             public byte[] ImageData { get; set; } = [];
             public List<BitmapPair> BitmapPairs { get; set; } = [];
 
-            public void ReadWrite(GbxReaderWriter rw, int v = 0)
+            public void Read(GbxReader r, int v = 0)
             {
-                ClassId = rw.UInt32(ClassId);
-                RelativePath = rw.String(RelativePath);
-                ImageSize = rw.UInt32(ImageSize);
-                ImageData = rw.Data(ImageData, (int)ImageSize);
-                BitmapPairs = rw.ListReadableWritable(BitmapPairs);
+                ClassId = r.ReadUInt32();
+                RelativePath = r.ReadString();
+                ImageSize = r.ReadUInt32();
+                ImageData = r.ReadBytes((int)ImageSize);
+                BitmapPairs = r.ReadListReadable<BitmapPair>();
+            }
+
+            public void Write(GbxWriter w, int v = 0)
+            {
+                w.Write(ClassId);
+                w.Write(RelativePath);
+                w.Write(ImageSize);
+                w.Write(ImageData);
+                w.WriteListWritable(BitmapPairs);
             }
         }
 
-        public class BitmapPair : IReadableWritable
+        public class BitmapPair : IReadable, IWritable
         {
             public int InstanceIndex { get; set; }
             public byte TexFilter { get; set; }
             public byte TexAddress { get; set; }
 
-            public void ReadWrite(GbxReaderWriter rw, int v = 0)
+            public void Read(GbxReader r, int v = 0)
             {
-                InstanceIndex = rw.Int32(InstanceIndex);
-                TexFilter = rw.Byte(TexFilter);
-                TexAddress = rw.Byte(TexAddress);
+                InstanceIndex = r.ReadInt32();
+                TexFilter = r.ReadByte();
+                TexAddress = r.ReadByte();
+            }
+
+            public void Write(GbxWriter w, int v = 0)
+            {
+                w.Write(InstanceIndex);
+                w.Write(TexFilter);
+                w.Write(TexAddress);
             }
         }
 
-        public class TriggerGroup : IReadableWritable
+        public class TriggerGroup : IReadable, IWritable
         {
+            private TriggerGroupCondition? condition;
+            private TriggerGroupEvent? onEnterEvent;
+            private TriggerGroupEvent? onInsideEvent;
+            private TriggerGroupEvent? onLeaveEvent;
+
             public string Name { get; set; } = string.Empty;
             public byte Flags { get; set; }
-            public TriggerGroupCondition? Condition { get; set; }
-            public TriggerGroupEvent? OnEnterEvent { get; set; }
-            public TriggerGroupEvent? OnInsideEvent { get; set; }
-            public TriggerGroupEvent? OnLeaveEvent { get; set; }
 
-            public void ReadWrite(GbxReaderWriter rw, int v = 0)
+            public TriggerGroupCondition? Condition
             {
-                Name = rw.String(Name);
-                Flags = rw.Byte(Flags);
-
-                if ((Flags & 1) != 0) // hasCondition
+                get => condition;
+                set
                 {
-                    Condition ??= new();
-                    rw.ReadableWritable<TriggerGroupCondition>(Condition);
+                    condition = value;
+
+                    if (value is null) Flags &= 0xFE;
+                    else Flags |= 1;
+                }
+            }
+
+            public TriggerGroupEvent? OnEnterEvent
+            {
+                get => onEnterEvent;
+                set
+                {
+                    onEnterEvent = value;
+
+                    if (value is null) Flags &= 0xFD;
+                    else Flags |= 2;
+                }
+            }
+
+            public TriggerGroupEvent? OnInsideEvent
+            {
+                get => onInsideEvent;
+                set
+                {
+                    onInsideEvent = value;
+
+                    if (value is null) Flags &= 0xFB;
+                    else Flags |= 4;
+                }
+            }
+
+            public TriggerGroupEvent? OnLeaveEvent
+            {
+                get => onLeaveEvent;
+                set
+                {
+                    onLeaveEvent = value;
+
+                    if (value is null) Flags &= 0xF7;
+                    else Flags |= 8;
+                }
+            }
+
+            public void Read(GbxReader r, int v = 0)
+            {
+                Name = r.ReadString();
+                Flags = r.ReadByte();
+
+                if ((Flags & 1) != 0)
+                {
+                    condition = r.ReadReadable<TriggerGroupCondition>();
                 }
 
-                if ((Flags & 2) != 0) // hasOnEnterEvent
+                if ((Flags & 2) != 0)
                 {
-                    OnEnterEvent ??= new();
-                    rw.ReadableWritable<TriggerGroupEvent>(OnEnterEvent);
+                    onEnterEvent = r.ReadReadable<TriggerGroupEvent>();
                 }
 
-                if ((Flags & 4) != 0) // hasOnInsideEvent
+                if ((Flags & 4) != 0)
                 {
-                    OnInsideEvent ??= new();
-                    rw.ReadableWritable<TriggerGroupEvent>(OnInsideEvent);
+                    onInsideEvent = r.ReadReadable<TriggerGroupEvent>();
                 }
 
-                if ((Flags & 8) != 0) // hasOnLeaveEvent
+                if ((Flags & 8) != 0)
                 {
-                    OnLeaveEvent ??= new();
-                    rw.ReadableWritable<TriggerGroupEvent>(OnLeaveEvent);
+                    onLeaveEvent = r.ReadReadable<TriggerGroupEvent>();
+                }
+            }
+
+            public void Write(GbxWriter w, int v = 0)
+            {
+                w.Write(Name);
+                w.Write(Flags);
+
+                if (Condition is not null)
+                {
+                    w.WriteWritable(Condition);
+                }
+
+                if (OnEnterEvent is not null)
+                {
+                    w.WriteWritable(OnEnterEvent);
+                }
+
+                if (OnInsideEvent is not null)
+                {
+                    w.WriteWritable(OnInsideEvent);
+                }
+
+                if (OnLeaveEvent is not null)
+                {
+                    w.WriteWritable(OnLeaveEvent);
                 }
             }
         }
 
-        public class TriggerGroupCondition : IReadableWritable
+        public class TriggerGroupCondition : IReadable, IWritable
         {
-            public byte EventTarget { get; set; }
+            public enum EEventTarget
+            {
+                MediaTracker,
+                AngelScript
+            }
+
+            public EEventTarget EventTarget { get; set; }
             public byte? ConditionType { get; set; }
             public float? Value { get; set; }
             public uint? ModuleIndex { get; set; }
             public uint? FunctionIndex { get; set; }
 
-            public void ReadWrite(GbxReaderWriter rw, int v = 0)
+            public void Read(GbxReader r, int v = 0)
             {
-                EventTarget = rw.Byte(EventTarget);
+                EventTarget = (EEventTarget)r.ReadByte();
 
-                if (EventTarget == 0) // mediaTracker
+                switch (EventTarget)
                 {
-                    ConditionType = rw.Byte(ConditionType ?? 0);
-
-                    if (ConditionType != 0) // none
-                    {
-                        Value = rw.Single(Value ?? 0);
-                    }
+                    case EEventTarget.MediaTracker:
+                        ConditionType = r.ReadByte();
+                        if (ConditionType != 0) // none
+                        {
+                            Value = r.ReadSingle();
+                        }
+                        break;
+                    case EEventTarget.AngelScript:
+                        ModuleIndex = r.ReadUInt32();
+                        FunctionIndex = r.ReadUInt32();
+                        break;
                 }
-                else if (EventTarget == 1) // angelScript
+            }
+
+            public void Write(GbxWriter w, int v = 0)
+            {
+                w.Write((byte)EventTarget);
+
+                switch (EventTarget)
                 {
-                    ModuleIndex = rw.UInt32(ModuleIndex ?? 0);
-                    FunctionIndex = rw.UInt32(FunctionIndex ?? 0);
+                    case EEventTarget.MediaTracker:
+                        w.Write(ConditionType ?? 0);
+                        if (ConditionType != 0) // none
+                        {
+                            w.Write(Value ?? 0);
+                        }
+                        break;
+                    case EEventTarget.AngelScript:
+                        w.Write(ModuleIndex ?? 0);
+                        w.Write(FunctionIndex ?? 0);
+                        break;
                 }
             }
         }
 
-        public class TriggerGroupEvent : IReadableWritable
+        public class TriggerGroupEvent : IReadable, IWritable
         {
-            public byte EventTarget { get; set; }
+            public enum EEventTarget
+            {
+                ParameterSet,
+                AngelScript = 2
+            }
+
+            public EEventTarget EventTarget { get; set; }
             public uint? ParameterSetIndex { get; set; }
             public uint? ModuleIndex { get; set; }
             public uint? FunctionIndex { get; set; }
 
-            public void ReadWrite(GbxReaderWriter rw, int v = 0)
+            public void Read(GbxReader r, int v = 0)
             {
-                EventTarget = rw.Byte(EventTarget);
+                EventTarget = (EEventTarget)r.ReadByte();
 
-                if (EventTarget == 0) // parameterSet
+                switch (EventTarget)
                 {
-                    ParameterSetIndex = rw.UInt32(ParameterSetIndex ?? 0);
+                    case EEventTarget.ParameterSet:
+                        ParameterSetIndex = r.ReadUInt32();
+                        break;
+                    case EEventTarget.AngelScript:
+                        ModuleIndex = r.ReadUInt32();
+                        FunctionIndex = r.ReadUInt32();
+                        break;
                 }
-                else if (EventTarget == 2) // angelScript
+            }
+
+            public void Write(GbxWriter w, int v = 0)
+            {
+                w.Write((byte)EventTarget);
+
+                switch (EventTarget)
                 {
-                    ModuleIndex = rw.UInt32(ModuleIndex ?? 0);
-                    FunctionIndex = rw.UInt32(FunctionIndex ?? 0);
+                    case EEventTarget.ParameterSet:
+                        w.Write(ParameterSetIndex ?? 0);
+                        break;
+                    case EEventTarget.AngelScript:
+                        w.Write(ModuleIndex ?? 0);
+                        w.Write(FunctionIndex ?? 0);
+                        break;
                 }
             }
         }
 
-        public class BlockGroup : IReadableWritable
+        public class BlockGroup : IReadable, IWritable
         {
             public string Name { get; set; } = string.Empty;
 
-            public void ReadWrite(GbxReaderWriter rw, int v = 0)
+            public void Read(GbxReader r, int v = 0)
             {
-                Name = rw.String(Name);
+                Name = r.ReadString();
+            }
+
+            public void Write(GbxWriter w, int v = 0)
+            {
+                w.Write(Name);
             }
         }
 
@@ -1676,26 +1142,79 @@ public partial class CGameCtnChallenge
             }
         }
 
-        public record AngelScriptModule : IReadableWritable
+        public record AngelScriptModule : IReadable, IWritable
         {
-            public byte Flags { get; set; }
-            public string? ModuleName { get; set; }
-            public byte[]? ByteCode { get; set; }
-            public bool IsCoreModule => (Flags & 2) != 0; // isCoreModule
+            private string? moduleName;
+            private byte[]? byteCode;
 
-            public void ReadWrite(GbxReaderWriter rw, int v = 0)
+            public byte Flags { get; private set; }
+
+            public string? ModuleName
             {
-                Flags = rw.Byte(Flags);
-
-                if ((Flags & 2) == 0) // not isCoreModule
+                get => moduleName;
+                set
                 {
-                    ModuleName = rw.String(ModuleName);
+                    moduleName = value;
+
+                    if (value is null)
+                    {
+                        Flags |= 1;
+                    }
+                    else
+                    {
+                        Flags &= 0xFE;
+                    }
+                }
+            }
+
+            public byte[]? ByteCode
+            {
+                get => byteCode;
+                set
+                {
+                    byteCode = value;
+
+                    if (value is null)
+                    {
+                        Flags |= 2;
+                    }
+                    else
+                    {
+                        Flags &= 0xFD;
+                    }
+                }
+            }
+
+            public bool IsCoreModule => (Flags & 2) != 0;
+            public bool IsEmpty => (Flags & 1) != 0;
+
+            public void Read(GbxReader r, int v = 0)
+            {
+                Flags = r.ReadByte();
+
+                if (!IsCoreModule)
+                {
+                    moduleName = r.ReadString();
                 }
 
-                if ((Flags & 1) == 0) // not isEmpty
+                if (!IsEmpty)
                 {
                     throw new NotSupportedException("AngelScript modules are not currently supported");
-                    //ByteCode = rw.Data(ByteCode);
+                }
+            }
+
+            public void Write(GbxWriter w, int v = 0)
+            {
+                w.Write(Flags);
+
+                if (!IsCoreModule)
+                {
+                    w.Write(ModuleName);
+                }
+
+                if (!IsEmpty)
+                {
+                    throw new NotSupportedException("AngelScript modules are not currently supported");
                 }
             }
         }
@@ -2196,6 +1715,777 @@ public partial class CGameCtnChallenge
             Vehicle_DisableFreeWheeling,
             Vehicle_EnableFreeWheeling,
             Reset_VehicleMaterials
+        }
+    }
+
+    public partial class Chunk03043055
+    {
+        public Chunk3F001001? TMUnlimiterChunk;
+
+        // empty => sets classic clips to true? related to TMCanyon?
+        // if unskippable = odd unlimiter chunk
+
+        public override void Read(CGameCtnChallenge n, GbxReader r)
+        {
+            if (TMUnlimiterChunk is null)
+            {
+                return;
+            }
+
+            n.TMUnlimiterData = new TMUnlimiter();
+
+            var versionByte = r.ReadByte();
+            TMUnlimiterChunk.Version = versionByte switch
+            {
+                1 => 4,
+                2 => 5,
+                _ => throw new NotSupportedException($"Unlimiter chunk version {versionByte} not supported.")
+            };
+
+            n.TMUnlimiterData.DecorationOffset = r.ReadInt3();
+            n.TMUnlimiterData.SkyDecorationVisibility = (TMUnlimiter.DecorationVisibility)r.ReadByte();
+
+            var blockCount = r.ReadInt32();
+
+            if (n.blocks is null) throw new InvalidOperationException("Blocks are null.");
+
+            for (var i = 0; i < blockCount; i++)
+            {
+                var block = n.blocks[r.ReadInt32()];
+
+                block.TMUnlimiterData = new CGameCtnBlock.TMUnlimiter
+                {
+                    OverOverSizeChunk = r.ReadByte3(),
+                    IsInverted = r.ReadBoolean(asByte: true),
+                    Offset = r.ReadInt3(),
+                    Rotation = TMUnlimiterChunk.Version >= 5 ? r.ReadInt3() : r.ReadByte3()
+                };
+            }
+
+            var mediaClipMappingCount = r.ReadInt32();
+            n.tempOldTMUnlimiterClipData = new(mediaClipMappingCount);
+
+            for (var i = 0; i < mediaClipMappingCount; i++)
+            {
+                // this appears before the mediatracker chunk, so this has to be stored in a private dictionary
+                var mediaClipIndex = r.ReadInt32();
+                var resourceType = r.ReadByte();
+
+                CGameCtnMediaClip.TMUnlimiter.LegacyResource resource;
+
+                switch (resourceType)
+                {
+                    case 0: // Parameter Set
+                        var parameterSet = new CGameCtnMediaClip.TMUnlimiter.LegacyParameterSet
+                        {
+                            Parameters = new CGameCtnMediaClip.TMUnlimiter.Parameter[4]
+                        };
+
+                        for (var parameterIndex = 0; parameterIndex < parameterSet.Parameters.Length; parameterIndex++)
+                        {
+                            parameterSet.Parameters[parameterIndex] = new CGameCtnMediaClip.TMUnlimiter.Parameter
+                            {
+                                CatalogIndex = r.ReadByte(),
+                                FunctionIndex = r.ReadByte(),
+                                Value = r.ReadSingle()
+                            };
+                        }
+
+                        resource = parameterSet;
+
+                        break;
+                    case 1: // Legacy Script
+                        resource = new CGameCtnMediaClip.TMUnlimiter.LegacyScript
+                        {
+                            ByteCode = r.ReadData()
+                        };
+                        break;
+                    default: // Unknown
+                        throw new NotSupportedException($"Media clip mapping resource type {resourceType} not supported.");
+                }
+
+                n.tempOldTMUnlimiterClipData[mediaClipIndex] = new CGameCtnMediaClip.TMUnlimiter
+                {
+                    Resource = resource
+                };
+            }
+
+            if (r.ReadUInt32() != 0xFACADE01)
+            {
+                throw new InvalidDataException("Unlimiter chunk did not end properly.");
+            }
+        }
+
+        public override void Write(CGameCtnChallenge n, GbxWriter w)
+        {
+            if (TMUnlimiterChunk is null)
+            {
+                return;
+            }
+
+            w.Write((byte)(TMUnlimiterChunk.Version == 4 ? 1 : 2));
+
+            w.Write(n.TMUnlimiterData?.DecorationOffset ?? Vec3.Zero);
+            w.Write((byte)(n.TMUnlimiterData?.SkyDecorationVisibility ?? TMUnlimiter.DecorationVisibility.Everything));
+
+            var blocks = n.blocks ?? throw new InvalidOperationException("Blocks are null.");
+
+            w.Write(blocks.Count(x => x.TMUnlimiterData is not null));
+
+            foreach (var (block, i) in blocks
+                .Select((block, i) => (block, i))
+                .Where(x => x.block.TMUnlimiterData is not null))
+            {
+                w.Write(i);
+                w.Write(block.TMUnlimiterData!.OverOverSizeChunk);
+                w.Write(block.TMUnlimiterData.IsInverted, asByte: true);
+                w.Write(block.TMUnlimiterData.Offset);
+
+                if (TMUnlimiterChunk.Version >= 5)
+                {
+                    w.Write(block.TMUnlimiterData.Rotation);
+                }
+                else
+                {
+                    w.Write((Byte3)(Int3)(block.TMUnlimiterData.Rotation));
+                }
+            }
+
+            w.Write(n.clipGroupInGame?.Clips.Count(x => x.Clip.TMUnlimiterData is not null) ?? 0);
+
+            foreach (var (clip, i) in n.clipGroupInGame?.Clips
+                .Select((clip, i) => (clip.Clip, i))
+                .Where(x => x.Clip.TMUnlimiterData is not null) ?? [])
+            {
+                w.Write(i);
+
+                switch (clip.TMUnlimiterData!.Resource)
+                {
+                    case CGameCtnMediaClip.TMUnlimiter.LegacyParameterSet parameterSet:
+                        w.Write((byte)0); // Parameter Set
+                        foreach (var parameter in parameterSet.Parameters)
+                        {
+                            w.Write(parameter.CatalogIndex);
+                            w.Write(parameter.FunctionIndex);
+                            w.Write(parameter.Value);
+                        }
+                        break;
+
+                    case CGameCtnMediaClip.TMUnlimiter.LegacyScript legacyScript:
+                        w.Write((byte)1); // Legacy Script
+                        w.WriteData(legacyScript.ByteCode);
+                        break;
+                    default:
+                        throw new InvalidOperationException("Unsupported TM Unlimiter media clip resource type.");
+                }
+            }
+
+            w.Write(0xFACADE01);
+        }
+    }
+
+    public partial class Chunk3F001000 : IVersionable
+    {
+        public int Version { get; set; }
+
+        public int U01;
+
+        [Flags]
+        private enum ChallengeFlags
+        {
+            DecorationVisibility_SkyOnly = 1 << 0,
+            IsDecorationMoved = 1 << 1,
+            DecorationVisibility_Nothing = 1 << 2,
+            IsDecorationScaled = 1 << 3,
+            IsTrackBaseEmpty = 1 << 4,
+            IsVanillaMode = 1 << 5,
+            DecorationVisibility_Warp = 1 << 8,
+            IsPylonsDisabled = 1 << 9,
+            ReservedBit = 1 << 15,
+        }
+
+        [Flags]
+        private enum BlockFlags
+        {
+            IsOutsideBoundaries = 1 << 0,
+            IsMoved = 1 << 1,
+            IsRotated = 1 << 2,
+            IsScaled = 1 << 3,
+            IsInverted = 1 << 4,
+            IsVanillaTerrain = 1 << 5,
+            IsSpawnPointFixEnabled = 1 << 6,
+            IsDynamic = 1 << 7,
+            IsInvisible = 1 << 8,
+            IsCollisionDisabled = 1 << 9,
+            IsClassicMode = 1 << 10,
+            IsClassicTerrain = 1 << 11,
+            HasIdentifier = 1 << 14,
+            Reserved = 1 << 15,
+        }
+
+        public override void Read(CGameCtnChallenge n, GbxReader r)
+        {
+            using var ms = new MemoryStream(Crypt(r.ReadToEnd()));
+            using var decryptedReader = new GbxReader(ms);
+            decryptedReader.LoadFrom(r);
+            ReadDecrypted(n, decryptedReader);
+        }
+
+        public override void Write(CGameCtnChallenge n, GbxWriter w)
+        {
+            using var ms = new MemoryStream();
+            using var decryptedWriter = new GbxWriter(ms);
+            decryptedWriter.LoadFrom(w);
+            WriteDecrypted(n, decryptedWriter);
+
+            w.Write(Crypt(ms.ToArray()));
+        }
+
+        private void ReadDecrypted(CGameCtnChallenge n, GbxReader r)
+        {
+            n.TMUnlimiterData = new TMUnlimiter();
+
+            var challengeFlags = (ChallengeFlags)r.ReadUInt16();
+            n.TMUnlimiterData.SkyDecorationVisibility = (TMUnlimiter.DecorationVisibility)((int)challengeFlags & 0x105);
+            var isDecorationMoved = (challengeFlags & ChallengeFlags.IsDecorationMoved) != 0;
+            var isDecorationScaled = (challengeFlags & ChallengeFlags.IsDecorationScaled) != 0;
+            n.TMUnlimiterData.IsTrackBaseEmpty = (challengeFlags & ChallengeFlags.IsTrackBaseEmpty) != 0;
+            n.TMUnlimiterData.IsVanillaMode = (challengeFlags & ChallengeFlags.IsVanillaMode) != 0;
+            n.TMUnlimiterData.IsPylonsDisabled = (challengeFlags & ChallengeFlags.IsPylonsDisabled) != 0;
+
+            if (n.TMUnlimiterData.SkyDecorationVisibility != TMUnlimiter.DecorationVisibility.Nothing)
+            {
+                if (isDecorationMoved)
+                {
+                    n.TMUnlimiterData.DecorationOffset = r.ReadVec3();
+                }
+
+                if (isDecorationScaled)
+                {
+                    n.TMUnlimiterData.DecorationScale = r.ReadVec3();
+                }
+            }
+
+            var blockCount = r.ReadInt32();
+
+            if (n.blocks is null) throw new InvalidOperationException("Blocks are null.");
+
+            for (var i = 0; i < blockCount; i++)
+            {
+                var block = n.blocks![r.ReadInt32()];
+                block.TMUnlimiterData = new CGameCtnBlock.TMUnlimiter();
+                var flags = (BlockFlags)r.ReadUInt16();
+
+                if (flags.HasFlag(BlockFlags.IsOutsideBoundaries))
+                {
+                    block.TMUnlimiterData.OverOverSizeChunk = r.ReadByte3();
+                }
+
+                block.TMUnlimiterData.IsInverted = flags.HasFlag(BlockFlags.IsInverted);
+                block.TMUnlimiterData.IsVanillaTerrain = flags.HasFlag(BlockFlags.IsVanillaTerrain);
+                block.TMUnlimiterData.IsSpawnPointFixEnabled = flags.HasFlag(BlockFlags.IsSpawnPointFixEnabled);
+                block.TMUnlimiterData.IsDynamic = flags.HasFlag(BlockFlags.IsDynamic);
+                block.TMUnlimiterData.IsInvisible = flags.HasFlag(BlockFlags.IsInvisible);
+                block.TMUnlimiterData.IsCollisionDisabled = flags.HasFlag(BlockFlags.IsCollisionDisabled);
+                block.TMUnlimiterData.IsClassicMode = flags.HasFlag(BlockFlags.IsClassicMode);
+                block.TMUnlimiterData.IsClassicTerrain = flags.HasFlag(BlockFlags.IsClassicTerrain);
+
+                if (block.TMUnlimiterData.IsVanillaTerrain)
+                {
+                    continue;
+                }
+
+                if (flags.HasFlag(BlockFlags.IsMoved))
+                {
+                    block.TMUnlimiterData.Offset = r.ReadVec3();
+                }
+
+                if (flags.HasFlag(BlockFlags.IsRotated))
+                {
+                    block.TMUnlimiterData.Rotation = r.ReadVec3();
+                }
+
+                if (flags.HasFlag(BlockFlags.IsScaled))
+                {
+                    block.TMUnlimiterData.Scale = r.ReadVec3();
+                }
+
+                if (flags.HasFlag(BlockFlags.HasIdentifier))
+                {
+                    block.TMUnlimiterData.Group = r.ReadString();
+                }
+            }
+
+            U01 = r.ReadInt32();
+        }
+
+        private void WriteDecrypted(CGameCtnChallenge n, GbxWriter w)
+        {
+            var challengeFlags = (ChallengeFlags)0;
+            if (n.TMUnlimiterData is not null)
+            {
+                challengeFlags |= (ChallengeFlags)((int)n.TMUnlimiterData.SkyDecorationVisibility & 0x105);
+                if (n.TMUnlimiterData.IsDecorationMoved) challengeFlags |= ChallengeFlags.IsDecorationMoved;
+                if (n.TMUnlimiterData.IsDecorationScaled) challengeFlags |= ChallengeFlags.IsDecorationScaled;
+                if (n.TMUnlimiterData.IsTrackBaseEmpty) challengeFlags |= ChallengeFlags.IsTrackBaseEmpty;
+                if (n.TMUnlimiterData.IsVanillaMode) challengeFlags |= ChallengeFlags.IsVanillaMode;
+                if (n.TMUnlimiterData.IsPylonsDisabled) challengeFlags |= ChallengeFlags.IsPylonsDisabled;
+            }
+
+            w.Write((ushort)challengeFlags);
+
+            if (n.TMUnlimiterData is not null && n.TMUnlimiterData.SkyDecorationVisibility != TMUnlimiter.DecorationVisibility.Nothing)
+            {
+                if (n.TMUnlimiterData.IsDecorationMoved)
+                {
+                    w.Write(n.TMUnlimiterData.DecorationOffset);
+                }
+
+                if (n.TMUnlimiterData.IsDecorationScaled)
+                {
+                    w.Write(n.TMUnlimiterData.DecorationScale);
+                }
+            }
+
+            var blocks = n.blocks ?? throw new InvalidOperationException("Blocks are null.");
+
+            w.Write(blocks.Count(x => x.TMUnlimiterData is not null));
+
+            foreach (var (block, i) in blocks
+                .Select((block, i) => (block, i))
+                .Where(x => x.block.TMUnlimiterData is not null))
+            {
+                w.Write(i);
+
+                var flags = (BlockFlags)0;
+                if (block.TMUnlimiterData!.IsOutsideBoundaries) flags |= BlockFlags.IsOutsideBoundaries;
+                if (block.TMUnlimiterData.IsMoved) flags |= BlockFlags.IsMoved;
+                if (block.TMUnlimiterData.IsRotated) flags |= BlockFlags.IsRotated;
+                if (block.TMUnlimiterData.IsScaled) flags |= BlockFlags.IsScaled;
+                if (block.TMUnlimiterData.IsInverted) flags |= BlockFlags.IsInverted;
+                if (block.TMUnlimiterData.IsVanillaTerrain) flags |= BlockFlags.IsVanillaTerrain;
+                if (block.TMUnlimiterData.IsSpawnPointFixEnabled) flags |= BlockFlags.IsSpawnPointFixEnabled;
+                if (block.TMUnlimiterData.IsDynamic) flags |= BlockFlags.IsDynamic;
+                if (block.TMUnlimiterData.IsInvisible) flags |= BlockFlags.IsInvisible;
+                if (block.TMUnlimiterData.IsCollisionDisabled) flags |= BlockFlags.IsCollisionDisabled;
+                if (block.TMUnlimiterData.IsClassicMode) flags |= BlockFlags.IsClassicMode;
+                if (block.TMUnlimiterData.IsClassicTerrain) flags |= BlockFlags.IsClassicTerrain;
+                if (block.TMUnlimiterData.HasIdentifier) flags |= BlockFlags.HasIdentifier;
+
+                w.Write((ushort)flags);
+
+                if (block.TMUnlimiterData.IsVanillaTerrain)
+                {
+                    continue;
+                }
+
+                if (block.TMUnlimiterData.IsMoved)
+                {
+                    w.Write(block.TMUnlimiterData.Offset);
+                }
+
+                if (block.TMUnlimiterData.IsRotated)
+                {
+                    w.Write(block.TMUnlimiterData.Rotation);
+                }
+
+                if (block.TMUnlimiterData.IsScaled)
+                {
+                    w.Write(block.TMUnlimiterData.Scale);
+                }
+
+                if (block.TMUnlimiterData.HasIdentifier)
+                {
+                    w.Write(block.TMUnlimiterData.Group);
+                }
+            }
+
+            w.Write(U01);
+        }
+
+        private static byte[] Crypt(byte[] cryptedChunkData)
+        {
+            for (uint offset = 0; offset < cryptedChunkData.Length; offset++)
+            {
+                uint data = cryptedChunkData[offset];
+                uint hash = (uint)(cryptedChunkData.Length * ((cryptedChunkData.Length * 2) - offset));
+
+                hash ^= 0xEAD9C8B3;
+                hash += offset * 3 % 0x7F;
+
+                if (offset % 5 < 2)
+                {
+                    hash = ~hash;
+                }
+
+                cryptedChunkData[offset] = (byte)~(data ^ hash);
+            }
+
+            return cryptedChunkData;
+        }
+    }
+
+    public partial class Chunk3F001001 : IVersionable
+    {
+        public int Version { get; set; }
+
+        [Flags]
+        private enum ChallengeFlags
+        {
+            DecorationVisibility_SkyOnly = 1 << 0,
+            DecorationVisibility_Background = 1 << 1,
+            DecorationVisibility_Nothing = 3,
+            IsDecorationMoved = 1 << 2,
+            IsDecorationScaled = 1 << 3,
+            IsPylonsDisabled = 1 << 4,
+            IsTrackBaseEmpty = 1 << 5,
+            EnableVehicleCollisions = 1 << 6,
+            EnableRandomStartLine = 1 << 7,
+            EnableServerCommunication = 1 << 8,
+            IgnoreMultiplayerTimeSyncForMotionBlocks = 1 << 9,
+        }
+
+        public override void ReadWrite(CGameCtnChallenge n, GbxReaderWriter rw) => ReadWrite(n, rw, ver: 0);
+
+        protected void ReadWrite(CGameCtnChallenge n, GbxReaderWriter rw, int ver)
+        {
+            rw.VersionByte(this);
+
+            if (Version == 0)
+            {
+                return;
+            }
+
+            if (Version != 7)
+            {
+                throw new ChunkVersionNotSupportedException(Version);
+            }
+
+            if (rw.Reader is not null)
+            {
+                Read(n, rw.Reader, ver);
+            }
+
+            if (rw.Writer is not null)
+            {
+                Write(n, rw.Writer, ver);
+            }
+        }
+
+        private void Read(CGameCtnChallenge n, GbxReader r, int ver)
+        {
+            var flags = (ChallengeFlags)r.ReadUInt16();
+            var isDecorationMoved = (flags & ChallengeFlags.IsDecorationMoved) != 0;
+            var isDecorationScaled = (flags & ChallengeFlags.IsDecorationScaled) != 0;
+
+            n.TMUnlimiterData = new()
+            {
+                SkyDecorationVisibility = (TMUnlimiter.DecorationVisibility)((int)flags & 3),
+                IsPylonsDisabled = (flags & ChallengeFlags.IsPylonsDisabled) != 0,
+                IsTrackBaseEmpty = (flags & ChallengeFlags.IsTrackBaseEmpty) != 0,
+                EnableVehicleCollisions = (flags & ChallengeFlags.EnableVehicleCollisions) != 0,
+                EnableRandomStartLine = (flags & ChallengeFlags.EnableRandomStartLine) != 0,
+                EnableServerCommunication = (flags & ChallengeFlags.EnableServerCommunication) != 0,
+                IgnoreMultiplayerTimeSyncForMotionBlocks = (flags & ChallengeFlags.IgnoreMultiplayerTimeSyncForMotionBlocks) != 0
+            };
+
+            if (n.TMUnlimiterData.SkyDecorationVisibility != TMUnlimiter.DecorationVisibility.Nothing)
+            {
+                if (isDecorationMoved)
+                {
+                    n.TMUnlimiterData.DecorationOffset = r.ReadVec3();
+                }
+
+                if (isDecorationScaled)
+                {
+                    n.TMUnlimiterData.DecorationScale = r.ReadVec3();
+                }
+            }
+
+            n.TMUnlimiterData.AngelScriptModules = r.ReadListReadable<TMUnlimiter.AngelScriptModule>();
+            n.TMUnlimiterData.ParameterSets = r.ReadListReadable<TMUnlimiter.ParameterSet>();
+            n.TMUnlimiterData.TriggerGroups = r.ReadListReadable<TMUnlimiter.TriggerGroup>();
+            n.TMUnlimiterData.BlockGroups = r.ReadListReadable<TMUnlimiter.BlockGroup>();
+
+            var embeddedBlockCount = r.ReadInt32();
+            n.TMUnlimiterData.MaterialModelRefs = r.ReadListReadable<TMUnlimiter.MaterialModelRef>();
+
+            var tempRefTable = new GbxRefTable();
+
+            foreach (var materialModelRef in n.TMUnlimiterData.MaterialModelRefs)
+            {
+                r.NodeDict[materialModelRef.InstanceIndex] = new GbxRefTableFile(tempRefTable, 0, useFile: false, materialModelRef.MaterialModelRelativePath);
+            }
+
+            n.TMUnlimiterData.ReplacementTexture = r.ReadReadable<TMUnlimiter.ReplacementTextureFlags>();
+
+            if (n.TMUnlimiterData.ReplacementTexture.SpecularInstanceIndex.HasValue)
+            {
+                r.NodeDict[n.TMUnlimiterData.ReplacementTexture.SpecularInstanceIndex.Value] = new GbxRefTableFile(tempRefTable, 0, useFile: true, "Specular");
+            }
+
+            if (n.TMUnlimiterData.ReplacementTexture.NormalInstanceIndex.HasValue)
+            {
+                r.NodeDict[n.TMUnlimiterData.ReplacementTexture.NormalInstanceIndex.Value] = new GbxRefTableFile(tempRefTable, 0, useFile: true, "Normal");
+            }
+
+            if (n.TMUnlimiterData.ReplacementTexture.WhiteInstanceIndex.HasValue)
+            {
+                r.NodeDict[n.TMUnlimiterData.ReplacementTexture.WhiteInstanceIndex.Value] = new GbxRefTableFile(tempRefTable, 0, useFile: true, "White");
+            }
+
+            if (n.TMUnlimiterData.ReplacementTexture.BlackInstanceIndex.HasValue)
+            {
+                r.NodeDict[n.TMUnlimiterData.ReplacementTexture.BlackInstanceIndex.Value] = new GbxRefTableFile(tempRefTable, 0, useFile: true, "Black");
+            }
+
+            n.TMUnlimiterData.EmbeddedImages = r.ReadListReadable<TMUnlimiter.EmbeddedImage>();
+
+            foreach (var embeddedImage in n.TMUnlimiterData.EmbeddedImages)
+            {
+                var file = new GbxRefTableFile(tempRefTable, 0, useFile: true, embeddedImage.RelativePath);
+
+                foreach (var bitmapPair in embeddedImage.BitmapPairs)
+                {
+                    r.NodeDict[bitmapPair.InstanceIndex] = file;
+                }
+            }
+
+            n.TMUnlimiterData.EmbeddedBlocks = r.ReadListReadable<TMUnlimiter.EmbeddedBlock>(length: embeddedBlockCount, version: ver);
+
+            n.TMUnlimiterData.VehicleIdentifiers = r.ReadListIdent();
+
+            ReadBlocks(n, r);
+        }
+
+        private void Write(CGameCtnChallenge n, GbxWriter w, int ver)
+        {
+            var flags = (ChallengeFlags)0;
+            if (n.TMUnlimiterData is not null)
+            {
+                flags |= (ChallengeFlags)((int)n.TMUnlimiterData.SkyDecorationVisibility & 3);
+                if (n.TMUnlimiterData.IsDecorationMoved) flags |= ChallengeFlags.IsDecorationMoved;
+                if (n.TMUnlimiterData.IsDecorationScaled) flags |= ChallengeFlags.IsDecorationScaled;
+                if (n.TMUnlimiterData.IsPylonsDisabled) flags |= ChallengeFlags.IsPylonsDisabled;
+                if (n.TMUnlimiterData.IsTrackBaseEmpty) flags |= ChallengeFlags.IsTrackBaseEmpty;
+                if (n.TMUnlimiterData.EnableVehicleCollisions) flags |= ChallengeFlags.EnableVehicleCollisions;
+                if (n.TMUnlimiterData.EnableRandomStartLine) flags |= ChallengeFlags.EnableRandomStartLine;
+                if (n.TMUnlimiterData.EnableServerCommunication) flags |= ChallengeFlags.EnableServerCommunication;
+                if (n.TMUnlimiterData.IgnoreMultiplayerTimeSyncForMotionBlocks) flags |= ChallengeFlags.IgnoreMultiplayerTimeSyncForMotionBlocks;
+            }
+
+            w.Write((ushort)flags);
+
+            if (n.TMUnlimiterData is not null)
+            {
+                if (n.TMUnlimiterData.IsDecorationMoved)
+                {
+                    w.Write(n.TMUnlimiterData.DecorationOffset);
+                }
+
+                if (n.TMUnlimiterData.IsDecorationScaled)
+                {
+                    w.Write(n.TMUnlimiterData.DecorationScale);
+                }
+            }
+
+            w.WriteListWritable(n.TMUnlimiterData?.AngelScriptModules ?? []);
+            w.WriteListWritable(n.TMUnlimiterData?.ParameterSets ?? []);
+            w.WriteListWritable(n.TMUnlimiterData?.TriggerGroups ?? []);
+            w.WriteListWritable(n.TMUnlimiterData?.BlockGroups ?? []);
+
+            w.Write(n.TMUnlimiterData?.EmbeddedBlocks.Count ?? 0);
+            w.WriteListWritable(n.TMUnlimiterData?.MaterialModelRefs ?? []);
+            w.WriteWritable(n.TMUnlimiterData?.ReplacementTexture ?? new TMUnlimiter.ReplacementTextureFlags());
+            w.WriteListWritable(n.TMUnlimiterData?.EmbeddedImages ?? []);
+
+            foreach (var embeddedBlock in n.TMUnlimiterData?.EmbeddedBlocks ?? [])
+            {
+                embeddedBlock.Write(w);
+            }
+
+            w.WriteList(n.TMUnlimiterData?.VehicleIdentifiers ?? []);
+        }
+
+        private void ReadBlocks(CGameCtnChallenge n, GbxReader r)
+        {
+            var blockCount = r.ReadInt32();
+            n.Blocks = [];
+
+            for (var i = 0; i < blockCount; i++)
+            {
+                var blockType = r.ReadByte();
+
+                switch (blockType)
+                {
+                    case 0:
+                        {
+                            var block = new CGameCtnBlock
+                            {
+                                BlockModel = (r.ReadIdAsString(), r.ReadId(), ""),
+                                Coord = r.ReadInt3(),
+                                Direction = (Direction)r.ReadByte(),
+                                Flags = r.ReadInt32()
+                            };
+
+                            if ((block.Flags & (1 << 15)) != 0) // hasAuthorAndSkin
+                            {
+                                block.Author = r.ReadIdAsString();
+                                block.Skin = r.ReadNodeRef<CGameCtnBlockSkin>();
+                            }
+
+                            n.Blocks.Add(block);
+                            break;
+                        }
+
+                    case 1:
+                        {
+                            var coord = r.ReadInt3();
+                            var direction = (Direction)r.ReadByte();
+                            var triggerGroupIndexes = r.ReadArray<int>();
+                            break;
+                        }
+
+                    case 2:
+                        {
+                            var name = r.ReadIdAsString();
+                            var author = r.ReadIdAsString();
+                            var coord = r.ReadInt3();
+                            var direction = (Direction)r.ReadByte();
+                            var flags = r.ReadInt32();
+                            break;
+                        }
+
+                    case 3:
+                        {
+                            var embeddedBlockIndex = r.ReadInt32();
+                            var coord = r.ReadInt3();
+                            var direction = (Direction)r.ReadByte();
+                            var flags = r.ReadInt32();
+                            break;
+                        }
+                }
+
+                switch (blockType)
+                {
+                    case 0:
+                    case 2:
+                    case 3:
+                        {
+                            var flags2 = r.ReadUInt16();
+
+                            if ((flags2 & 1) != 0) // isOffsetApplied  
+                            {
+                                var offset = r.ReadVec3();
+                            }
+
+                            if ((flags2 & (1 << 1)) != 0) // isRotationApplied  
+                            {
+                                var rotation = r.ReadVec3();
+                            }
+
+                            if ((flags2 & (1 << 2)) != 0) // isScaleApplied  
+                            {
+                                var scale = r.ReadVec3();
+                            }
+
+                            if ((flags2 & (1 << 3)) != 0) // isMotionApplied  
+                            {
+                                var flags3 = r.ReadByte();
+
+                                if ((flags3 & (1 << 3)) == 0) // not isManuallyControlled  
+                                {
+                                    var motionPointsCount = r.ReadInt32();
+                                    for (var j = 0; j < motionPointsCount; j++)
+                                    {
+                                        var time = r.ReadTimeInt32();
+                                        var motionOffset = r.ReadVec3();
+                                        var motionRotation = r.ReadVec3();
+                                    }
+                                }
+                            }
+
+                            if ((flags2 & (1 << 4)) != 0) // isOriginOffsetApplied  
+                            {
+                                var originOffset = r.ReadVec3();
+                            }
+
+                            if ((flags2 & (1 << 5)) != 0) // isInBlockGroups  
+                            {
+                                var blockGroupIndexesCount = r.ReadInt32();
+                                var blockGroupIndexes = new List<uint>(blockGroupIndexesCount);
+                                for (var j = 0; j < blockGroupIndexesCount; j++)
+                                {
+                                    blockGroupIndexes.Add(r.ReadUInt32());
+                                }
+                            }
+
+                            var spawnPointAlterMethod = (flags2 >> 9) & 3;
+                            if (spawnPointAlterMethod == 1) // manual  
+                            {
+                                var spawnOffset = r.ReadVec3();
+                                var spawnRotation = r.ReadVec3();
+                            }
+
+                            break;
+                        }
+
+                    case 1:
+                        {
+                            var flags2 = r.ReadByte();
+
+                            const byte isOffsetApplied = 1 << 0;
+                            const byte isRotationApplied = 1 << 1;
+                            const byte isScaleApplied = 1 << 2;
+                            const byte isMotionApplied = 1 << 3;
+                            const byte isInBlockGroups = 1 << 4;
+
+                            if ((flags2 & isOffsetApplied) != 0)
+                            {
+                                var offset = r.ReadVec3();
+                            }
+
+                            if ((flags2 & isRotationApplied) != 0)
+                            {
+                                var rotation = r.ReadVec3();
+                            }
+
+                            if ((flags2 & isScaleApplied) != 0)
+                            {
+                                var scale = r.ReadVec3();
+                            }
+
+                            if ((flags2 & isMotionApplied) != 0)
+                            {
+                                var flags3 = r.ReadByte();
+                                const byte isManuallyControlled = 1 << 3;
+
+                                if ((flags3 & isManuallyControlled) == 0)
+                                {
+                                    var motionPointsCount = r.ReadInt32();
+                                    for (var j = 0; j < motionPointsCount; j++)
+                                    {
+                                        var time = r.ReadTimeInt32();
+                                        var motionOffset = r.ReadVec3();
+                                        var motionRotation = r.ReadVec3();
+                                    }
+                                }
+                            }
+
+                            if ((flags2 & isInBlockGroups) != 0)
+                            {
+                                var blockGroupIndexesCount = r.ReadInt32();
+                                var blockGroupIndexes = new List<uint>(blockGroupIndexesCount);
+                                for (var j = 0; j < blockGroupIndexesCount; j++)
+                                {
+                                    blockGroupIndexes.Add(r.ReadUInt32());
+                                }
+                            }
+
+                            break;
+                        }
+                }
+            }
         }
     }
 
