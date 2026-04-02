@@ -46,6 +46,8 @@ public partial class CGameCtnChallenge
         public ReplacementTextureFlags ReplacementTexture { get; set; } = new();
         public List<EmbeddedImage> EmbeddedImages { get; set; } = [];
         public List<Ident> VehicleIdentifiers { get; set; } = [];
+        public List<TriggerBlock> TriggerBlocks { get; set; } = [];
+        public List<ExternalBlock> ExternalBlocks { get; set; } = [];
 
         public enum DecorationVisibility
         {
@@ -56,7 +58,7 @@ public partial class CGameCtnChallenge
             Warp = 1 << 8
         }
 
-        public class EmbeddedBlock : IReadable, IWritable
+        public class EmbeddedBlockData : IReadable, IWritable
         {
             public string Id { get; set; } = string.Empty;
             public string Author { get; set; } = string.Empty;
@@ -1219,6 +1221,66 @@ public partial class CGameCtnChallenge
             }
         }
 
+        public record Block
+        {
+            public Int3 Coord { get; set; }
+            public Direction Direction { get; set; }
+            public Vec3 Offset { get; set; }
+            public Vec3 Rotation { get; set; }
+            public Vec3 Scale { get; set; } = Vec3.One;
+            public Motion? Motion { get; set; }
+            public Vec3? OriginOffset { get; set; }
+            public List<BlockGroup> BlockGroups { get; set; } = [];
+            public Vec3? SpawnOffset { get; set; }
+            public Vec3? SpawnRotation { get; set; }
+        }
+
+        public record TriggerBlock : Block
+        {
+            public List<TriggerGroup> TriggerGroups { get; set; } = [];
+        }
+
+        public record ExternalBlock : Block
+        {
+            public string Name { get; set; } = "";
+            public string Author { get; set; } = "";
+            public int Flags { get; set; }
+        }
+
+        public record EmbeddedBlock : Block
+        {
+            public string Name { get; set; } = "";
+            public int Flags { get; set; }
+            public EmbeddedBlockData Data { get; set; }
+        }
+
+        public record Motion
+        {
+            public int WaveType { get; set; }
+            public List<MotionPoint> Points { get; set; } = [];
+        }
+
+        public record MotionPoint : IReadable, IWritable
+        {
+            public TimeInt32 Time { get; set; }
+            public Vec3 Offset { get; set; }
+            public Vec3 Rotation { get; set; }
+
+            public void Read(GbxReader r, int v = 0)
+            {
+                Time = r.ReadTimeInt32();
+                Offset = r.ReadVec3();
+                Rotation = r.ReadVec3();
+            }
+
+            public void Write(GbxWriter w, int v = 0)
+            {
+                w.Write(Time);
+                w.Write(Offset);
+                w.Write(Rotation);
+            }
+        }
+
         public enum MediaClipMappedResourceType
         {
             ParameterSet,
@@ -2237,11 +2299,11 @@ public partial class CGameCtnChallenge
                 }
             }
 
-            n.TMUnlimiterData.EmbeddedBlocks = r.ReadListReadable<TMUnlimiter.EmbeddedBlock>(length: embeddedBlockCount, version: ver);
+            var embeddedBlockData = r.ReadListReadable<TMUnlimiter.EmbeddedBlockData>(length: embeddedBlockCount, version: ver);
 
             n.TMUnlimiterData.VehicleIdentifiers = r.ReadListIdent();
 
-            ReadBlocks(n, r);
+            ReadBlocks(n, n.TMUnlimiterData, r, embeddedBlockData);
         }
 
         private void Write(CGameCtnChallenge n, GbxWriter w, int ver)
@@ -2280,20 +2342,20 @@ public partial class CGameCtnChallenge
             w.WriteListWritable(n.TMUnlimiterData?.TriggerGroups ?? []);
             w.WriteListWritable(n.TMUnlimiterData?.BlockGroups ?? []);
 
-            w.Write(n.TMUnlimiterData?.EmbeddedBlocks.Count ?? 0);
+            w.Write(n.TMUnlimiterData?.EmbeddedBlocks.Select(x => x.Data).Distinct().Count() ?? 0);
             w.WriteListWritable(n.TMUnlimiterData?.MaterialModelRefs ?? []);
             w.WriteWritable(n.TMUnlimiterData?.ReplacementTexture ?? new TMUnlimiter.ReplacementTextureFlags());
             w.WriteListWritable(n.TMUnlimiterData?.EmbeddedImages ?? []);
 
-            foreach (var embeddedBlock in n.TMUnlimiterData?.EmbeddedBlocks ?? [])
+            foreach (var embeddedBlockData in n.TMUnlimiterData?.EmbeddedBlocks.Select(x => x.Data).Distinct() ?? [])
             {
-                embeddedBlock.Write(w);
+                embeddedBlockData.Write(w);
             }
 
             w.WriteList(n.TMUnlimiterData?.VehicleIdentifiers ?? []);
         }
 
-        private void ReadBlocks(CGameCtnChallenge n, GbxReader r)
+        private void ReadBlocks(CGameCtnChallenge n, TMUnlimiter tmUnlimiter, GbxReader r, List<TMUnlimiter.EmbeddedBlockData> embeddedBlockData)
         {
             var blockCount = r.ReadInt32();
             n.Blocks = [];
@@ -2302,54 +2364,64 @@ public partial class CGameCtnChallenge
             {
                 var blockType = r.ReadByte();
 
+                var block = default(CGameCtnBlock);
+                var tmUnlimiterBlock = default(TMUnlimiter.Block);
+
                 switch (blockType)
                 {
-                    case 0:
+                    case 0: // game block
+                        block = new CGameCtnBlock
                         {
-                            var block = new CGameCtnBlock
-                            {
-                                BlockModel = (r.ReadIdAsString(), r.ReadId(), ""),
-                                Coord = r.ReadInt3(),
-                                Direction = (Direction)r.ReadByte(),
-                                Flags = r.ReadInt32()
-                            };
+                            BlockModel = (r.ReadIdAsString(), r.ReadId(), ""),
+                            Coord = r.ReadInt3(),
+                            Direction = (Direction)r.ReadByte(),
+                            Flags = r.ReadInt32()
+                        };
 
-                            if ((block.Flags & (1 << 15)) != 0) // hasAuthorAndSkin
-                            {
-                                block.Author = r.ReadIdAsString();
-                                block.Skin = r.ReadNodeRef<CGameCtnBlockSkin>();
-                            }
-
-                            n.Blocks.Add(block);
-                            break;
+                        if ((block.Flags & (1 << 15)) != 0) // hasAuthorAndSkin
+                        {
+                            block.Author = r.ReadIdAsString();
+                            block.Skin = r.ReadNodeRef<CGameCtnBlockSkin>();
                         }
 
-                    case 1:
+                        n.Blocks.Add(block);
+                        break;
+                    case 1: // trigger block
+                        var triggerBlock = new TMUnlimiter.TriggerBlock
                         {
-                            var coord = r.ReadInt3();
-                            var direction = (Direction)r.ReadByte();
-                            var triggerGroupIndexes = r.ReadArray<int>();
-                            break;
-                        }
+                            Coord = r.ReadInt3(),
+                            Direction = (Direction)r.ReadByte(),
+                            TriggerGroups = r.ReadArray<int>()
+                                .Select(index => tmUnlimiter.TriggerGroups[index])
+                                .ToList(),
+                        };
+                        tmUnlimiter.TriggerBlocks.Add(triggerBlock);
+                        tmUnlimiterBlock = triggerBlock;
+                        break;
+                    case 2: // external block
+                        var externalBlock = new TMUnlimiter.ExternalBlock
+                        {
+                            Name = r.ReadIdAsString(),
+                            Author = r.ReadIdAsString(),
+                            Coord = r.ReadInt3(),
+                            Direction = (Direction)r.ReadByte(),
+                            Flags = r.ReadInt32()
+                        };
+                        tmUnlimiter.ExternalBlocks.Add(externalBlock);
+                        tmUnlimiterBlock = externalBlock;
+                        break;
 
-                    case 2:
+                    case 3: // embedded block
+                        var embeddedBlock = new TMUnlimiter.EmbeddedBlock
                         {
-                            var name = r.ReadIdAsString();
-                            var author = r.ReadIdAsString();
-                            var coord = r.ReadInt3();
-                            var direction = (Direction)r.ReadByte();
-                            var flags = r.ReadInt32();
-                            break;
-                        }
-
-                    case 3:
-                        {
-                            var embeddedBlockIndex = r.ReadInt32();
-                            var coord = r.ReadInt3();
-                            var direction = (Direction)r.ReadByte();
-                            var flags = r.ReadInt32();
-                            break;
-                        }
+                            Data = embeddedBlockData[r.ReadInt32()],
+                            Coord = r.ReadInt3(),
+                            Direction = (Direction)r.ReadByte(),
+                            Flags = r.ReadInt32()
+                        };
+                        tmUnlimiter.EmbeddedBlocks.Add(embeddedBlock);
+                        tmUnlimiterBlock = embeddedBlock;
+                        break;
                 }
 
                 switch (blockType)
@@ -2363,47 +2435,56 @@ public partial class CGameCtnChallenge
                             if ((flags2 & 1) != 0) // isOffsetApplied  
                             {
                                 var offset = r.ReadVec3();
+                                block?.TMUnlimiterData?.Offset = offset;
+                                tmUnlimiterBlock?.Offset = offset;
                             }
 
                             if ((flags2 & (1 << 1)) != 0) // isRotationApplied  
                             {
                                 var rotation = r.ReadVec3();
+                                block?.TMUnlimiterData?.Rotation = rotation;
+                                tmUnlimiterBlock?.Rotation = rotation;
                             }
 
                             if ((flags2 & (1 << 2)) != 0) // isScaleApplied  
                             {
                                 var scale = r.ReadVec3();
+                                block?.TMUnlimiterData?.Scale = scale;
+                                tmUnlimiterBlock?.Scale = scale;
                             }
 
                             if ((flags2 & (1 << 3)) != 0) // isMotionApplied  
                             {
                                 var flags3 = r.ReadByte();
 
+                                var motion = new TMUnlimiter.Motion
+                                {
+                                    WaveType = flags3 & 7
+                                };
+
                                 if ((flags3 & (1 << 3)) == 0) // not isManuallyControlled  
                                 {
-                                    var motionPointsCount = r.ReadInt32();
-                                    for (var j = 0; j < motionPointsCount; j++)
-                                    {
-                                        var time = r.ReadTimeInt32();
-                                        var motionOffset = r.ReadVec3();
-                                        var motionRotation = r.ReadVec3();
-                                    }
+                                    motion.Points = r.ReadListReadable<TMUnlimiter.MotionPoint>();
                                 }
+
+                                block?.TMUnlimiterData?.Motion = motion;
+                                tmUnlimiterBlock?.Motion = motion;
                             }
 
                             if ((flags2 & (1 << 4)) != 0) // isOriginOffsetApplied  
                             {
                                 var originOffset = r.ReadVec3();
+                                block?.TMUnlimiterData?.OriginOffset = originOffset;
+                                tmUnlimiterBlock?.OriginOffset = originOffset;
                             }
 
                             if ((flags2 & (1 << 5)) != 0) // isInBlockGroups  
                             {
-                                var blockGroupIndexesCount = r.ReadInt32();
-                                var blockGroupIndexes = new List<uint>(blockGroupIndexesCount);
-                                for (var j = 0; j < blockGroupIndexesCount; j++)
-                                {
-                                    blockGroupIndexes.Add(r.ReadUInt32());
-                                }
+                                var blockGroups = r.ReadArray<int>()
+                                    .Select(index => tmUnlimiter.BlockGroups[index])
+                                    .ToList();
+                                block?.TMUnlimiterData?.BlockGroups = blockGroups;
+                                tmUnlimiterBlock?.BlockGroups = blockGroups;
                             }
 
                             var spawnPointAlterMethod = (flags2 >> 9) & 3;
@@ -2411,61 +2492,66 @@ public partial class CGameCtnChallenge
                             {
                                 var spawnOffset = r.ReadVec3();
                                 var spawnRotation = r.ReadVec3();
+
+                                block?.TMUnlimiterData?.SpawnOffset = spawnOffset;
+                                block?.TMUnlimiterData?.SpawnRotation = spawnRotation;
+                                tmUnlimiterBlock?.SpawnOffset = spawnOffset;
+                                tmUnlimiterBlock?.SpawnRotation = spawnRotation;
                             }
 
                             break;
                         }
 
-                    case 1:
+                    case 1: // trigger block
                         {
                             var flags2 = r.ReadByte();
 
-                            const byte isOffsetApplied = 1 << 0;
-                            const byte isRotationApplied = 1 << 1;
-                            const byte isScaleApplied = 1 << 2;
-                            const byte isMotionApplied = 1 << 3;
-                            const byte isInBlockGroups = 1 << 4;
-
-                            if ((flags2 & isOffsetApplied) != 0)
+                            if ((flags2 & 1) != 0) // isOffsetApplied
                             {
                                 var offset = r.ReadVec3();
+                                block?.TMUnlimiterData?.Offset = offset;
+                                tmUnlimiterBlock?.Offset = offset;
                             }
 
-                            if ((flags2 & isRotationApplied) != 0)
+                            if ((flags2 & (1 << 1)) != 0) // isRotationApplied
                             {
                                 var rotation = r.ReadVec3();
+                                block?.TMUnlimiterData?.Rotation = rotation;
+                                tmUnlimiterBlock?.Rotation = rotation;
                             }
 
-                            if ((flags2 & isScaleApplied) != 0)
+                            if ((flags2 & (1 << 2)) != 0) // isScaleApplied
                             {
                                 var scale = r.ReadVec3();
+                                block?.TMUnlimiterData?.Scale = scale;
+                                tmUnlimiterBlock?.Scale = scale;
                             }
 
-                            if ((flags2 & isMotionApplied) != 0)
+                            if ((flags2 & (1 << 3)) != 0) // isMotionApplied
                             {
                                 var flags3 = r.ReadByte();
-                                const byte isManuallyControlled = 1 << 3;
 
-                                if ((flags3 & isManuallyControlled) == 0)
+                                var motion = new TMUnlimiter.Motion
                                 {
-                                    var motionPointsCount = r.ReadInt32();
-                                    for (var j = 0; j < motionPointsCount; j++)
-                                    {
-                                        var time = r.ReadTimeInt32();
-                                        var motionOffset = r.ReadVec3();
-                                        var motionRotation = r.ReadVec3();
-                                    }
+                                    WaveType = flags3 & 7
+                                };
+
+                                if ((flags3 & (1 << 3)) == 0) // not isManuallyControlled  
+                                {
+                                    motion.Points = r.ReadListReadable<TMUnlimiter.MotionPoint>();
                                 }
+
+                                block?.TMUnlimiterData?.Motion = motion;
+                                tmUnlimiterBlock?.Motion = motion;
                             }
 
-                            if ((flags2 & isInBlockGroups) != 0)
+                            if ((flags2 & (1 << 4)) != 0) // isInBlockGroups
                             {
-                                var blockGroupIndexesCount = r.ReadInt32();
-                                var blockGroupIndexes = new List<uint>(blockGroupIndexesCount);
-                                for (var j = 0; j < blockGroupIndexesCount; j++)
-                                {
-                                    blockGroupIndexes.Add(r.ReadUInt32());
-                                }
+                                var blockGroups = r.ReadArray<int>()
+                                    .Select(index => tmUnlimiter.BlockGroups[index])
+                                    .ToList();
+                                block?.TMUnlimiterData?.BlockGroups = blockGroups;
+                                tmUnlimiterBlock?.BlockGroups = blockGroups;
                             }
 
                             break;

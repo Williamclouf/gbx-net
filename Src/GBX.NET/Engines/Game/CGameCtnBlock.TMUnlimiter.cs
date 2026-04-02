@@ -24,5 +24,11 @@ public partial class CGameCtnBlock
         public bool IsRotated => Rotation != Vec3.Zero;
         public bool IsScaled => Scale != Vec3.One;
         public bool HasIdentifier => Group is not null;
+
+        public CGameCtnChallenge.TMUnlimiter.Motion? Motion { get; set; }
+        public Vec3? OriginOffset { get; set; }
+        public List<CGameCtnChallenge.TMUnlimiter.BlockGroup> BlockGroups { get; set; } = [];
+        public Vec3? SpawnOffset { get; set; }
+        public Vec3? SpawnRotation { get; set; }
     }
 }
