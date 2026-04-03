@@ -256,6 +256,20 @@ public partial class CGameCtnChallenge
             n.TMUnlimiterData.IsVanillaMode = (challengeFlags & ChallengeFlags.IsVanillaMode) != 0;
             n.TMUnlimiterData.IsPylonsDisabled = (challengeFlags & ChallengeFlags.IsPylonsDisabled) != 0;
 
+            // throw if any flags outside the enum are set
+            if ((challengeFlags & ~(
+                  ChallengeFlags.DecorationVisibility_SkyOnly
+                | ChallengeFlags.IsDecorationMoved
+                | ChallengeFlags.DecorationVisibility_Nothing
+                | ChallengeFlags.IsDecorationScaled
+                | ChallengeFlags.IsTrackBaseEmpty
+                | ChallengeFlags.IsVanillaMode
+                | ChallengeFlags.DecorationVisibility_Warp
+                | ChallengeFlags.IsPylonsDisabled)) != 0)
+            {
+                throw new InvalidDataException($"Unknown challenge flags set: {(ushort)challengeFlags & 0xFF7F}");
+            }
+
             if (n.TMUnlimiterData.SkyDecorationVisibility != TMUnlimiter.DecorationVisibility.Nothing)
             {
                 if (isDecorationMoved)
@@ -292,6 +306,25 @@ public partial class CGameCtnChallenge
                 block.TMUnlimiterData.IsCollisionDisabled = flags.HasFlag(BlockFlags.IsCollisionDisabled);
                 block.TMUnlimiterData.IsClassicMode = flags.HasFlag(BlockFlags.IsClassicMode);
                 block.TMUnlimiterData.IsClassicTerrain = flags.HasFlag(BlockFlags.IsClassicTerrain);
+
+                // throw if any flags outside the enum are set
+                if ((flags & ~(
+                      BlockFlags.IsOutsideBoundaries
+                    | BlockFlags.IsMoved
+                    | BlockFlags.IsRotated
+                    | BlockFlags.IsScaled
+                    | BlockFlags.IsInverted
+                    | BlockFlags.IsVanillaTerrain
+                    | BlockFlags.IsSpawnPointFixEnabled
+                    | BlockFlags.IsDynamic
+                    | BlockFlags.IsInvisible
+                    | BlockFlags.IsCollisionDisabled
+                    | BlockFlags.IsClassicMode
+                    | BlockFlags.IsClassicTerrain
+                    | BlockFlags.HasIdentifier)) != 0)
+                {
+                    throw new InvalidDataException($"Unknown block flags set: {(ushort)flags & 0x7F7F}");
+                }
 
                 if (block.TMUnlimiterData.IsVanillaTerrain)
                 {
@@ -475,7 +508,7 @@ public partial class CGameCtnChallenge
             }
         }
 
-        private void Read(CGameCtnChallenge n, GbxReader r, int ver)
+        private static void Read(CGameCtnChallenge n, GbxReader r, int ver)
         {
             var flags = (ChallengeFlags)r.ReadUInt16();
             var isDecorationMoved = (flags & ChallengeFlags.IsDecorationMoved) != 0;
@@ -491,6 +524,22 @@ public partial class CGameCtnChallenge
                 EnableServerCommunication = (flags & ChallengeFlags.EnableServerCommunication) != 0,
                 IgnoreMultiplayerTimeSyncForMotionBlocks = (flags & ChallengeFlags.IgnoreMultiplayerTimeSyncForMotionBlocks) != 0
             };
+
+            // throw if any flags outside the enum are set
+            if ((flags & ~(
+                  ChallengeFlags.DecorationVisibility_SkyOnly
+                | ChallengeFlags.DecorationVisibility_Background
+                | ChallengeFlags.IsDecorationMoved
+                | ChallengeFlags.IsDecorationScaled
+                | ChallengeFlags.IsPylonsDisabled
+                | ChallengeFlags.IsTrackBaseEmpty
+                | ChallengeFlags.EnableVehicleCollisions
+                | ChallengeFlags.EnableRandomStartLine
+                | ChallengeFlags.EnableServerCommunication
+                | ChallengeFlags.IgnoreMultiplayerTimeSyncForMotionBlocks)) != 0)
+            {
+                throw new InvalidDataException($"Unknown challenge flags set: {(ushort)flags & 0xFE00}");
+            }
 
             if (n.TMUnlimiterData.SkyDecorationVisibility != TMUnlimiter.DecorationVisibility.Nothing)
             {
@@ -562,7 +611,7 @@ public partial class CGameCtnChallenge
             ReadBlocks(n, n.TMUnlimiterData, r, embeddedBlockData, triggerGroups, blockGroups);
         }
 
-        private void Write(CGameCtnChallenge n, GbxWriter w, int ver)
+        private static void Write(CGameCtnChallenge n, GbxWriter w, int ver)
         {
             var flags = (ChallengeFlags)0;
             if (n.TMUnlimiterData is not null)
@@ -664,7 +713,7 @@ public partial class CGameCtnChallenge
             WriteBlocks(n, n.TMUnlimiterData!, w, embeddedBlockDatas.ToList(), triggerGroups, blockGroups ?? []);
         }
 
-        private void ReadBlocks(
+        private static void ReadBlocks(
             CGameCtnChallenge n, 
             TMUnlimiter tmUnlimiter, 
             GbxReader r, 
@@ -716,10 +765,10 @@ public partial class CGameCtnChallenge
                         tmUnlimiterBlock = triggerBlock;
                         break;
                     case 2: // external block
-                        var externalBlock = new TMUnlimiter.ExternalBlock
+                        var externalBlock = new TMUnlimiter.ExternalBlock(
+                            Name: r.ReadIdAsString(), 
+                            Author: r.ReadIdAsString())
                         {
-                            Name = r.ReadIdAsString(),
-                            Author = r.ReadIdAsString(),
                             Coord = r.ReadInt3(),
                             Direction = (Direction)r.ReadByte(),
                             Flags = r.ReadInt32()
@@ -729,9 +778,9 @@ public partial class CGameCtnChallenge
                         break;
 
                     case 3: // embedded block
-                        var embeddedBlock = new TMUnlimiter.EmbeddedBlock
+                        var embeddedBlock = new TMUnlimiter.EmbeddedBlock(
+                            Data: embeddedBlockData[r.ReadInt32()])
                         {
-                            Data = embeddedBlockData[r.ReadInt32()],
                             Coord = r.ReadInt3(),
                             Direction = (Direction)r.ReadByte(),
                             Flags = r.ReadInt32()
@@ -769,8 +818,23 @@ public partial class CGameCtnChallenge
                                 tmUnlimiterBlock?.BlockGroups = mappedBlockGroups;
                             }
 
-                            var spawnPointAlterMethod = (flags2 >> 9) & 3;
-                            if (spawnPointAlterMethod == 1) // manual  
+                            var isDynamic = (flags2 & (1 << 6)) != 0;
+                            block?.TMUnlimiterData?.IsDynamic = isDynamic;
+                            tmUnlimiterBlock?.IsDynamic = isDynamic;
+
+                            var isInvisible = (flags2 & (1 << 7)) != 0;
+                            block?.TMUnlimiterData?.IsInvisible = isInvisible;
+                            tmUnlimiterBlock?.IsInvisible = isInvisible;
+
+                            var isNonCollidable = (flags2 & (1 << 8)) != 0;
+                            block?.TMUnlimiterData?.IsNonCollidable = isNonCollidable;
+                            tmUnlimiterBlock?.IsNonCollidable = isNonCollidable;
+
+                            var spawnPointAlterMethod = (TMUnlimiter.ESpawnPointAlterMethod)((flags2 >> 9) & 3);
+                            block?.TMUnlimiterData?.SpawnPointAlterMethod = spawnPointAlterMethod;
+                            tmUnlimiterBlock?.SpawnPointAlterMethod = spawnPointAlterMethod;
+
+                            if (spawnPointAlterMethod == TMUnlimiter.ESpawnPointAlterMethod.Manual)
                             {
                                 var spawnOffset = r.ReadVec3();
                                 var spawnRotation = r.ReadVec3();
@@ -779,6 +843,32 @@ public partial class CGameCtnChallenge
                                 block?.TMUnlimiterData?.SpawnRotation = spawnRotation;
                                 tmUnlimiterBlock?.SpawnOffset = spawnOffset;
                                 tmUnlimiterBlock?.SpawnRotation = spawnRotation;
+                            }
+
+                            var respawnCapability = (TMUnlimiter.ERespawnCapability)((flags2 >> 11) & 3);
+                            block?.TMUnlimiterData?.RespawnCapability = respawnCapability;
+                            tmUnlimiterBlock?.RespawnCapability = respawnCapability;
+
+                            var blockTriggerActivationMethod = (TMUnlimiter.EBlockTriggerActivationMethod)((flags2 >> 13) & 3);
+                            block?.TMUnlimiterData?.BlockTriggerActivationMethod = blockTriggerActivationMethod;
+                            tmUnlimiterBlock?.BlockTriggerActivationMethod = blockTriggerActivationMethod;
+
+                            // throw if any flags outside the enum are set
+                            if ((flags2 & ~(
+                                  (1 << 0) // isOffsetApplied
+                                | (1 << 1) // isRotationApplied
+                                | (1 << 2) // isScaleApplied
+                                | (1 << 3) // isMotionApplied
+                                | (1 << 4) // isOriginOffsetApplied
+                                | (1 << 5) // isInBlockGroups
+                                | (1 << 6) // isDynamic
+                                | (1 << 7) // isInvisible
+                                | (1 << 8) // isNonCollidable
+                                | (3 << 9) // spawnPointAlterMethod
+                                | (3 << 11) // respawnCapability
+                                | (3 << 13))) != 0)
+                            {
+                                throw new InvalidDataException($"Unknown block flags2 set: {flags2 & 0xC11F}");
                             }
 
                             break;
@@ -795,8 +885,21 @@ public partial class CGameCtnChallenge
                                 var mappedBlockGroups = r.ReadArray<int>()
                                     .Select(index => allBlockGroups[index])
                                     .ToList();
-                                block?.TMUnlimiterData?.BlockGroups = mappedBlockGroups;
                                 tmUnlimiterBlock?.BlockGroups = mappedBlockGroups;
+                            }
+
+                            tmUnlimiterBlock?.IsNonCollidable = (flags2 & (1 << 5)) != 0;
+
+                            // throw if any flags outside the enum are set
+                            if ((flags2 & ~(
+                                  (1 << 0) // isOffsetApplied
+                                | (1 << 1) // isRotationApplied
+                                | (1 << 2) // isScaleApplied
+                                | (1 << 3) // isMotionApplied
+                                | (1 << 4) // isInBlockGroups
+                                | (1 << 5))) != 0)
+                            {
+                                throw new InvalidDataException($"Unknown trigger block flags2 set: {flags2 & 0xE0}");
                             }
 
                             break;
@@ -849,7 +952,7 @@ public partial class CGameCtnChallenge
             }
         }
 
-        private void WriteBlocks(
+        private static void WriteBlocks(
             CGameCtnChallenge n,
             TMUnlimiter tmUnlimiter,
             GbxWriter w,
@@ -913,7 +1016,7 @@ public partial class CGameCtnChallenge
             }
         }
 
-        private void WriteBlock20Properties(GbxWriter w, CGameCtnBlock? block, TMUnlimiter.Block? tmUnlimiterBlock, List<TMUnlimiter.BlockGroup> allBlockGroups)
+        private static void WriteBlock20Properties(GbxWriter w, CGameCtnBlock? block, TMUnlimiter.Block? tmUnlimiterBlock, List<TMUnlimiter.BlockGroup> allBlockGroups)
         {
             var offset = (block?.TMUnlimiterData?.Offset ?? tmUnlimiterBlock?.Offset).GetValueOrDefault();
             var rotation = (block?.TMUnlimiterData?.Rotation ?? tmUnlimiterBlock?.Rotation).GetValueOrDefault();
@@ -921,8 +1024,14 @@ public partial class CGameCtnChallenge
             var motion = block?.TMUnlimiterData?.Motion ?? tmUnlimiterBlock?.Motion;
             var originOffset = block?.TMUnlimiterData?.OriginOffset ?? tmUnlimiterBlock?.OriginOffset;
             var blockGroups = block?.TMUnlimiterData?.BlockGroups ?? tmUnlimiterBlock?.BlockGroups;
+            var isDynamic = block?.TMUnlimiterData?.IsDynamic ?? tmUnlimiterBlock?.IsDynamic ?? false;
+            var isInvisible = block?.TMUnlimiterData?.IsInvisible ?? tmUnlimiterBlock?.IsInvisible ?? false;
+            var isNonCollidable = block?.TMUnlimiterData?.IsNonCollidable ?? tmUnlimiterBlock?.IsNonCollidable ?? false;
+            var spawnPointAlterMethod = block?.TMUnlimiterData?.SpawnPointAlterMethod ?? tmUnlimiterBlock?.SpawnPointAlterMethod ?? TMUnlimiter.ESpawnPointAlterMethod.None;
             var spawnOffset = block?.TMUnlimiterData?.SpawnOffset ?? tmUnlimiterBlock?.SpawnOffset;
             var spawnRotation = block?.TMUnlimiterData?.SpawnRotation ?? tmUnlimiterBlock?.SpawnRotation;
+            var respawnCapability = block?.TMUnlimiterData?.RespawnCapability ?? tmUnlimiterBlock?.RespawnCapability ?? TMUnlimiter.ERespawnCapability.Default;
+            var blockTriggerActivationMethod = block?.TMUnlimiterData?.BlockTriggerActivationMethod ?? tmUnlimiterBlock?.BlockTriggerActivationMethod ?? TMUnlimiter.EBlockTriggerActivationMethod.Default;
 
             var flags = (ushort)0;
             if (offset != Vec3.Zero) flags |= 1;
@@ -931,8 +1040,12 @@ public partial class CGameCtnChallenge
             if (motion is not null) flags |= 1 << 3;
             if (originOffset is not null && originOffset != Vec3.Zero) flags |= 1 << 4;
             if (blockGroups?.Count > 0) flags |= 1 << 5;
-            if ((spawnOffset is not null && spawnOffset != Vec3.Zero)
-              || spawnRotation is not null && spawnRotation != Vec3.Zero) flags |= 1 << 9;
+            if (isDynamic) flags |= 1 << 6;
+            if (isInvisible) flags |= 1 << 7;
+            if (isNonCollidable) flags |= 1 << 8;
+            flags |= (ushort)(((ushort)spawnPointAlterMethod & 3) << 9);
+            flags |= (ushort)(((ushort)respawnCapability & 3) << 11);
+            flags |= (ushort)(((ushort)blockTriggerActivationMethod & 3) << 13);
 
             w.Write(flags);
 
@@ -958,15 +1071,14 @@ public partial class CGameCtnChallenge
                 w.WriteArray(blockGroups.Select(g => allBlockGroups.IndexOf(g)).ToArray());
             }
 
-            if ((spawnOffset is not null && spawnOffset != Vec3.Zero)
-              || spawnRotation is not null && spawnRotation != Vec3.Zero)
+            if (spawnPointAlterMethod == TMUnlimiter.ESpawnPointAlterMethod.Manual)
             {
                 w.Write(spawnOffset.GetValueOrDefault());
                 w.Write(spawnRotation.GetValueOrDefault());
             }
         }
 
-        private void WriteTriggerBlock20Properties(GbxWriter w, TMUnlimiter.TriggerBlock triggerBlock, List<TMUnlimiter.BlockGroup> allBlockGroups)
+        private static void WriteTriggerBlock20Properties(GbxWriter w, TMUnlimiter.TriggerBlock triggerBlock, List<TMUnlimiter.BlockGroup> allBlockGroups)
         {
             var offset = triggerBlock.Offset;
             var rotation = triggerBlock.Rotation;
@@ -980,6 +1092,7 @@ public partial class CGameCtnChallenge
             if (scale != Vec3.One) flags |= 1 << 2;
             if (motion is not null) flags |= 1 << 3;
             if (blockGroups?.Count > 0) flags |= 1 << 4;
+            if (triggerBlock.IsNonCollidable) flags |= 1 << 5;
 
             w.Write(flags);
 
@@ -2197,8 +2310,14 @@ public partial class CGameCtnChallenge
             public Motion? Motion { get; set; }
             public Vec3? OriginOffset { get; set; }
             public List<BlockGroup> BlockGroups { get; set; } = [];
+            public ESpawnPointAlterMethod SpawnPointAlterMethod { get; set; }
             public Vec3? SpawnOffset { get; set; }
             public Vec3? SpawnRotation { get; set; }
+            public bool IsNonCollidable { get; set; }
+            public bool IsDynamic { get; set; }
+            public bool IsInvisible { get; set; }
+            public ERespawnCapability RespawnCapability { get; set; }
+            public EBlockTriggerActivationMethod BlockTriggerActivationMethod { get; set; }
         }
 
         public record TriggerBlock : Block
@@ -2206,18 +2325,14 @@ public partial class CGameCtnChallenge
             public List<TriggerGroup> TriggerGroups { get; set; } = [];
         }
 
-        public record ExternalBlock : Block
+        public record ExternalBlock(string Name, string Author) : Block
         {
-            public string Name { get; set; } = "";
-            public string Author { get; set; } = "";
             public int Flags { get; set; }
         }
 
-        public record EmbeddedBlock : Block
+        public record EmbeddedBlock(EmbeddedBlockData Data) : Block
         {
-            public string Name { get; set; } = "";
             public int Flags { get; set; }
-            public EmbeddedBlockData Data { get; set; }
         }
 
         public record Motion
@@ -2245,6 +2360,27 @@ public partial class CGameCtnChallenge
                 w.Write(Offset);
                 w.Write(Rotation);
             }
+        }
+
+        public enum ESpawnPointAlterMethod
+        {
+            None,
+            Manual,
+            Automatic
+        }
+
+        public enum ERespawnCapability
+        {
+            Default,
+            ForceIsRespawnable,
+            ForceIsNonRespawnable
+        }
+
+        public enum EBlockTriggerActivationMethod
+        {
+            Default,
+            Disabled,
+            TriggerManually
         }
 
         public enum MediaClipMappedResourceType

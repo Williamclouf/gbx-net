@@ -28,7 +28,11 @@ public partial class CGameCtnBlock
         public CGameCtnChallenge.TMUnlimiter.Motion? Motion { get; set; }
         public Vec3? OriginOffset { get; set; }
         public List<CGameCtnChallenge.TMUnlimiter.BlockGroup> BlockGroups { get; set; } = [];
+        public CGameCtnChallenge.TMUnlimiter.ESpawnPointAlterMethod SpawnPointAlterMethod { get; set; }
         public Vec3? SpawnOffset { get; set; }
         public Vec3? SpawnRotation { get; set; }
+        public bool IsNonCollidable { get; set; }
+        public CGameCtnChallenge.TMUnlimiter.ERespawnCapability RespawnCapability { get; set; }
+        public CGameCtnChallenge.TMUnlimiter.EBlockTriggerActivationMethod BlockTriggerActivationMethod { get; set; }
     }
 }

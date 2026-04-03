@@ -1,5 +1,4 @@
-﻿using GBX.NET.Extensions;
-using GBX.NET.Interfaces.Game;
+﻿using GBX.NET.Interfaces.Game;
 using System.Collections.Immutable;
 using System.IO.Compression;
 using System.Security;
