@@ -209,6 +209,8 @@ public partial class CGameCtnBlock : IGameCtnBlockTM10, IGameCtnBlockTMSX, IGame
         set => SetFlagBitAndObject(DecalBit, ref decalId, value);
     }
 
+    public TMUnlimiter? TMUnlimiterData { get; set; }
+
     /// <summary>
     /// Creates a new instance of <see cref="CGameCtnBlock"/>. Adding chunks is not needed (only when creating blocks for TM1.0 from 2003).
     /// </summary>

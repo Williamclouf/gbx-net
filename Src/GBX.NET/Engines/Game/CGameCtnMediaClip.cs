@@ -20,6 +20,8 @@ public partial class CGameCtnMediaClip
         set => tracks = value;
     }
 
+    public TMUnlimiter? TMUnlimiterData { get; set; }
+
     public override string ToString()
     {
         return $"{nameof(CGameCtnMediaClip)}: {(string.IsNullOrEmpty(Name) ? "(unnamed)" : Name)}";

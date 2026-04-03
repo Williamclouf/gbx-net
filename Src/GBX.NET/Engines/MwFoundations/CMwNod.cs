@@ -13,7 +13,7 @@ namespace GBX.NET.Engines.MwFoundations;
 [Class(0x01001000)]
 public partial class CMwNod : IClass
 {
-    internal const int MaxSkippableChunkSize = 0x1000000; // ~16MB
+    internal const int MaxSkippableChunkSize = 0x10000000; // ~268MB
 
     private const uint SKIP = 0x534B4950;
     private const uint FACADE = 0xFACADE01;
@@ -72,6 +72,13 @@ public partial class CMwNod : IClass
                 {
                     if (chunk is not null)
                     {
+                        if (chunk is CGameCtnChallenge.Chunk03043055 unlimiterChunk)
+                        {
+                            unlimiterChunk.TMUnlimiterChunk = new();
+                            r.BaseStream.Position -= 4;
+                            goto TMUnlimiter055;
+                        }
+
                         return;
                     }
 
@@ -254,6 +261,8 @@ public partial class CMwNod : IClass
                 continue;
             }
 
+            TMUnlimiter055:
+
             // Unskippable chunk
             if (r.Logger is not null)
             {
@@ -319,6 +328,12 @@ public partial class CMwNod : IClass
 
             if (chunk is ISkippableChunk skippable)
             {
+                if (skippable is CGameCtnChallenge.Chunk03043055 { TMUnlimiterChunk: not null } unlimiterChunk)
+                {
+                    unlimiterChunk.ReadWrite(this, chunkRw);
+                    continue;
+                }
+
                 w.WriteHexUInt32(SKIP);
 
                 if (skippable.Data is not null)

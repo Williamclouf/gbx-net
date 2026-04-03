@@ -475,6 +475,8 @@ public partial class CGameCtnChallenge :
     /// </summary>
     public ImmutableList<Ident>? ExpectedEmbeddedItemModels { get; private set; }
 
+    public TMUnlimiter? TMUnlimiterData { get; set; }
+
     // poss to generate
     string IGameCtnChallenge.MapUid
     {
@@ -1322,6 +1324,12 @@ public partial class CGameCtnChallenge :
 
             if (Version < 6)
             {
+                if (n.ContainsChunk<Chunk3F001001>() || n.ContainsChunk<Chunk3F001002>() || n.ContainsChunk<Chunk3F001003>())
+                {
+                    w.WriteListWritable(n.TMUnlimiterData?.FakeBlocks, version: Version);
+                    return;
+                }
+
                 w.WriteListWritable(n.blocks, version: Version);
                 return;
             }
@@ -1954,14 +1962,6 @@ public partial class CGameCtnChallenge :
                     w.WriteList(n.Textures);
                 }
             });
-        }
-    }
-
-    public partial class Chunk03043055
-    {
-        public override void ReadWrite(CGameCtnChallenge n, GbxReaderWriter rw)
-        {
-            // empty, sets classic clips to true?
         }
     }
 
