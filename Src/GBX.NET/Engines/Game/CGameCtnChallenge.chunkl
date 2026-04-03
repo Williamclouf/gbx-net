@@ -168,9 +168,7 @@ CGameCtnChallenge 0x03043000 // A map.
  if !HasCustomCamThumbnail
   return
  byte
- vec3 // Iso4 technically
- vec3 // camera calibration matrix?
- vec3
+ mat3 ThumbnailRotationMatrix
  vec3 ThumbnailPosition
  float ThumbnailFov
  float ThumbnailNearClipPlane
