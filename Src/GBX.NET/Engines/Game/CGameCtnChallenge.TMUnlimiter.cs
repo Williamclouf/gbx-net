@@ -638,12 +638,20 @@ public partial class CGameCtnChallenge
 
             w.WriteListWritable(materialModelRefs);
 
+            int? GetReplacementTextureInstanceIndex(string name)
+            {
+                var match = embeddedW.NodeDict
+                    .FirstOrDefault(x => x.Key is GbxRefTableFile { UseFile: true } file
+                        && file.FilePath == name);
+                return match.Key is not null ? match.Value : null;
+            }
+
             var replacementTextureFlags = new TMUnlimiter.ReplacementTextureFlags
             {
-                SpecularInstanceIndex = embeddedW.NodeDict.FirstOrDefault(x => x.Key is GbxRefTableFile { UseFile: true, FilePath: "Specular" }).Value,
-                NormalInstanceIndex = embeddedW.NodeDict.FirstOrDefault(x => x.Key is GbxRefTableFile { UseFile: true, FilePath: "Normal" }).Value,
-                WhiteInstanceIndex = embeddedW.NodeDict.FirstOrDefault(x => x.Key is GbxRefTableFile { UseFile: true, FilePath: "White" }).Value,
-                BlackInstanceIndex = embeddedW.NodeDict.FirstOrDefault(x => x.Key is GbxRefTableFile { UseFile: true, FilePath: "Black" }).Value
+                SpecularInstanceIndex = GetReplacementTextureInstanceIndex("Specular"),
+                NormalInstanceIndex = GetReplacementTextureInstanceIndex("Normal"),
+                WhiteInstanceIndex = GetReplacementTextureInstanceIndex("White"),
+                BlackInstanceIndex = GetReplacementTextureInstanceIndex("Black")
             };
 
             w.WriteWritable(replacementTextureFlags);
@@ -731,6 +739,8 @@ public partial class CGameCtnChallenge
                         tmUnlimiter.EmbeddedBlocks.Add(embeddedBlock);
                         tmUnlimiterBlock = embeddedBlock;
                         break;
+                    default:
+                        throw new InvalidDataException($"Unknown block type {blockType}.");
                 }
 
                 switch (blockType)
@@ -791,6 +801,8 @@ public partial class CGameCtnChallenge
 
                             break;
                         }
+                    default:
+                        throw new InvalidDataException($"Unknown block type {blockType}.");
                 }
             }
         }
@@ -1006,10 +1018,10 @@ public partial class CGameCtnChallenge
     public sealed class TMUnlimiter
     {
         public Vec3 DecorationOffset { get; set; }
-        public Vec3 DecorationScale { get; set; }
+        public Vec3 DecorationScale { get; set; } = Vec3.One;
         public DecorationVisibility SkyDecorationVisibility { get; set; }
         public bool IsDecorationMoved => DecorationOffset != Vec3.Zero;
-        public bool IsDecorationScaled => DecorationScale != new Vec3(1, 1, 1);
+        public bool IsDecorationScaled => DecorationScale != Vec3.One;
         public bool IsTrackBaseEmpty { get; set; }
         public bool IsVanillaMode { get; set; }
         public bool IsPylonsDisabled { get; set; }
@@ -2114,11 +2126,11 @@ public partial class CGameCtnChallenge
 
                     if (value is null)
                     {
-                        Flags |= 1;
+                        Flags |= 2;
                     }
                     else
                     {
-                        Flags &= 0xFE;
+                        Flags &= 0xFD;
                     }
                 }
             }
@@ -2132,17 +2144,17 @@ public partial class CGameCtnChallenge
 
                     if (value is null)
                     {
-                        Flags |= 2;
+                        Flags |= 1;
                     }
                     else
                     {
-                        Flags &= 0xFD;
+                        Flags &= 0xFE;
                     }
                 }
             }
 
-            public bool IsCoreModule => (Flags & 2) != 0;
             public bool IsEmpty => (Flags & 1) != 0;
+            public bool IsCoreModule => (Flags & 2) != 0;
 
             public void Read(GbxReader r, int v = 0)
             {
