@@ -52,7 +52,14 @@ internal sealed partial class BoundedStream : Stream
             if (memoryStream is null)
             {
                 var data = new byte[remaining];
-                await baseStream.ReadAtLeastAsync(data, data.Length, throwOnEndOfStream: false, cancellationToken);
+                read = await baseStream.ReadAtLeastAsync(data, data.Length, throwOnEndOfStream: false, cancellationToken);
+                
+                if (read != data.Length)
+                {
+                    // Trim array. This should happen on EOF & possibly net streams.
+                    data = data[..read];
+                }
+
                 memoryStream = new MemoryStream(data);
             }
 
@@ -87,7 +94,14 @@ internal sealed partial class BoundedStream : Stream
             if (memoryStream is null)
             {
                 var data = new byte[remaining];
-                await baseStream.ReadAtLeastAsync(data, data.Length, throwOnEndOfStream: false, cancellationToken);
+                read = await baseStream.ReadAtLeastAsync(data, data.Length, throwOnEndOfStream: false, cancellationToken);
+
+                if (read != data.Length)
+                {
+                    // Trim array. This should happen on EOF & possibly net streams.
+                    Array.Resize(ref data, read);
+                }
+
                 memoryStream = new MemoryStream(data);
             }
 
@@ -131,9 +145,9 @@ internal sealed partial class BoundedStream : Stream
             _ => throw new ArgumentException("Invalid seek origin.", nameof(origin))
         };
 
-        if (newPosition < 0 || newPosition > length)
+        if (newPosition < 0)
         {
-            throw new IOException("An attempt was made to move the position before the beginning or after the end of the stream.");
+            throw new IOException("An attempt was made to move the position before the beginning of the stream.");
         }
 
         if (baseStream.CanSeek)
@@ -145,7 +159,14 @@ internal sealed partial class BoundedStream : Stream
             if (memoryStream is null)
             {
                 var data = new byte[remaining];
-                baseStream.ReadExactly(data);
+                var read = baseStream.ReadAtLeast(data, data.Length, throwOnEndOfStream: false);
+
+                if (read != data.Length)
+                {
+                    // Trim array. This should happen on EOF & possibly net streams.
+                    Array.Resize(ref data, read);
+                }
+
                 memoryStream = new MemoryStream(data);
             }
 
