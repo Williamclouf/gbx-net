@@ -853,7 +853,7 @@ public partial class CGameCtnChallenge
             {
                 w.Write((byte)0); // game block
                 w.WriteIdAsString(block.BlockModel.Id);
-                w.WriteIdAsString(block.BlockModel.Author);
+                w.Write(block.BlockModel.Collection);
                 w.Write(block.Coord);
                 w.Write((byte)block.Direction);
                 w.Write(block.Flags);
