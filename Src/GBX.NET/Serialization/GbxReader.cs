@@ -1028,6 +1028,12 @@ public sealed partial class GbxReader : BinaryReader, IGbxReader
             {
                 logger?.LogDebug("NodeRef #{Index}: {ExistingNode} (existing)", index.Value, existingNode);
 
+                if (existingNode is GbxRefTableFile nodeFile)
+                {
+                    file = nodeFile;
+                    return default;
+                }
+
                 file = null;
                 return (IClass)existingNode;
             }

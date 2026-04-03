@@ -1322,6 +1322,12 @@ public partial class CGameCtnChallenge :
             w.Write(n.needUnlock);
             w.Write(Version);
 
+            if (n.ContainsChunk<Chunk3F001001>() || n.ContainsChunk<Chunk3F001002>() || n.ContainsChunk<Chunk3F001003>())
+            {
+                w.WriteListWritable(n.TMUnlimiterData?.FakeBlocks, version: Version);
+                return;
+            }
+
             if (Version < 6)
             {
                 w.WriteListWritable(n.blocks, version: Version);
