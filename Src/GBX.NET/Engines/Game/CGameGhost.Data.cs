@@ -160,8 +160,12 @@ public partial class CGameGhost
                 }
             }
 
-            // CGameGhostTMData::ArchiveStateTimes
-            stateTimes = r.ReadArray<int>();
+            // guessed. there's some difference between TM1 and TM2 here, pls investigate soon
+            if (Version >= 10 || !IsFixedTimeStep)
+            {
+                // CGameGhostTMData::ArchiveStateTimes
+                stateTimes = r.ReadArray<int>();
+            }
 
             if (r.BaseStream.Position != r.BaseStream.Length)
             {
@@ -264,8 +268,11 @@ public partial class CGameGhost
                 }
             }
 
-            // CGameGhostTMData::ArchiveStateTimes
-            w.WriteArray(stateTimes);
+            if (Version >= 10 || !IsFixedTimeStep)
+            {
+                // CGameGhostTMData::ArchiveStateTimes
+                w.WriteArray(stateTimes);
+            }
         }
 
         private Sample ReadSample(TimeInt32 time, byte[] sampleData)
