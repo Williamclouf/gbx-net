@@ -418,7 +418,7 @@ public partial class Pak : IDisposable
     }
 
     [Zomp.SyncMethodGenerator.CreateSyncVersion]
-    public async Task<bool> CheckIsGbxAsync(PakFile file, CancellationToken cancellationToken = default)
+    public async Task<bool> CheckFileIsGbxAsync(PakFile file, CancellationToken cancellationToken = default)
     {
         using var stream = OpenFile(file, out var _);
         return await Gbx.IsGbxAsync(stream, cancellationToken);
@@ -494,7 +494,7 @@ public partial class Pak : IDisposable
             foundFileNames.Add(file.Name);
 
             // only gbx files can be checked for reference table
-            if (!await pak.CheckIsGbxAsync(file, cancellationToken))
+            if (!await pak.CheckFileIsGbxAsync(file, cancellationToken))
             {
                 continue;
             }
