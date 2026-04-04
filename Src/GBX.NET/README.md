@@ -177,10 +177,9 @@ Some of the common types to start with (a lot more are supported):
 | Mesh.Gbx | CPlugSolid2Model | Yes | Yes
 | Shape.Gbx | CPlugSurface | Yes | Yes
 | Macroblock.Gbx | CGameCtnMacroBlockInfo | Yes | Yes
-| LightMapCache.Gbx | CHmsLightMapCache | No | No
+| Profile.Gbx | CGamePlayerProfile / CGameUserProfile | Yes | Yes
 | SystemConfig.Gbx | CSystemConfig | Yes | Yes
-| FidCache.Gbx | CMwRefBuffer | Yes | Yes
-| Profile.Gbx | CGamePlayerProfile | Up to MP4 | Up to MP4
+| ScriptCache.Gbx | CScriptTraitsMetadata | Yes | Yes
 | Scores.Gbx | CGamePlayerScore | Yes | Yes
 
 ## Supported games
@@ -193,7 +192,7 @@ Many *essential* Gbx files from many games are supported:
 - ManiaPlanet 3, TM2/SM
 - ManiaPlanet 2, TM2/SM
 - ManiaPlanet 1, TM2
-- **TrackMania Forever**, Nations/United
+- **TrackMania Forever**, Nations/United (including TMUnlimiter)
 - Virtual Skipper 5
 - TrackMania United
 - **TrackMania Nations ESWC**
