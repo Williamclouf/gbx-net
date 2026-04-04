@@ -528,6 +528,11 @@ public partial class CMwNod : IClass
         return Chunks.Create<T>();
     }
 
+    public bool TryCreateChunk<T>(out T chunk) where T : IChunk, new()
+    {
+        return Chunks.TryCreate<T>(out chunk);
+    }
+
     public T? GetChunk<T>() where T : IChunk
     {
         return Chunks.Get<T>();
