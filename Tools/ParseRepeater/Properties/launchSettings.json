@@ -2,7 +2,7 @@
   "profiles": {
     "ParseRepeater": {
       "commandName": "Project",
-      "commandLineArgs": "\"D:\\GbxTools\\Dataset\\TM10\\Alpine\\Media\\Texture\\AlpineBark.Texture.gbx\""
+      "commandLineArgs": "\"E:\\Games\\TrackMania Nations ESWC\\GameData\\Tracks\\Replays\\Bench.Replay.Gbx\""
     }
   }
 }

@@ -34,6 +34,11 @@ public partial class CMwNod : IClass
         {
             var rawChunkId = r.ReadHexUInt32();
 
+            if (!OnRawChunkIdRead(rawChunkId))
+            {
+                return;
+            }
+
             if (rawChunkId == FACADE)
             {
                 r.Logger?.LogDebug("- FACADE -");
@@ -386,6 +391,11 @@ public partial class CMwNod : IClass
         {
             Write(rw);
         }
+    }
+
+    protected virtual bool OnRawChunkIdRead(uint rawChunkId)
+    {
+        return true;
     }
 
 #if NET8_0_OR_GREATER
