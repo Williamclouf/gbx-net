@@ -26,6 +26,23 @@ public interface IChunkSet<TKind> : ICollection<TKind>, IEnumerable<TKind>, IEnu
     T Create<T>() where T : TKind, new();
 
     /// <summary>
+    /// Tries to create a new chunk using the ID. Returns false if the same chunk ID already exists.
+    /// </summary>
+    /// <param name="chunkId">ID of the chunk.</param>
+    /// <param name="preferHeaderChunks">Whether to prefer creating header chunks if available.</param>
+    /// <param name="chunk">The created chunk if successful.</param>
+    /// <returns>True if a new chunk was successfully created, otherwise false.</returns>
+    bool TryCreate(uint chunkId, bool preferHeaderChunks, out TKind chunk);
+
+    /// <summary>
+    /// Tries to create a new chunk using the chunk type. Returns false if the same chunk already exists.
+    /// </summary>
+    /// <typeparam name="T">Type of the chunk.</typeparam>
+    /// <param name="chunk">The created chunk if successful.</param>
+    /// <returns>True if a new chunk was successfully created, otherwise false.</returns>
+    bool TryCreate<T>(out T chunk) where T : TKind, new();
+
+    /// <summary>
     /// Gets a chunk using the ID.
     /// </summary>
     /// <param name="chunkId">ID of the chunk.</param>
@@ -163,6 +180,34 @@ internal class ChunkSet<TKind>(CMwNod? node) : IChunkSet<TKind> where TKind : IC
         Add(newChunk);
 
         return newChunk;
+    }
+
+    public bool TryCreate(uint chunkId, bool preferHeaderChunks, out TKind chunk)
+    {
+        if (chunksById.TryGetValue(chunkId, out chunk))
+        {
+            return false;
+        }
+
+        chunk = New(chunkId, preferHeaderChunks);
+
+        Add(chunk);
+
+        return true;
+    }
+
+    public bool TryCreate<T>(out T chunk) where T : TKind, new()
+    {
+        if (chunksByType.TryGetValue(typeof(T), out var chunkBase))
+        {
+            chunk = (T)chunkBase;
+            return false;
+        }
+
+        chunk = new T();
+        Add(chunk);
+
+        return true;
     }
 
     public TKind? Get(uint chunkId)

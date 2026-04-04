@@ -3,10 +3,10 @@
 internal sealed partial class BoundedStream : Stream
 {
     private readonly Stream baseStream;
-    private readonly long length;
-    private readonly long startPosition;
+    private readonly int length;
+    private readonly int startPosition;
 
-    private long remaining;
+    private int remaining;
     private MemoryStream? memoryStream;
 
     public override bool CanRead => true;
@@ -22,14 +22,14 @@ internal sealed partial class BoundedStream : Stream
 
     public long Remaining => remaining;
 
-    public BoundedStream(Stream baseStream, long length)
+    public BoundedStream(Stream baseStream, int length)
     {
         this.baseStream = baseStream ?? throw new ArgumentNullException(nameof(baseStream));
         if (!baseStream.CanRead) throw new ArgumentException("Base stream must be readable.");
         if (length < 0) throw new ArgumentOutOfRangeException(nameof(length));
 
         this.length = length;
-        startPosition = baseStream.CanSeek ? baseStream.Position : 0;
+        startPosition = baseStream.CanSeek ? (int)baseStream.Position : 0;
         remaining = length;
     }
 
@@ -173,7 +173,7 @@ internal sealed partial class BoundedStream : Stream
             memoryStream.Seek(newPosition, SeekOrigin.Begin);
         }
 
-        remaining = length - newPosition;
+        remaining = length - (int)newPosition;
         return newPosition;
     }
 

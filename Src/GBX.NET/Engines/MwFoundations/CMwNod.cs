@@ -34,6 +34,11 @@ public partial class CMwNod : IClass
         {
             var rawChunkId = r.ReadHexUInt32();
 
+            if (!OnRawChunkIdRead(rawChunkId))
+            {
+                return;
+            }
+
             if (rawChunkId == FACADE)
             {
                 r.Logger?.LogDebug("- FACADE -");
@@ -388,6 +393,11 @@ public partial class CMwNod : IClass
         }
     }
 
+    protected virtual bool OnRawChunkIdRead(uint rawChunkId)
+    {
+        return true;
+    }
+
 #if NET8_0_OR_GREATER
     [Experimental("GBXNET10001")]
 #endif
@@ -516,6 +526,11 @@ public partial class CMwNod : IClass
     public T CreateChunk<T>() where T : IChunk, new()
     {
         return Chunks.Create<T>();
+    }
+
+    public bool TryCreateChunk<T>(out T chunk) where T : IChunk, new()
+    {
+        return Chunks.TryCreate<T>(out chunk);
     }
 
     public T? GetChunk<T>() where T : IChunk
