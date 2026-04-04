@@ -335,6 +335,7 @@ CSystemConfig 0x0B005000
  int NetworkDownload
  int NetworkUpload
  bool NetworkUseNatUPnP
+ bool NetworkTestInternetConnection
  string NetworkLastUsedMSAddress
  string NetworkLastUsedMSPath
  int[]

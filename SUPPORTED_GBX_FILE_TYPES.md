@@ -15,8 +15,8 @@ Older extensions | Latest extension | Class | Read (whole) | Write | Read (heade
 | | Shape.Gbx | [CPlugSurface](Src/GBX.NET/Engines/Plug/CPlugSurface.chunkl) | Yes | Yes
 | | Macroblock.Gbx | [CGameCtnMacroBlockInfo](Src/GBX.NET/Engines/Game/CGameCtnMacroBlockInfo.chunkl) | Yes | Yes | Yes
 | | SystemConfig.Gbx | [CSystemConfig](Src/GBX.NET/Engines/System/CSystemConfig.chunkl) | Yes | Yes
-| RefBuffer.Gbx | FidCache.Gbx | [CMwRefBuffer](Src/GBX.NET/Engines/MwFoundations/CMwRefBuffer.chunkl) | Yes | Yes
-| | Profile.Gbx | [CGamePlayerProfile](Src/GBX.NET/Engines/Game/CGamePlayerProfile.chunkl) | Up to TMF | No | Yes
+| RefBuffer.Gbx | FidCache.Gbx | [CMwRefBuffer](Src/GBX.NET/Engines/MwFoundations/CMwRefBuffer.chunkl) | No | No
+| | Profile.Gbx | [CGamePlayerProfile](Src/GBX.NET/Engines/Game/CGamePlayerProfile.chunkl) / [CGameUserProfile](Src/GBX.NET/Engines/Game/CGameUserProfile.chunkl) | Yes | Yes | Yes
 | | Spawn.Gbx | [CGameSpawnModel](Src/GBX.NET/Engines/GameData/CGameSpawnModel.chunkl) | Yes | Yes
 | ConstructionCampaign.Gbx | Campaign.Gbx | [CGameCtnCampaign](Src/GBX.NET/Engines/Game/CGameCtnCampaign.chunkl) | Yes | Yes
 | TMCollection.Gbx | Collection.Gbx | [CGameCtnCollection](Src/GBX.NET/Engines/Game/CGameCtnCollection.chunkl) | Yes | Yes | Yes
@@ -27,6 +27,8 @@ Older extensions | Latest extension | Class | Read (whole) | Write | Read (heade
 | | Scene3d.Gbx | [CSceneLayout](Src/GBX.NET/Engines/Scene/CSceneLayout.chunkl) | From TMF | From TMF
 | TMEDClassic.Gbx | EDClassic.Gbx | [CGameCtnBlockInfoClassic](Src/GBX.NET/Engines/Game/CGameCtnBlockInfoClassic.chunkl) | Yes | Yes | Yes
 | TMEDClip.Gbx | EDClip.Gbx | [CGameCtnBlockInfoClip](Src/GBX.NET/Engines/Game/CGameCtnBlockInfoClip.chunkl) | Yes | Yes | Yes
+| | EDHorizontalClip.Gbx | [CGameCtnBlockInfoClipHorizontal](Src/GBX.NET/Engines/Game/CGameCtnBlockInfoClipHorizontal.chunkl) | Yes | Yes | Yes
+| | EDVerticalClip.Gbx | [CGameCtnBlockInfoClipVertical](Src/GBX.NET/Engines/Game/CGameCtnBlockInfoClipVertical.chunkl) | Yes | Yes | Yes
 | TMEDFlat.Gbx | EDFlat.Gbx | [CGameCtnBlockInfoFlat](Src/GBX.NET/Engines/Game/CGameCtnBlockInfoFlat.chunkl) | Yes | Yes | Yes
 | TMEDFrontier.Gbx | EDFrontier.Gbx | [CGameCtnBlockInfoFrontier](Src/GBX.NET/Engines/Game/CGameCtnBlockInfoFrontier.chunkl) | Yes | Yes | Yes
 | TMEDPylon.Gbx | EDPylon.Gbx | [CGameCtnBlockInfoPylon](Src/GBX.NET/Engines/Game/CGameCtnBlockInfoPylon.chunkl) | Yes | Yes | Yes
@@ -70,5 +72,7 @@ Older extensions | Latest extension | Class | Read (whole) | Write | Read (heade
 | | Armor.Gbx | [CGameArmorModel](Src/GBX.NET/Engines/GameData/CGameArmorModel.chunkl) | Yes | Yes
 | | Gate.Gbx | [CGameGateModel](Src/GBX.NET/Engines/GameData/CGameGateModel.chunkl) | Yes | Yes
 | | GameAdvertisement.Gbx | [CGameAdvertising](Src/GBX.NET/Engines/Game/CGameAdvertising.chunkl) | Yes | Yes
+| | Scores.Gbx | [CGamePlayerScore](Src/GBX.NET/Engines/Game/CGamePlayerScore.chunkl) | Yes | Yes
+| | ScriptCache.Gbx | [CScriptTraitsMetadata](Src/GBX.NET/Engines/Script/CScriptTraitsMetadata.chunkl) | Yes | Yes
 
 - <sup>1</sup>Safety reasons. Consider extracting `CGameCtnGhost` from `CGameCtnReplayRecord`, transfer it over to `CGameCtnMediaBlockGhost`, add it to `CGameCtnMediaClip`, and save it as `.Clip.Gbx`, which you can then import in MediaTracker.

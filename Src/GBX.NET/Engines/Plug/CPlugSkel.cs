@@ -13,6 +13,7 @@ public partial class CPlugSkel
     private byte? u05;
     private int? u06;
     private byte[]? u07;
+    private Vec3[]? u08;
 
     public string Name { get => name; set => name = value; }
     public bool U01 { get => u01; set => u01 = value; }
@@ -22,6 +23,7 @@ public partial class CPlugSkel
     public byte? U05 { get => u05; set => u05 = value; }
     public int? U06 { get => u06; set => u06 = value; }
     public byte[]? U07 { get => u07; set => u07 = value; }
+    public Vec3[]? U08 { get => u08; set => u08 = value; }
 
     public void ReadWrite(GbxReaderWriter rw, int v = 0)
     {
@@ -53,7 +55,7 @@ public partial class CPlugSkel
                         var u09 = r.ReadArray<ulong>();
                         var u10 = r.ReadArray<Quat>();*/
 
-                        throw new Exception("U04 == true");
+                        throw new Exception("u02 == true");
                     }
 
                     if (v >= 10)
@@ -64,6 +66,7 @@ public partial class CPlugSkel
 
                             if (v >= 18)
                             {
+                                // Second u04 data read in version >= 18
                                 rw.Data(ref u04);
                             }
                         }
@@ -81,9 +84,9 @@ public partial class CPlugSkel
 
                             if (v == 14)
                             {
-                                // some array
+                                // Empty array (count = 0)
                                 rw.Int32(0);
-                                // then NPlugSkel::ArchiveJointExprs
+                                // Then NPlugSkel::ArchiveJointExprs
                                 rw.ArrayReadableWritable<JointExpr>(ref jointExprs!);
                             }
 
@@ -95,6 +98,11 @@ public partial class CPlugSkel
 
                         if (v >= 17)
                         {
+                            if (v >= 20)
+                            {
+                                rw.Array<Vec3>(ref u08);
+                            }
+
                             rw.Byte(ref u05);
                             rw.Int32(ref u06);
                         }

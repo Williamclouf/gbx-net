@@ -4,7 +4,7 @@ namespace GBX.NET.Engines.Plug;
 
 public partial class CPlugPrefab : IVersionable
 {
-    private DateTime fileWriteTime;
+    private DateTime? fileWriteTime;
     private string url = "";
     private int u01;
     private int u02;
@@ -12,18 +12,11 @@ public partial class CPlugPrefab : IVersionable
 
     public int Version { get; set; }
 
-    public DateTime FileWriteTime { get => fileWriteTime; set => fileWriteTime = value; }
+    public DateTime? FileWriteTime { get => fileWriteTime; set => fileWriteTime = value; }
     public string Url { get => url; set => url = value; }
     public int U01 { get => u01; set => u01 = value; }
     public int U02 { get => u02; set => u02 = value; }
     public EntRef[] Ents { get => ents; set => ents = value; }
-
-#if NET8_0_OR_GREATER
-    static void IClass.Read<T>(T node, GbxReaderWriter rw)
-    {
-        node.ReadWrite(rw);
-    }
-#endif
 
     public override void ReadWrite(GbxReaderWriter rw)
     {

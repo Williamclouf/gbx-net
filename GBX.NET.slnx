@@ -44,6 +44,7 @@
     <Project Path="Samples/Advanced/ItemPacker/ItemPacker.csproj" />
   </Folder>
   <Folder Name="/Samples/Beginner/">
+    <Project Path="Samples/Beginner/Beyblade/Beyblade.csproj" Id="9bd1dd59-9f3b-4d9d-86dd-706463278526" />
     <Project Path="Samples/Beginner/EnvimixForTM2020/EnvimixForTM2020.csproj" />
     <Project Path="Samples/Beginner/FixDesertUpdatePillarsAfterConversion/FixDesertUpdatePillarsAfterConversion.csproj" />
     <Project Path="Samples/Beginner/FullMapInfo/FullMapInfo.csproj" />
@@ -59,9 +60,7 @@
   </Folder>
   <Folder Name="/Samples/Trimming/">
     <Project Path="Samples/Trimming/SimpleMapInfo_Trimmed/SimpleMapInfo_Trimmed.csproj" />
-    <Project Path="Samples/Trimming/SimpleMapInfo_TrimmedGeneric/SimpleMapInfo_TrimmedGeneric.csproj" />
     <Project Path="Samples/Trimming/SimpleMapInfo_Untrimmed/SimpleMapInfo_Untrimmed.csproj" />
-    <Project Path="Samples/Trimming/SimpleMapInfo_UntrimmedGeneric/SimpleMapInfo_UntrimmedGeneric.csproj" />
   </Folder>
   <Folder Name="/Src/">
     <Project Path="Src/GBX.NET.BlockInfo/GBX.NET.BlockInfo.csproj" />
@@ -120,6 +119,7 @@
     <Project Path="Tools/PakToFolder/PakToFolder.csproj" />
     <Project Path="Tools/PakToZip/PakToZip.csproj" />
     <Project Path="Tools/ParseRepeater/ParseRepeater.csproj" />
+    <Project Path="Tools/PopulateExtensions/PopulateExtensions.csproj" Id="a4d3d9a7-2e22-4cfa-bf7c-6c61cf1236f9" />
   </Folder>
   <Folder Name="/Tools/Old Gbx Explorer/">
     <Project Path="Tools/GbxExplorerOld/Client/GbxExplorerOld.Client.csproj" />

@@ -1,0 +1,14 @@
+﻿namespace GBX.NET;
+
+public sealed class RawData(byte[] data, Exception? exception)
+{
+    public byte[] Data { get; } = data;
+    public Exception? Exception { get; set; } = exception;
+
+    public bool Parsed { get; set; }
+
+    public override string ToString()
+    {
+        return $"RawData ({ByteHelper.ToByteSize(Data.Length)}, parsed: {Parsed})";
+    }
+}

@@ -5,7 +5,7 @@ CPlugShaderApply 0x09026000
  int
  int
  CPlugBitmapAddress[] BitmapAddresses
- int
+ uint
 
 0x09063002 (not-remapped)
  dataint
@@ -38,7 +38,7 @@ CPlugShaderApply 0x09026000
  uint
 
 0x00C
- CPlugBitmapAddress[]_deprec BitmapAddresses // May not be correct
+ CPlugBitmapAddress[]_deprec BitmapAddresses
 
 0x00D
  byte // DoData

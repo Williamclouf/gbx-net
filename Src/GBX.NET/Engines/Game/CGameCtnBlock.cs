@@ -70,9 +70,6 @@ public partial class CGameCtnBlock : IGameCtnBlockTM10, IGameCtnBlockTMSX, IGame
     /// </summary>
     public int Flags { get => flags; set => flags = value; }
 
-    [Obsolete("Flags are now always presented. There's no point to use this anymore.")]
-    public bool HasFlags => flags != -1;
-
     /// <summary>
     /// Variant of the block. Taken from flags. Value range of 0-63.
     /// </summary>
@@ -146,16 +143,6 @@ public partial class CGameCtnBlock : IGameCtnBlockTM10, IGameCtnBlockTMSX, IGame
         set => SetFlagBit(ReplacementBit, value);
     }
 
-    /// <summary>
-    /// Taken from flags.
-    /// </summary>
-    [Obsolete("This bit has been resolved. If absolutely needed, equivalent is !string.IsNullOrEmpty(DecalId).")]
-    public bool Bit17
-    {
-        get => IsFlagBitSet(DecalBit);
-        set => SetFlagBit(DecalBit, value);
-    }
-
     private CGameWaypointSpecialProperty? waypointSpecialProperty;
     /// <summary>
     /// Additional block parameters.
@@ -198,17 +185,6 @@ public partial class CGameCtnBlock : IGameCtnBlockTM10, IGameCtnBlockTMSX, IGame
     /// <summary>
     /// Rotation of the block. Used only in TM2020 in Free block mode.
     /// </summary>
-    /// <remarks>Use the correctly-named YawPitchRoll instead. This property doesn't swap Pitch and Yaw and behaves like YawPitchRoll, and it will be removed in 2.3.0.</remarks>
-    [Obsolete("Use the correctly-named YawPitchRoll instead. This property doesn't swap Pitch and Yaw and behaves like YawPitchRoll, and it will be removed in 2.3.0.")]
-    public Vec3? PitchYawRoll
-    {
-        get => YawPitchRoll;
-        set => YawPitchRoll = value;
-    }
-
-    /// <summary>
-    /// Rotation of the block. Used only in TM2020 in Free block mode.
-    /// </summary>
     public Vec3? YawPitchRoll { get; set; }
 
     /// <summary>
@@ -232,6 +208,8 @@ public partial class CGameCtnBlock : IGameCtnBlockTM10, IGameCtnBlockTMSX, IGame
         get => decalId;
         set => SetFlagBitAndObject(DecalBit, ref decalId, value);
     }
+
+    public TMUnlimiter? TMUnlimiterData { get; set; }
 
     /// <summary>
     /// Creates a new instance of <see cref="CGameCtnBlock"/>. Adding chunks is not needed (only when creating blocks for TM1.0 from 2003).

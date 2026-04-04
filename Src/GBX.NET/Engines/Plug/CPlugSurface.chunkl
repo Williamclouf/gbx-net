@@ -5,8 +5,6 @@ CPlugSurface 0x0900C000
  CPlugSurfaceGeom Geom
  SurfMaterial[] Materials
 
-0x001
-
 0x003 [TMT.v2, MP4.v2]
 
 archive SurfMaterial

@@ -8,9 +8,15 @@ namespace GBX.NET.Crypto;
 public class Blowfish
 {
     private readonly int N = 16;
+    private readonly BlowfishTrick trick;
 
     public Blowfish(byte[] key, BlowfishTrick trick)
     {
+        if (key is null)
+        {
+            throw new ArgumentNullException(nameof(key));
+        }
+
         this.trick = trick;
 
         uint i;
@@ -73,12 +79,7 @@ public class Blowfish
         // Trick #2: reverse the order of first 10 elements in the P array
         if (trick == BlowfishTrick.LittleEndianPak18)
         {
-            var temp = (uint[])_p.Clone();
-
-            for (i = 0; i < 10; i++)
-            {
-                _p[i] = temp[9 - i];
-            }
+            Array.Reverse(_p, 0, 10);
         }
     }
 
@@ -130,6 +131,11 @@ public class Blowfish
 
     public void Decrypt(byte[] data)
     {
+        if (data is null)
+        {
+            throw new ArgumentNullException(nameof(data));
+        }
+
         if (data.Length % 8 != 0)
         {
             throw new Exception("Length must be a multiple of 8");
@@ -202,6 +208,11 @@ public class Blowfish
 
     public void Encrypt(byte[] data)
     {
+        if (data is null)
+        {
+            throw new ArgumentNullException(nameof(data));
+        }
+
         if (data.Length % 8 != 0)
         {
             throw new Exception("Invalid Length");
@@ -271,6 +282,16 @@ public class Blowfish
 
     public static string DecryptHexa(string hex, byte[] key)
     {
+        if (hex is null)
+        {
+            throw new ArgumentNullException(nameof(hex));
+        }
+
+        if (key is null)
+        {
+            throw new ArgumentNullException(nameof(key));
+        }
+
 #if NET5_0_OR_GREATER
         var raw = Convert.FromHexString(hex);
 #else
@@ -302,6 +323,16 @@ public class Blowfish
 
     public static string EncryptHexa(string plainText, byte[] key, bool lowercase = false)
     {
+        if (plainText is null)
+        {
+            throw new ArgumentNullException(nameof(plainText));
+        }
+
+        if (key is null)
+        {
+            throw new ArgumentNullException(nameof(key));
+        }
+
         var plainBytes = Encoding.UTF8.GetBytes(plainText);
 
         var paddedLength = (plainBytes.Length + 7) / 8 * 8;
@@ -530,5 +561,4 @@ public class Blowfish
                 0x90D4F869, 0xA65CDEA0, 0x3F09252D, 0xC208E69F, 0xB74E6132, 0xCE77E25B, 0x578FDFE3, 0x3AC372E6
             }
         };
-    private readonly BlowfishTrick trick;
 }

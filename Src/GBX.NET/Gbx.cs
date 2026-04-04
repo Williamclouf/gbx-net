@@ -144,7 +144,13 @@ public partial class Gbx : IGbx
 
     public static ILzo? LZO { get; set; }
     public static ICrc32? CRC32 { get; set; } = new CRC32();
-    public static IZLib? ZLib { get; set; }
+
+    private static IZLib? zLib;
+    public static IZLib ZLib
+    {
+        get => zLib ?? throw new ZLibNotDefinedException();
+        set => zLib = value;
+    }
 
     internal Gbx(GbxHeader header, GbxBody body)
     {
@@ -188,10 +194,10 @@ public partial class Gbx : IGbx
         _ = stream ?? throw new ArgumentNullException(nameof(stream));
 
         var logger = settings.Logger;
-        if (logger is not null) LoggerExtensions.LogInformation(logger, "Gbx Parse (IMPLICIT)");
+        if (logger is not null) logger.LogInformation("Gbx Parse (IMPLICIT)");
 
         var filePath = stream is FileStream fs ? fs.Name : null;
-        if (logger is not null) LoggerExtensions.LogDebug(logger, "File path: {FilePath}", filePath);
+        if (logger is not null) logger.LogDebug("File path: {FilePath}", filePath);
 
         using var reader = new GbxReader(stream, settings);
 
@@ -204,9 +210,9 @@ public partial class Gbx : IGbx
 
             if (logger is not null)
             {
-                LoggerExtensions.LogDebug(logger, "Id version: {IdVersion}", reader.IdVersion);
-                LoggerExtensions.LogDebug(logger, "Class ID remap mode: {ClassIdRemapMode}", reader.ClassIdRemapMode);
-                LoggerExtensions.LogInformation(logger, "Unknown Gbx completed.");
+                logger.LogDebug("Id version: {IdVersion}", reader.IdVersion);
+                logger.LogDebug("Class ID remap mode: {ClassIdRemapMode}", reader.ClassIdRemapMode);
+                logger.LogInformation("Unknown Gbx completed.");
             }
 
             return new Gbx(header, unknownBody)
@@ -245,11 +251,11 @@ public partial class Gbx : IGbx
 
         if (logger is not null)
         {
-            LoggerExtensions.LogDebug(logger, "Id version: {IdVersion}", reader.IdVersion);
-            LoggerExtensions.LogDebug(logger, "PackDesc version: {PackDescVersion}", reader.PackDescVersion);
-            LoggerExtensions.LogDebug(logger, "Deprec version: {DeprecVersion}", reader.DeprecVersion);
-            LoggerExtensions.LogDebug(logger, "Class ID remap mode: {ClassIdRemapMode}", reader.ClassIdRemapMode);
-            LoggerExtensions.LogInformation(logger, "Known Gbx completed.");
+            logger.LogDebug("Id version: {IdVersion}", reader.IdVersion);
+            logger.LogDebug("PackDesc version: {PackDescVersion}", reader.PackDescVersion);
+            logger.LogDebug("Deprec version: {DeprecVersion}", reader.DeprecVersion);
+            logger.LogDebug("Class ID remap mode: {ClassIdRemapMode}", reader.ClassIdRemapMode);
+            logger.LogInformation("Known Gbx completed.");
         }
 
         return gbx;
@@ -273,44 +279,7 @@ public partial class Gbx : IGbx
     [Zomp.SyncMethodGenerator.CreateSyncVersion]
     public static async Task<Gbx<T>> ParseAsync<T>(Stream stream, GbxReadSettings settings = default, CancellationToken cancellationToken = default) where T : CMwNod, new()
     {
-        _ = stream ?? throw new ArgumentNullException(nameof(stream));
-
-        var logger = settings.Logger;
-        if (logger is not null) LoggerExtensions.LogInformation(logger, "Gbx Parse (EXPLICIT)");
-
-        var filePath = stream is FileStream fs ? fs.Name : null;
-        if (logger is not null) LoggerExtensions.LogDebug(logger, "File path: {FilePath}", filePath);
-
-        using var reader = new GbxReader(stream, settings);
-
-        var header = GbxHeader.Parse<T>(reader, out var node);
-        var refTable = GbxRefTable.Parse(reader, header, Path.GetDirectoryName(filePath));
-
-        reader.ResetIdState();
-        reader.ExpectedNodeCount = header.NumNodes;
-
-        var body = await GbxBody.ParseAsync(node, reader, header.Basic.CompressionOfBody, cancellationToken);
-        // reader is disposed here by the GbxReaderWriter in GbxBody.ParseAsync
-
-        if (logger is not null)
-        {
-            LoggerExtensions.LogDebug(logger, "Id version: {IdVersion}", reader.IdVersion);
-            LoggerExtensions.LogDebug(logger, "PackDesc version: {PackDescVersion}", reader.PackDescVersion);
-            LoggerExtensions.LogDebug(logger, "Deprec version: {DeprecVersion}", reader.DeprecVersion);
-            LoggerExtensions.LogDebug(logger, "Class ID remap mode: {ClassIdRemapMode}", reader.ClassIdRemapMode);
-            LoggerExtensions.LogInformation(logger, "Gbx completed.");
-        }
-
-        return new Gbx<T>(header, body, node)
-        {
-            RefTable = refTable,
-            ReadSettings = settings,
-            IdVersion = reader.IdVersion,
-            PackDescVersion = reader.PackDescVersion,
-            DeprecVersion = reader.DeprecVersion,
-            ClassIdRemapMode = reader.ClassIdRemapMode,
-            FilePath = filePath
-        };
+        return (Gbx<T>)await ParseAsync(stream, settings, cancellationToken);
     }
 
     public static async Task<Gbx<T>> ParseAsync<T>(string filePath, GbxReadSettings settings = default, CancellationToken cancellationToken = default) where T : CMwNod, new()
@@ -348,9 +317,9 @@ public partial class Gbx : IGbx
         {
             if (logger is not null)
             {
-                LoggerExtensions.LogDebug(logger, "Id version: {IdVersion}", reader.IdVersion);
-                LoggerExtensions.LogDebug(logger, "Class ID remap mode: {ClassIdRemapMode}", reader.ClassIdRemapMode);
-                LoggerExtensions.LogInformation(logger, "Unknown Gbx completed.");
+                logger.LogDebug("Id version: {IdVersion}", reader.IdVersion);
+                logger.LogDebug("Class ID remap mode: {ClassIdRemapMode}", reader.ClassIdRemapMode);
+                logger.LogInformation("Unknown Gbx completed.");
             }
 
             return new Gbx(header, body)
@@ -365,11 +334,11 @@ public partial class Gbx : IGbx
 
         if (logger is not null)
         {
-            LoggerExtensions.LogDebug(logger, "Id version: {IdVersion}", reader.IdVersion);
-            LoggerExtensions.LogDebug(logger, "PackDesc version: {PackDescVersion}", reader.PackDescVersion);
-            LoggerExtensions.LogDebug(logger, "Deprec version: {DeprecVersion}", reader.DeprecVersion);
-            LoggerExtensions.LogDebug(logger, "Class ID remap mode: {ClassIdRemapMode}", reader.ClassIdRemapMode);
-            LoggerExtensions.LogInformation(logger, "Known Gbx completed.");
+            logger.LogDebug("Id version: {IdVersion}", reader.IdVersion);
+            logger.LogDebug("PackDesc version: {PackDescVersion}", reader.PackDescVersion);
+            logger.LogDebug("Deprec version: {DeprecVersion}", reader.DeprecVersion);
+            logger.LogDebug("Class ID remap mode: {ClassIdRemapMode}", reader.ClassIdRemapMode);
+            logger.LogInformation("Known Gbx completed.");
         }
 
         var gbx = ClassManager.NewGbx(header, body, node) ?? new Gbx(header, body);
@@ -392,37 +361,7 @@ public partial class Gbx : IGbx
 
     public static Gbx<T> ParseHeader<T>(Stream stream, GbxReadSettings settings = default) where T : CMwNod, new()
     {
-        _ = stream ?? throw new ArgumentNullException(nameof(stream));
-
-        var logger = settings.Logger;
-        logger?.LogInformation("Gbx Header Parse (EXPLICIT)");
-
-        var filePath = stream is FileStream fs ? fs.Name : null;
-        logger?.LogDebug("File path: {FilePath}", filePath);
-
-        using var reader = new GbxReader(stream, settings);
-
-        var header = GbxHeader.Parse<T>(reader, out var node);
-        var refTable = GbxRefTable.Parse(reader, header, Path.GetDirectoryName(filePath));
-        var body = GbxBody.Parse(reader, header.Basic.CompressionOfBody);
-
-        if (logger is not null)
-        {
-            LoggerExtensions.LogDebug(logger, "Id version: {IdVersion}", reader.IdVersion);
-            LoggerExtensions.LogDebug(logger, "Class ID remap mode: {ClassIdRemapMode}", reader.ClassIdRemapMode);
-            LoggerExtensions.LogInformation(logger, "Gbx completed.");
-        }
-
-        return new Gbx<T>(header, body, node)
-        {
-            RefTable = refTable,
-            ReadSettings = settings,
-            IdVersion = reader.IdVersion,
-            PackDescVersion = reader.PackDescVersion,
-            DeprecVersion = reader.DeprecVersion,
-            ClassIdRemapMode = reader.ClassIdRemapMode,
-            FilePath = filePath
-        };
+        return (Gbx<T>)ParseHeader(stream, settings);
     }
 
     public static Gbx<T> ParseHeader<T>(string filePath, GbxReadSettings settings = default) where T : CMwNod, new()
@@ -758,19 +697,16 @@ public partial class Gbx : IGbx
 
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="NotAGbxException"></exception>
+    [Zomp.SyncMethodGenerator.CreateSyncVersion]
     public static async Task<uint> ParseClassIdAsync(Stream stream, bool remap = true, CancellationToken cancellationToken = default)
     {
         _ = stream ?? throw new ArgumentNullException(nameof(stream));
 
         var minimalData = new byte[13];
-#if NETSTANDARD2_0
-        var count = await stream.ReadAsync(minimalData, 0, minimalData.Length, cancellationToken);
-#else
-        var count = await stream.ReadAsync(minimalData, cancellationToken);
-#endif
-        if (count != minimalData.Length)
+        var count = await stream.ReadAtLeastAsync(minimalData, minimalData.Length, throwOnEndOfStream: false, cancellationToken);
+        if (count < minimalData.Length)
         {
-            throw new NotAGbxException("Not enough data to parse the class ID.");
+            throw new NotAGbxException("Not enough data to read the class ID.");
         }
 
         if (minimalData[0] != 'G' || minimalData[1] != 'B' || minimalData[2] != 'X')
@@ -790,39 +726,6 @@ public partial class Gbx : IGbx
         return await ParseClassIdAsync(fs, remap, cancellationToken);
     }
 
-    /// <exception cref="ArgumentNullException"></exception>
-    /// <exception cref="NotAGbxException"></exception>
-    public static uint ParseClassId(Stream stream, bool remap = true)
-    {
-        _ = stream ?? throw new ArgumentNullException(nameof(stream));
-
-#if NETSTANDARD2_0
-        var minimalData = new byte[13];
-        var count = stream.Read(minimalData, 0, minimalData.Length);
-#else
-        Span<byte> minimalData = stackalloc byte[13];
-        var count = stream.Read(minimalData);
-#endif
-
-        if (count != minimalData.Length)
-        {
-            throw new NotAGbxException("Not enough data to parse the class ID.");
-        }
-
-        if (minimalData[0] != 'G' || minimalData[1] != 'B' || minimalData[2] != 'X')
-        {
-            throw new NotAGbxException();
-        }
-
-#if NETSTANDARD2_0
-        var classId = BitConverter.ToUInt32(minimalData, 9);
-#else
-        var classId = BitConverter.ToUInt32(minimalData.Slice(9));
-#endif
-
-        return remap ? ClassManager.Wrap(classId) : classId;
-    }
-
     /// <exception cref="NotAGbxException"></exception>
     public static uint ParseClassId(string filePath, bool remap = true)
     {
@@ -830,20 +733,16 @@ public partial class Gbx : IGbx
         return ParseClassId(fs, remap);
     }
 
+    [Zomp.SyncMethodGenerator.CreateSyncVersion]
     public static async Task<bool> IsGbxAsync(Stream stream, CancellationToken cancellationToken = default)
     {
         _ = stream ?? throw new ArgumentNullException(nameof(stream));
 
         var minimalData = new byte[5];
-#if NETSTANDARD2_0
-        var count = await stream.ReadAsync(minimalData, 0, minimalData.Length, cancellationToken);
-#else
-        var count = await stream.ReadAsync(minimalData, cancellationToken);
-#endif
-
-        if (count != minimalData.Length)
+        var count = await stream.ReadAtLeastAsync(minimalData, minimalData.Length, throwOnEndOfStream: false, cancellationToken);
+        if (count < minimalData.Length)
         {
-            return false;
+            throw new NotAGbxException("Not enough data to read the class ID.");
         }
 
         if (minimalData[0] != 'G' || minimalData[1] != 'B' || minimalData[2] != 'X')
@@ -865,55 +764,20 @@ public partial class Gbx : IGbx
         return await IsGbxAsync(fs, cancellationToken);
     }
 
-    public static bool IsGbx(Stream stream)
-    {
-        _ = stream ?? throw new ArgumentNullException(nameof(stream));
-
-#if NETSTANDARD2_0
-        var minimalData = new byte[5];
-        var count = stream.Read(minimalData, 0, minimalData.Length);
-#else
-        Span<byte> minimalData = stackalloc byte[5];
-        var count = stream.Read(minimalData);
-#endif
-
-        if (count != minimalData.Length)
-        {
-            return false;
-        }
-
-        if (minimalData[0] != 'G' || minimalData[1] != 'B' || minimalData[2] != 'X')
-        {
-            return false;
-        }
-
-        if (minimalData[4] != 0)
-        {
-            return false;
-        }
-
-        return true;
-    }
-
     public static bool IsGbx(string filePath)
     {
         using var fs = File.OpenRead(filePath);
         return IsGbx(fs);
     }
 
-    public static bool IsUncompressed(Stream stream)
+    [Zomp.SyncMethodGenerator.CreateSyncVersion]
+    public static async Task<bool> IsUncompressedAsync(Stream stream, CancellationToken cancellationToken = default)
     {
         _ = stream ?? throw new ArgumentNullException(nameof(stream));
 
-#if NETSTANDARD2_0
         var minimalData = new byte[8];
-        var count = stream.Read(minimalData, 0, minimalData.Length);
-#else
-        Span<byte> minimalData = stackalloc byte[8];
-        var count = stream.Read(minimalData);
-#endif
-
-        if (count != minimalData.Length)
+        var count = await stream.ReadAtLeastAsync(minimalData, minimalData.Length, throwOnEndOfStream: false, cancellationToken);
+        if (count < minimalData.Length)
         {
             throw new NotAGbxException("Not enough data to check if the Gbx is uncompressed.");
         }
@@ -924,6 +788,12 @@ public partial class Gbx : IGbx
         }
 
         return minimalData[7] == (byte)GbxCompression.Uncompressed;
+    }
+
+    public static async Task<bool> IsUncompressedAsync(string filePath, CancellationToken cancellationToken = default)
+    {
+        using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true);
+        return await IsUncompressedAsync(fs, cancellationToken);
     }
 
     public static bool IsUncompressed(string filePath)
@@ -932,48 +802,14 @@ public partial class Gbx : IGbx
         return IsUncompressed(fs);
     }
 
-    public static async Task<bool> IsUncompressed(Stream stream, CancellationToken cancellationToken = default)
+    [Zomp.SyncMethodGenerator.CreateSyncVersion]
+    public static async Task<bool> IsCompressed(Stream stream, CancellationToken cancellationToken = default)
     {
         _ = stream ?? throw new ArgumentNullException(nameof(stream));
 
         var minimalData = new byte[8];
-#if NETSTANDARD2_0
-        var count = await stream.ReadAsync(minimalData, 0, minimalData.Length, cancellationToken);
-#else
-        var count = await stream.ReadAsync(minimalData, cancellationToken);
-#endif
-        if (count != minimalData.Length)
-        {
-            throw new NotAGbxException("Not enough data to check if the Gbx is uncompressed.");
-        }
-
-        if (minimalData[0] != 'G' || minimalData[1] != 'B' || minimalData[2] != 'X')
-        {
-            throw new NotAGbxException();
-        }
-
-        return minimalData[7] == (byte)GbxCompression.Uncompressed;
-    }
-
-    public static async Task<bool> IsUncompressed(string filePath, CancellationToken cancellationToken = default)
-    {
-        using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true);
-        return await IsUncompressed(fs, cancellationToken);
-    }
-
-    public static bool IsCompressed(Stream stream)
-    {
-        _ = stream ?? throw new ArgumentNullException(nameof(stream));
-
-#if NETSTANDARD2_0
-        var minimalData = new byte[8];
-        var count = stream.Read(minimalData, 0, minimalData.Length);
-#else
-        Span<byte> minimalData = stackalloc byte[8];
-        var count = stream.Read(minimalData);
-#endif
-
-        if (count != minimalData.Length)
+        var count = await stream.ReadAtLeastAsync(minimalData, minimalData.Length, throwOnEndOfStream: false, cancellationToken);
+        if (count < minimalData.Length)
         {
             throw new NotAGbxException("Not enough data to check if the Gbx is compressed.");
         }
@@ -990,29 +826,6 @@ public partial class Gbx : IGbx
     {
         using var fs = File.OpenRead(filePath);
         return IsCompressed(fs);
-    }
-
-    public static async Task<bool> IsCompressed(Stream stream, CancellationToken cancellationToken = default)
-    {
-        _ = stream ?? throw new ArgumentNullException(nameof(stream));
-
-        var minimalData = new byte[8];
-#if NETSTANDARD2_0
-        var count = await stream.ReadAsync(minimalData, 0, minimalData.Length, cancellationToken);
-#else
-        var count = await stream.ReadAsync(minimalData, cancellationToken);
-#endif
-        if (count != minimalData.Length)
-        {
-            throw new NotAGbxException("Not enough data to check if the Gbx is compressed.");
-        }
-
-        if (minimalData[0] != 'G' || minimalData[1] != 'B' || minimalData[2] != 'X')
-        {
-            throw new NotAGbxException();
-        }
-
-        return minimalData[7] == (byte)GbxCompression.Compressed;
     }
 
     public static async Task<bool> IsCompressed(string filePath, CancellationToken cancellationToken = default)

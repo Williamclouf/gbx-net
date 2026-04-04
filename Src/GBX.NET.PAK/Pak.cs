@@ -417,6 +417,13 @@ public partial class Pak : IDisposable
         return Gbx.ParseHeader(stream, settings with { EncryptionInitializer = encryptionInitializer });
     }
 
+    [Zomp.SyncMethodGenerator.CreateSyncVersion]
+    public async Task<bool> CheckFileIsGbxAsync(PakFile file, CancellationToken cancellationToken = default)
+    {
+        using var stream = OpenFile(file, out var _);
+        return await Gbx.IsGbxAsync(stream, cancellationToken);
+    }
+
     public void Dispose()
     {
         stream.Dispose();
@@ -455,7 +462,7 @@ public partial class Pak : IDisposable
         var pakList = await PakList.ParseAsync(pakListFilePath, game, cancellationToken);
 
         return await BruteforceFileHashesAsync(directoryPath,
-            pakList.ToDictionary(x => x.Key, x => Convert.FromHexString(x.Value.Key)),
+            pakList.ToDictionary(x => x.Key, x => (byte[]?)Convert.FromHexString(x.Value.Key)),
             progress,
             keepUnresolvedHashes,
             cancellationToken);
@@ -486,6 +493,12 @@ public partial class Pak : IDisposable
             
             foundFileNames.Add(file.Name);
 
+            // only gbx files can be checked for reference table
+            if (!await pak.CheckFileIsGbxAsync(file, cancellationToken))
+            {
+                continue;
+            }
+
             Gbx gbx;
             try
             {
@@ -495,7 +508,7 @@ public partial class Pak : IDisposable
             {
                 continue;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 continue;
             }

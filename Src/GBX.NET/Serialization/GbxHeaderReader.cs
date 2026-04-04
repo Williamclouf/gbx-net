@@ -6,50 +6,10 @@ namespace GBX.NET.Serialization;
 
 internal sealed class GbxHeaderReader(GbxReader reader)
 {
-    private readonly ILogger? logger = reader.Settings.Logger;
+    private const int MaxUserDataSize = 0x1000000; // ~16MB
 
+    private readonly ILogger? logger = reader.Logger;
     private GbxReadSettings Settings => reader.Settings;
-
-    public GbxHeader<T> Parse<T>(out T node) where T : notnull, IClass, new()
-    {
-        logger?.LogDebug("Parsing header... (EXPLICIT, basic, UserData, number of nodes)");
-
-        using var _ = logger?.BeginScope("Header");
-
-        var basic = GbxHeaderBasic.Parse(reader);
-        logger?.LogDebug("Basic: {Version} {Format} {RefTableCompression} {BodyCompression} {UnknownByte}", basic.Version, basic.Format, basic.CompressionOfRefTable, basic.CompressionOfBody, basic.UnknownByte);
-
-        if (basic.Format != GbxFormat.Binary)
-        {
-            throw new TextFormatNotSupportedException();
-        }
-
-        var classId = ReadClassId();
-
-        var expectedClassId = ClassManager.GetId<T>();
-
-        if (classId != expectedClassId)
-        {
-            throw new InvalidCastException($"Class ID 0x{classId:X8} ({ClassManager.GetName(classId) ?? "unknown class name"}) does not match expected class ID 0x{expectedClassId:X8} ({typeof(T).Name}).");
-        }
-
-        node = new T();
-
-        logger?.LogInformation("Instantiated EXPLICIT node: {Node}", node);
-
-        if (basic.Version >= 6)
-        {
-            ReadUserData(node);
-        }
-
-        var numNodes = reader.ReadInt32();
-        logger?.LogDebug("Number of nodes: {NumNodes}", numNodes);
-
-        return new GbxHeader<T>(basic)
-        {
-            NumNodes = numNodes
-        };
-    }
 
     public GbxHeader Parse(out IClass? node)
     {
@@ -60,7 +20,7 @@ internal sealed class GbxHeaderReader(GbxReader reader)
         var basic = GbxHeaderBasic.Parse(reader);
         logger?.LogDebug("Basic: {Version} {Format} {RefTableCompression} {BodyCompression} {UnknownByte}", basic.Version, basic.Format, basic.CompressionOfRefTable, basic.CompressionOfBody, basic.UnknownByte);
 
-        var classId = ReadClassId();
+        var classId = ReadClassId(reader);
 
         node = ClassManager.New(classId);
 
@@ -88,7 +48,7 @@ internal sealed class GbxHeaderReader(GbxReader reader)
         return header;
     }
 
-    private uint ReadClassId()
+    private uint ReadClassId(GbxReader reader)
     {
         var rawClassId = reader.ReadHexUInt32();
         var classId = ClassManager.Wrap(rawClassId);
@@ -112,92 +72,80 @@ internal sealed class GbxHeaderReader(GbxReader reader)
         return classId;
     }
 
-    internal bool ReadUserData<T>(T node) where T : notnull, IClass
-    {
-        var userDataNums = ValidateUserDataNumbers();
-
-        if (userDataNums.Length == 0)
-        {
-            return false;
-        }
-
-        if (userDataNums.NumChunks == 0)
-        {
-            if (userDataNums.Length > sizeof(int))
-            {
-                // Corrupted header extract scenarios
-                logger?.LogWarning("UserData is zeroed, possibly corrupted header. (EXPLICIT)");
-                reader.SkipData(userDataNums.Length - sizeof(int));
-            }
-
-            return false;
-        }
-
-        using var readerWriter = new GbxReaderWriter(reader, leaveOpen: true);
-
-        Span<HeaderChunkInfo> headerChunkInfos = stackalloc HeaderChunkInfo[userDataNums.NumChunks];
-
-        FillHeaderChunkInfo(headerChunkInfos, userDataNums);
-
-        foreach (var desc in headerChunkInfos)
-        {
-            reader.Limit(desc.Size);
-
-            var chunk = node.CreateHeaderChunk(desc.Id);
-
-            if (chunk is null)
-            {
-                ReadAndAddUnknownHeaderChunk(node, unknownHeader: null, desc);
-            }
-            else
-            {
-                ReadKnownHeaderChunk(chunk, node, readerWriter, desc);
-            }
-
-            reader.Unlimit(skipToLimitWhenUnreached: Settings.SkipUnclearedHeaderChunkBuffers);
-        }
-
-        return true;
-    }
-
     internal bool ReadUserData(IClass? node, GbxHeaderUnknown? unknownHeader)
     {
-        var userDataNums = ValidateUserDataNumbers();
+        var userDataLength = reader.ReadInt32();
 
-        if (userDataNums.Length == 0)
+        if (userDataLength == 0)
         {
+            logger?.LogDebug("UserData: Empty");
             return false;
         }
 
-        if (userDataNums.NumChunks == 0)
+        var maxUserDataSize = Settings.MaxUserDataSize ?? MaxUserDataSize;
+
+        if (userDataLength > maxUserDataSize)
         {
-            if (userDataNums.Length > sizeof(int))
+            throw new LengthLimitException($"User data size {userDataLength} exceeds maximum allowed size {maxUserDataSize}.");
+        }
+
+        if (Settings.OpenPlanetHookExtractMode)
+        {
+            logger?.LogDebug("UserData: {Length} bytes (read skipped - OpenPlanetHookExtractMode)", userDataLength);
+            return false;
+        }
+        
+        if (Settings.SkipUserData)
+        {
+            logger?.LogDebug("UserData: {Length} bytes (read skipped)", userDataLength);
+            reader.SkipData(userDataLength);
+            return false;
+        }
+
+        using var boundedStream = new BoundedStream(reader.BaseStream, userDataLength);
+        using var r = new GbxReader(boundedStream);
+
+        var numHeaderChunks = r.ReadInt32();
+
+        if (numHeaderChunks < 0)
+        {
+            throw new InvalidDataException($"Number of header chunks {numHeaderChunks} is negative.");
+        }
+
+        if (numHeaderChunks > 255)
+        {
+            throw new InvalidDataException($"Number of header chunks {numHeaderChunks} exceeds maximum allowed (255).");
+        }
+
+        logger?.LogDebug("UserData: {Length} bytes, {NumChunks} header chunks", userDataLength, numHeaderChunks);
+
+        if (numHeaderChunks == 0)
+        {
+            if (userDataLength > sizeof(int))
             {
                 // Corrupted header extract scenarios
                 logger?.LogWarning("UserData is zeroed, possibly corrupted header. (IMPLICIT)");
-                reader.SkipData(userDataNums.Length - sizeof(int));
+                r.SkipData(userDataLength - sizeof(int));
             }
 
             return false;
         }
 
-        using var readerWriter = new GbxReaderWriter(reader, leaveOpen: true);
+        Span<HeaderChunkInfo> headerChunkInfos = stackalloc HeaderChunkInfo[numHeaderChunks];
 
-        Span<HeaderChunkInfo> headerChunkInfos = stackalloc HeaderChunkInfo[userDataNums.NumChunks];
-
-        FillHeaderChunkInfo(headerChunkInfos, userDataNums);
+        FillHeaderChunkInfo(headerChunkInfos, r);
 
         var nodeDict = default(Dictionary<uint, CMwNod>);
 
         foreach (var desc in headerChunkInfos)
         {
-            reader.Limit(desc.Size);
-
-            var chunk = node?.CreateHeaderChunk(desc.Id) ?? ClassManager.NewHeaderChunk(desc.Id);
+            var chunk = (node as CMwNod)?.NewHeaderChunk(desc.Id) ?? ClassManager.NewHeaderChunk(desc.Id);
 
             if (chunk is null)
             {
-                ReadAndAddUnknownHeaderChunk(node, unknownHeader, desc);
+                logger?.LogWarning("Unknown header chunk 0x{ChunkId:X8} ({ClassName})!", desc.Id, ClassManager.GetName(desc.Id & 0xFFFFF000) ?? "unknown class");
+
+                ReadAndAddUnknownHeaderChunk(r, node, unknownHeader, desc);
             }
             else
             {
@@ -205,7 +153,16 @@ internal sealed class GbxHeaderReader(GbxReader reader)
                 // Single node is shared for all chunks of the same class, except if it's abstract
                 node ??= GetOrCreateNodeFromHeaderChunkInfo(desc, ref nodeDict);
 
-                ReadKnownHeaderChunk(chunk, node, readerWriter, desc);
+                if (node.Chunks is ChunkSet chunkSet)
+                {
+                    chunkSet.AddInternal(chunk);
+                }
+                else
+                {
+                    node.Chunks.Add(chunk);
+                }
+
+                ReadKnownHeaderChunk(chunk, node, boundedStream, desc);
 
                 // On unknown classes, add the chunk and reset this temporary node state
                 if (unknownHeader is not null)
@@ -216,8 +173,11 @@ internal sealed class GbxHeaderReader(GbxReader reader)
                     node = null;
                 }
             }
+        }
 
-            reader.Unlimit(skipToLimitWhenUnreached: Settings.SkipUnclearedHeaderChunkBuffers);
+        if (boundedStream.Remaining > 0)
+        {
+            throw new Exception($"Not all data was read from user data. {boundedStream.Remaining} bytes remaining.");
         }
 
         return true;
@@ -236,105 +196,74 @@ internal sealed class GbxHeaderReader(GbxReader reader)
 
         if (ClassManager.New(classId) is not CMwNod nod)
         {
-            throw new Exception($"Chunk 0x{desc.Id:X8} requires a non-abstract CMwNod to read into.");
+            throw new Exception($"Header chunk 0x{desc.Id:X8} requires a non-abstract CMwNod to read into.");
         }
 
         nodeDict.Add(classId, nod);
         return nod;
     }
 
-    internal void FillHeaderChunkInfo(Span<HeaderChunkInfo> headerChunkDescs, UserDataNumbers userDataNums)
+    private void FillHeaderChunkInfo(Span<HeaderChunkInfo> headerChunkDescs, GbxReader reader)
     {
+        var maxUserDataSize = Settings.MaxUserDataSize ?? MaxUserDataSize;
+
+        var userDataSize = reader.BaseStream.Length;
         var totalSize = 4; // Includes the number of header chunks
 
-        for (var i = 0; i < userDataNums.NumChunks; i++)
+        for (var i = 0; i < headerChunkDescs.Length; i++)
         {
-            var chunkId = reader.ReadHexUInt32();
+            var rawChunkId = reader.ReadHexUInt32();
             var chunkSize = reader.ReadInt32();
             var actualChunkSize = (int)(chunkSize & ~0x80000000);
             var isHeavy = (chunkSize & 0x80000000) != 0;
 
-            logger?.LogDebug("Chunk 0x{ChunkId:X8} (Size: {Size}, Heavy: {Heavy})", chunkId, actualChunkSize, isHeavy);
+            var chunkId = ClassManager.Wrap(rawChunkId);
 
-            if (actualChunkSize > GbxReader.MaxDataSize)
+            if (logger is not null)
             {
-                throw new LengthLimitException($"Header chunk size {actualChunkSize} exceeds maximum data size {GbxReader.MaxDataSize}.");
+                var rawClassId = rawChunkId & 0xFFFFF000;
+                var classId = chunkId & 0xFFFFF000;
+
+                if (rawClassId == classId)
+                {
+                    logger.LogDebug("Chunk 0x{ChunkId:X8} ({ClassName}) (size: {Size}, heavy: {Heavy})", chunkId, ClassManager.GetName(classId) ?? "unknown class", actualChunkSize, isHeavy);
+                }
+                else
+                {
+                    logger.LogDebug("Chunk 0x{ChunkId:X8} (raw: 0x{RawChunkId:X8}, {RawClassName} -> {ClassName}) (size: {Size}, heavy: {Heavy})", 
+                        chunkId, 
+                        rawChunkId, 
+                        ClassManager.GetName(rawClassId) ?? "unknown class", 
+                        ClassManager.GetName(classId) ?? "unknown class", 
+                        actualChunkSize, 
+                        isHeavy);
+                }
             }
 
-            var mappedChunkId = ClassManager.Wrap(chunkId);
+            if (actualChunkSize > maxUserDataSize)
+            {
+                throw new LengthLimitException($"Header chunk size {actualChunkSize} exceeds maximum user data size {maxUserDataSize}.");
+            }
 
-            headerChunkDescs[i] = new HeaderChunkInfo(mappedChunkId, actualChunkSize, isHeavy);
+            headerChunkDescs[i] = new HeaderChunkInfo(chunkId, actualChunkSize, isHeavy);
 
             // sizeof(uint) + sizeof(int) + actualChunkSize
             totalSize += 8 + actualChunkSize;
 
-            if (totalSize > userDataNums.Length)
+            if (totalSize > userDataSize)
             {
-                throw new InvalidDataException($"Header chunk 0x{mappedChunkId:X8} (size {actualChunkSize}) exceeds user data length ({totalSize} > {userDataNums.Length}).");
+                throw new InvalidDataException($"Header chunk 0x{chunkId:X8} (size {actualChunkSize}) exceeds user data length ({totalSize} > {userDataSize}).");
             }
         }
 
         // Non-matching user data length will throw
-        if (totalSize != userDataNums.Length)
+        if (totalSize != userDataSize)
         {
-            throw new InvalidDataException($"User data length {userDataNums.Length} does not match actual data length {totalSize}.");
+            throw new InvalidDataException($"User data length {userDataSize} does not match actual data length {totalSize}.");
         }
     }
 
-    /// <summary>
-    /// Reads the user data length and the number of header chunks, also validating the values and returning them as <see cref="UserDataNumbers"/>.
-    /// </summary>
-    /// <returns></returns>
-    /// <exception cref="LengthLimitException"></exception>
-    internal UserDataNumbers ValidateUserDataNumbers()
-    {
-        var userDataLength = reader.ReadInt32();
-
-        if (userDataLength == 0)
-        {
-            logger?.LogDebug("UserData: Empty");
-            return new UserDataNumbers(0, 0);
-        }
-
-        // Maybe should be much stricter... and configurable
-        if (userDataLength > GbxReader.MaxDataSize || (Settings.MaxUserDataSize.HasValue && userDataLength > Settings.MaxUserDataSize.Value))
-        {
-            throw new LengthLimitException($"User data size {userDataLength} exceeds maximum allowed size {GbxReader.MaxDataSize}.");
-        }
-
-        // The idea is to preferably not create sub-buffers to reduce pressure on the GC.
-        // If SkipUserData is true, it can be faster to reach the next parse stage (reference table):
-        // - if seeking is supported, position moves past the user data
-        // - if seeking is NOT supported:
-        //   - .NET Standard 2.0: unavoidable byte array allocation with ReadBytes
-        //   - .NET 6+: no allocation with Read(stackalloc byte[])
-
-        if (Settings.OpenPlanetHookExtractMode)
-        {
-            logger?.LogDebug("UserData: {Length} bytes (read skipped - OpenPlanetHookExtractMode)", userDataLength);
-            return new UserDataNumbers(0, NumChunks: 0);
-        }
-        else if (Settings.SkipUserData)
-        {
-            logger?.LogDebug("UserData: {Length} bytes (read skipped)", userDataLength);
-            reader.SkipData(userDataLength);
-            return new UserDataNumbers(userDataLength, NumChunks: 0);
-        }
-
-        // Header chunk count
-        var numHeaderChunks = reader.ReadInt32();
-
-        if (numHeaderChunks < 0)
-        {
-            throw new InvalidDataException($"Number of header chunks {numHeaderChunks} is negative.");
-        }
-
-        logger?.LogDebug("UserData: {Length} bytes, {NumChunks} header chunks", userDataLength, numHeaderChunks);
-
-        return new UserDataNumbers(userDataLength, numHeaderChunks);
-    }
-
-    private void ReadAndAddUnknownHeaderChunk(IClass? node, GbxHeaderUnknown? unknownHeader, HeaderChunkInfo desc)
+    private static void ReadAndAddUnknownHeaderChunk(GbxReader reader, IClass? node, GbxHeaderUnknown? unknownHeader, HeaderChunkInfo desc)
     {
         var chunk = new HeaderChunk(desc.Id)
         {
@@ -344,58 +273,58 @@ internal sealed class GbxHeaderReader(GbxReader reader)
 
         if (node is not null)
         {
-            node.Chunks.Add(chunk);
+            if (node.Chunks is ChunkSet chunkSet)
+            {
+                chunkSet.AddInternal(chunk);
+            }
+            else
+            {
+                node.Chunks.Add(chunk);
+            }
         }
         else if (unknownHeader is not null)
         {
-            unknownHeader.UserData.Add(chunk);
+            if (unknownHeader.UserData is HeaderChunkSet headerChunkSet)
+            {
+                headerChunkSet.AddInternal(chunk);
+            }
+            else
+            {
+                unknownHeader.UserData.Add(chunk);
+            }
         }
         else
         {
-            throw new Exception($"Chunk 0x{desc.Id:X8} cannot be stored anywhere.");
+            throw new Exception($"Header chunk 0x{desc.Id:X8} cannot be stored anywhere.");
         }
     }
 
-    private void ReadKnownHeaderChunk<T>(IHeaderChunk chunk, T node, GbxReaderWriter rw, HeaderChunkInfo desc)
-        where T : notnull, IClass
+    private static void ReadKnownHeaderChunk(IHeaderChunk chunk, IClass node, BoundedStream stream, HeaderChunkInfo desc)
     {
         chunk.IsHeavy = desc.IsHeavy;
 
-        switch (chunk)
-        {
-            case IReadableWritableChunk<T> readableWritableT:
-                readableWritableT.ReadWrite(node, rw);
-                break;
-            case IReadableChunk<T> readableT:
-                readableT.Read(node, reader);
-                break;
-            case IReadableWritableChunk readableWritable:
-                readableWritable.ReadWrite(chunk.Node ?? node, rw);
-                break;
-            case IReadableChunk readable:
-                readable.Read(chunk.Node ?? node, reader);
-                break;
-            default:
-                reader.SkipData(desc.Size);
-                break;
-        }
-    }
-
-    private void ReadKnownHeaderChunk(IHeaderChunk chunk, IClass node, GbxReaderWriter rw, HeaderChunkInfo desc)
-    {
-        chunk.IsHeavy = desc.IsHeavy;
+        using var boundedStream = new BoundedStream(stream, desc.Size);
+        using var r = new GbxReader(boundedStream);
 
         switch (chunk)
         {
             case IReadableWritableChunk readableWritable:
-                readableWritable.ReadWrite(chunk.Node ?? node, rw);
+                using (var rw = new GbxReaderWriter(r, leaveOpen: true))
+                {
+                    readableWritable.ReadWrite(chunk.Node ?? node, rw);
+                }
                 break;
             case IReadableChunk readable:
-                readable.Read(chunk.Node ?? node, reader);
+                readable.Read(chunk.Node ?? node, r);
                 break;
             default:
-                reader.SkipData(desc.Size); // maybe let know?
+                r.SkipData(desc.Size); // maybe let know?
                 break;
+        }
+
+        if (boundedStream.Remaining > 0)
+        {
+            throw new Exception($"Not all data was read from header chunk 0x{chunk.Id:X8} ({ClassManager.GetName(chunk.Id)}). {boundedStream.Remaining} bytes remaining.");
         }
     }
 }

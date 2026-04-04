@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <PackageId>GBX.NET.PAK</PackageId>
-        <VersionPrefix>2.4.1</VersionPrefix>
+        <VersionPrefix>2.4.2</VersionPrefix>
         <Authors>BigBang1112</Authors>
         <Description>Support for reading Pak (NadeoPak) package files, integrated with GBX.NET.</Description>
         <Copyright>Copyright (c) 2026 Petr Pivoňka</Copyright>
@@ -21,6 +21,7 @@
         <Nullable>enable</Nullable>
         <IsTrimmable Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">true</IsTrimmable>
         <IsAotCompatible Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net7.0'))">true</IsAotCompatible>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <IncludeSymbols>true</IncludeSymbols>
@@ -29,9 +30,9 @@
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
 
-        <GenerateDocumentationFile>false</GenerateDocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <NoWarn>1591</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

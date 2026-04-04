@@ -1,22 +1,19 @@
-﻿using System.Collections.ObjectModel;
+﻿using GBX.NET.Managers;
 
 namespace GBX.NET.Engines.Game;
 
 public partial class CGameGhost
 {
-    public partial class Data
+    public partial class Data : IReadable, IWritable
     {
-        private readonly byte[]? rawGhostData;
-        private readonly CompressedData? compressedGhostData;
-
-        public bool SamplesRequested { get; private set; }
+        private int[] stateTimes = [];
 
         /// <summary>
         /// How much time is between each sample.
         /// </summary>
         public TimeInt32 SamplePeriod { get; set; }
 
-        public ObservableCollection<Sample> Samples { get; private set; }
+        public List<Sample> Samples { get; set; } = [];
         public uint SavedMobilClassId { get; set; }
         public bool IsFixedTimeStep { get; set; }
 
@@ -45,78 +42,88 @@ public partial class CGameGhost
         public int? U01 { get; set; }
         public int[]? Offsets { get; set; }
 
-        internal Data(CompressedData ghostData)
+        public int? FirstSampleOffset { get; set; }
+
+        public void Read(GbxReader r, int v = 0)
         {
-            compressedGhostData = ghostData;
-            Samples = [];
+            switch (v)
+            {
+                case 0: ReadOld(r); break;
+                case 1: ReadNew(r); break;
+                default: throw new NotSupportedException($"Version {v} is not supported.");
+            }
         }
 
-        internal Data(byte[] ghostData)
+        public void Write(GbxWriter w, int v = 0)
         {
-            rawGhostData = ghostData;
-            Samples = [];
+            switch (v)
+            {
+                case 0: WriteOld(w); break;
+                case 1: WriteNew(w); break;
+                default: throw new NotSupportedException($"Version {v} is not supported.");
+            }
         }
 
-        /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
-        internal void Parse()
+        private void ReadOld(GbxReader r)
         {
-            if (SamplesRequested)
-            {
-                return;
-            }
+            Offsets = r.ReadArray<int>();
+            stateTimes = r.ReadArray<int>();
+            IsFixedTimeStep = r.ReadBoolean();
+            SamplePeriod = r.ReadTimeInt32();
+            Version = r.ReadInt32();
+        }
 
-            SamplesRequested = true;
+        private void WriteOld(GbxWriter w)
+        {
+            w.WriteArray(Offsets);
+            w.WriteArray(stateTimes);
+            w.Write(IsFixedTimeStep);
+            w.Write(SamplePeriod);
+            w.Write(Version);
+        }
 
-            if (compressedGhostData is not null)
-            {
-                Read(compressedGhostData);
-                return;
-            }
+        internal void ReadSamplesOld(GbxReader r)
+        {
+            Samples = [];
 
             if (Offsets is null)
             {
                 throw new NotSupportedException("This type of ghost data is not supported.");
             }
 
-            SavedMobilClassId = 0x0A02B000;
+            var prevOffset = Offsets[0];
 
-            if (rawGhostData is not null && Offsets.Length > 0)
+            for (int i = 1; i < Offsets.Length; i++)
             {
-                Samples = [];
+                var nextOffset = Offsets[i];
 
-                using var ms = new MemoryStream(rawGhostData);
-                using var r = new GbxReader(ms);
+                Samples.Add(ReadSample(new TimeInt32((i - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes(nextOffset - prevOffset)));
 
-                var prevOffset = Offsets[0];
+                prevOffset = nextOffset;
+            }
 
-                for (int i = 1; i < Offsets.Length; i++)
-                {
-                    var offset = Offsets[i - 1];
+            Samples.Add(ReadSample(new TimeInt32((Offsets.Length - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes((int)r.BaseStream.Length - Offsets[Offsets.Length - 1])));
 
-                    Samples.Add(ReadSample(new TimeInt32((i - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes(offset - prevOffset)));
-
-                    prevOffset = offset;
-                }
-
-
-                Samples.Add(ReadSample(new TimeInt32((Offsets.Length - 1) * SamplePeriod.Milliseconds), sampleData: r.ReadBytes((int)r.BaseStream.Length - Offsets[Offsets.Length - 1])));
+            if (r.BaseStream.Position != r.BaseStream.Length)
+            {
+                throw new InvalidDataException($"Not all data was read. {r.BaseStream.Length - r.BaseStream.Position} bytes remaining.");
             }
         }
 
-        /// <exception cref="ZLibNotDefinedException">Zlib is not defined.</exception>
-        private void Read(CompressedData data)
+        internal void WriteSamplesOld(GbxWriter w)
         {
-            using var ms = data.OpenDecompressedMemoryStream();
-            using var r = new GbxReader(ms);
+            if (Offsets is null || Samples.Count == 0)
+            {
+                throw new NotSupportedException("This type of ghost data is not supported.");
+            }
 
-            Read(r);
+            foreach (var sample in Samples)
+            {
+                w.Write(GetSampleData(sample));
+            }
         }
 
-        /// <summary>
-        /// Read uncompressed ghost data with <see cref="GbxReader"/>.
-        /// </summary>
-        /// <param name="r">Reader.</param>
-        private void Read(GbxReader r)
+        private void ReadNew(GbxReader r)
         {
             SavedMobilClassId = r.ReadUInt32(); // CSceneVehicleCar or CSceneMobilCharVis
 
@@ -140,7 +147,7 @@ public partial class CGameGhost
 
             if (numSamples > 0)
             {
-                var firstSampleOffset = r.ReadInt32();
+                FirstSampleOffset = r.ReadInt32();
 
                 if (numSamples > 1)
                 {
@@ -152,16 +159,14 @@ public partial class CGameGhost
                     }
                 }
             }
-            //
 
             // CGameGhostTMData::ArchiveStateTimes
-            var sampleTimes = default(int[]);
+            stateTimes = r.ReadArray<int>();
 
-            if (!IsFixedTimeStep)
+            if (r.BaseStream.Position != r.BaseStream.Length)
             {
-                sampleTimes = r.ReadArray<int>();
+                throw new InvalidDataException($"Not all data was read. {r.BaseStream.Length - r.BaseStream.Position} bytes remaining.");
             }
-            //
 
             Samples = [];
 
@@ -183,24 +188,91 @@ public partial class CGameGhost
                     _ => stateBufferR.ReadBytes(sizePerSample)
                 };
 
-                if (sampleTimes is null)
+                if (stateTimes.Length == 0)
                 {
                     currentTime = new TimeInt32(i * SamplePeriod.Milliseconds);
                 }
                 else
                 {
-                    currentTime += new TimeInt32(sampleTimes[i]);
+                    currentTime += new TimeInt32(stateTimes[i]);
                 }
 
                 Samples.Add(ReadSample(currentTime, sampleData));
             }
         }
 
+        private void WriteNew(GbxWriter w)
+        {
+            w.Write(SavedMobilClassId);
+
+            if (SavedMobilClassId == uint.MaxValue)
+            {
+                return;
+            }
+
+            w.Write(IsFixedTimeStep);
+            w.Write(U01.GetValueOrDefault());
+            w.Write(SamplePeriod);
+            w.Write(Version);
+
+            using var stateBufferMs = new MemoryStream();
+            using var stateBufferW = new GbxWriter(stateBufferMs);
+
+            var numSamples = Samples.Count;
+            var sampleSizes = new int[Math.Max(0, numSamples - 1)];
+            var sizePerSample = -1;
+            var isUniformSize = true;
+            var firstSize = 0;
+
+            for (var i = 0; i < numSamples; i++)
+            {
+                var sampleData = GetSampleData(Samples[i]);
+                stateBufferW.Write(sampleData);
+
+                if (i == 0)
+                    firstSize = sampleData.Length;
+                else if (sampleData.Length != firstSize)
+                    isUniformSize = false;
+
+                if (i < numSamples - 1)
+                {
+                    sampleSizes[i] = sampleData.Length;
+                }
+            }
+
+            if (numSamples > 1 && isUniformSize)
+            {
+                sizePerSample = firstSize;
+            }
+
+            w.WriteData(stateBufferMs.ToArray());
+
+            w.Write(numSamples);
+
+            if (numSamples > 0)
+            {
+                w.Write(FirstSampleOffset ?? 0);
+
+                if (numSamples > 1)
+                {
+                    w.Write(sizePerSample);
+
+                    if (sizePerSample == -1)
+                    {
+                        w.WriteArray<int>(sampleSizes, numSamples - 1);
+                    }
+                }
+            }
+
+            // CGameGhostTMData::ArchiveStateTimes
+            w.WriteArray(stateTimes);
+        }
+
         private Sample ReadSample(TimeInt32 time, byte[] sampleData)
         {
             Sample sample = SavedMobilClassId switch
             {
-                0x0A02B000 => new CSceneVehicleCar.Sample(time, sampleData),
+                0x0A02B000 or 0x0A103000 => new CSceneVehicleCar.Sample(time, sampleData),
                 0x0A401000 => new CSceneMobilCharVis.Sample(time, sampleData),
                 _ => throw new NotSupportedException($"Class ID 0x{SavedMobilClassId:X8} is not supported.")
             };
@@ -213,11 +285,19 @@ public partial class CGameGhost
             using var sampleMs = new MemoryStream(sampleData);
             using var sampleR = new GbxReader(sampleMs);
 
-            sample.Read(sampleMs, sampleR, Version);
-
-            var sampleProgress = (int)sampleMs.Position;
+            sample.Read(sampleR, Version);
 
             return sample;
+        }
+
+        private byte[] GetSampleData(Sample sample)
+        {
+            using var sampleMs = new MemoryStream();
+            using var sampleW = new GbxWriter(sampleMs);
+
+            sample.Write(sampleW, Version);
+
+            return sampleMs.ToArray();
         }
 
         private static byte[] GetSampleDataFromDifferentSizes(GbxReader reader, int numSamples, int[]? sizesPerSample, int i)
@@ -243,17 +323,23 @@ public partial class CGameGhost
         public Sample? GetSampleLerp(TimeSingle timestamp)
         {
             if (Samples is null || Samples.Count == 0 || SamplePeriod.Ticks <= 0)
+            {
                 return null;
+            }
 
             var sampleKey = timestamp.TotalMilliseconds / SamplePeriod.TotalMilliseconds;
-            var a = Samples.ElementAtOrDefault((int)Math.Floor(sampleKey)); // Sample A
-            var b = Samples.ElementAtOrDefault((int)Math.Ceiling(sampleKey)); // Sample B
+            var a = Samples.ElementAtOrDefault((int)Math.Floor(sampleKey));
+            var b = Samples.ElementAtOrDefault((int)Math.Ceiling(sampleKey));
 
-            if (a == null) // Timestamp is outside of the range
+            if (a is null) // Timestamp is outside of the range
+            {
                 return null;
+            }
 
-            if (b == null || a == b) // There's no second sample to interpolate with
+            if (b is null || a == b) // There's no second sample to interpolate with
+            {
                 return a;
+            }
 
             var t = (float)(sampleKey - Math.Floor(sampleKey));
 
@@ -263,6 +349,16 @@ public partial class CGameGhost
                 Rotation = AdditionalMath.Lerp(a.Rotation, b.Rotation, t),
                 Velocity = AdditionalMath.Lerp(a.Velocity, b.Velocity, t)
             };
+        }
+
+        public override string ToString()
+        {
+            if (SavedMobilClassId == uint.MaxValue)
+            {
+                return "CGameGhost.Data (empty)";
+            }
+
+            return $"CGameGhost.Data ({ClassManager.GetName(SavedMobilClassId)} 0x{SavedMobilClassId:X8}, {Samples.Count} samples)";
         }
     }
 }

@@ -19,7 +19,7 @@
 
         if (selectedSaveMethod == 0)
         {
-            extensions = ClassManager.GetGbxExtensions(selectedGbx.Gbx.Header.ClassId);
+            extensions = ClassManager.GetFileExtensions(selectedGbx.Gbx.Header.ClassId);
         }
         else if (element is not null)
         {
@@ -31,7 +31,7 @@
 
                 if (classId.HasValue)
                 {
-                    extensions = ClassManager.GetGbxExtensions(classId.Value);
+                    extensions = ClassManager.GetFileExtensions(classId.Value);
                 }
             }
         }
@@ -75,17 +75,10 @@
                 else
                 {
                     <input type="text" style="min-width:0;" @bind="FileName" />
+                    <div>.Gbx</div>
                 }
-
-                <div>.Gbx</div>
             </div>
-            <div style="text-align: center">
-                Export for TMS/TMNESWC/TM1.0?
-                <select style="margin-left:0.5rem" @bind="SaveOption">
-                    <option value="0">No</option>
-                    <option value="1">Yes</option>
-                </select>
-            </div>
+            <div style="text-align: center;line-height:30px">Export will adapt to the game version.</div>
             <button class="button tooltip-top"
                 @onclick="SaveAsync"
             disabled="@(node is null || writingNotSupported)"
@@ -185,12 +178,12 @@
             case 0:
                 fileName = selectedGbx.OfficialExtension is null
                     ? selectedGbx.FileNameWithoutExtension + ".Gbx"
-                    : selectedGbx.FileNameWithoutExtension + "." + selectedGbx.OfficialExtension + ".Gbx";
+                    : selectedGbx.FileNameWithoutExtension + "." + selectedGbx.OfficialExtension;
                 break;
             case 1:
                 fileName = string.IsNullOrEmpty(customExtension)
                     ? customFileName + ".Gbx"
-                    : customFileName + "." + customExtension + ".Gbx";
+                    : customFileName + "." + customExtension;
 
                 if (element is null) return;
 
@@ -222,7 +215,7 @@
 
                     using (var gbxnetScope = Logger.BeginScope("GBX.NET"))
                     {
-                        selectedGbx.Gbx.Save(ms, new() { ClassIdRemapMode = remap });
+                        selectedGbx.Gbx.Save(ms);
                     }
                     
                     break;
@@ -231,7 +224,11 @@
                     
                     using (var gbxnetScope = Logger.BeginScope("GBX.NET"))
                     {
-                        node.Save(ms, new() { ClassIdRemapMode = remap });
+                        node.Save(ms, new()
+                        {
+                            ClassIdRemapMode = selectedGbx.Gbx.ClassIdRemapMode,
+                            PackDescVersion = selectedGbx.Gbx.PackDescVersion
+                        });
                     }
                     
                     break;

@@ -159,60 +159,6 @@ internal class ClassDataSubGenerator
         AppendEnumsLine(sb, classInfo, context);
 
         sb.AppendLine();
-        sb.Append("    public static ");
-
-        if (classInfo.Name != "CMwNod")
-        {
-            sb.Append("new ");
-        }
-
-        sb.AppendLine("IClass? New(uint classId) => classId switch");
-        sb.AppendLine("    {");
-
-        if (!classInfo.IsAbstract)
-        {
-            sb.Append("        0x");
-            sb.Append(classInfo.Id.GetValueOrDefault().ToString("X8"));
-            sb.Append(" => new ");
-            sb.Append(classInfo.Name);
-            sb.AppendLine("(),");
-        }
-
-        RecurseInheritanceInverted(classInfo.Name, []);
-
-        void RecurseInheritanceInverted(string name, HashSet<uint> alreadyAddedInheritance)
-        {
-            if (!inheritanceInverted.TryGetValue(name, out var classes))
-            {
-                return;
-            }
-
-            foreach (var classIdAndDataModel in classes)
-            {
-                if (alreadyAddedInheritance.Contains(classIdAndDataModel.Key))
-                {
-                    continue;
-                }
-
-                if (!classIdAndDataModel.Value.IsAbstract)
-                {
-                    sb.Append("        0x");
-                    sb.Append(classIdAndDataModel.Key.ToString("X8"));
-                    sb.Append(" => new ");
-                    sb.Append(classIdAndDataModel.Value.Name);
-                    sb.AppendLine("(),");
-                }
-
-                RecurseInheritanceInverted(classIdAndDataModel.Value.Name, alreadyAddedInheritance);
-            }
-        }
-
-
-        sb.AppendLine("        _ => null");
-
-        sb.AppendLine("    };");
-
-        sb.AppendLine();
 
         AppendChunkMethodsLine(sb, classInfo, existingMembers);
 
@@ -1013,7 +959,11 @@ internal class ClassDataSubGenerator
 
                 sb.Append("Chunk");
                 if (baseChunkIdStr.StartsWith("0x")) baseChunkIdStr = baseChunkIdStr.Substring(2);
-                var baseChunkId = classInfo.Id.GetValueOrDefault() | uint.Parse(baseChunkIdStr, NumberStyles.HexNumber);
+                var baseChunkId = uint.Parse(baseChunkIdStr, NumberStyles.HexNumber);
+                if (baseChunkId <= 0xFFF)
+                {
+                    baseChunkId = classInfo.Id.GetValueOrDefault() | baseChunkId;
+                }
                 sb.Append(baseChunkId.ToString("X8"));
             }
             else
@@ -1265,82 +1215,34 @@ internal class ClassDataSubGenerator
 
     private static void AppendChunkMethodsLine(StringBuilder sb, ClassDataModel classInfo, ImmutableArray<ISymbol> existingMembers)
     {
-        var hasCreateHeaderChunkMethod = existingMembers
+        var hasNewChunkMethod = existingMembers
             .OfType<IMethodSymbol>()
             .Any(x => !x.IsStatic
-                && x.Name == "CreateHeaderChunk"
-                && x.ReturnType.Name == "IHeaderChunk"
-                && (x.IsOverride || x.IsVirtual)
-                && x.Parameters.Length == 1
-                && x.Parameters[0].Type.Name == nameof(UInt32));
-
-        if (!hasCreateHeaderChunkMethod && classInfo.HeaderChunks.Count > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine("    public override IHeaderChunk? CreateHeaderChunk(uint chunkId)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        IHeaderChunk? chunk;");
-            sb.AppendLine("        switch (chunkId)");
-            sb.AppendLine("        {");
-
-            foreach (var chunk in classInfo.HeaderChunks)
-            {
-                sb.Append("            case 0x");
-                sb.Append(chunk.Value.Id.ToString("X8"));
-                sb.Append(": chunk = new HeaderChunk");
-                sb.Append(chunk.Value.Id.ToString("X8"));
-                sb.AppendLine("(); break;");
-            }
-
-            sb.AppendLine("            default: return base.CreateHeaderChunk(chunkId);");
-            sb.AppendLine("        }");
-            sb.AppendLine();
-            sb.AppendLine("        if (chunk is not null)");
-            sb.AppendLine("        {");
-            sb.AppendLine("            Chunks.Add(chunk);");
-            sb.AppendLine("        }");
-            sb.AppendLine();
-            sb.AppendLine("        return chunk;");
-            sb.AppendLine("    }");
-        }
-
-        var hasCreateChunkMethod = existingMembers
-            .OfType<IMethodSymbol>()
-            .Any(x => !x.IsStatic
-                && x.Name == "CreateChunk"
+                && x.Name == "NewChunk"
                 && x.ReturnType.Name == "IChunk"
                 && (x.IsOverride || x.IsVirtual)
                 && x.Parameters.Length == 1
                 && x.Parameters[0].Type.Name == nameof(UInt32));
 
-        if (!hasCreateChunkMethod && classInfo.Chunks.Count > 0)
+        if (hasNewChunkMethod || classInfo.Chunks.Count == 0)
         {
-            sb.AppendLine();
-            sb.AppendLine("    public override IChunk? CreateChunk(uint chunkId)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        IChunk? chunk;");
-            sb.AppendLine("        switch (chunkId)");
-            sb.AppendLine("        {");
-
-            foreach (var chunk in classInfo.Chunks)
-            {
-                sb.Append("            case 0x");
-                sb.Append(chunk.Value.Id.ToString("X8"));
-                sb.Append(": chunk = new Chunk");
-                sb.Append(chunk.Value.Id.ToString("X8"));
-                sb.AppendLine("(); break;");
-            }
-
-            sb.AppendLine("            default: return base.CreateChunk(chunkId);");
-            sb.AppendLine("        }");
-            sb.AppendLine();
-            sb.AppendLine("        if (chunk is not null)");
-            sb.AppendLine("        {");
-            sb.AppendLine("            Chunks.Add(chunk);");
-            sb.AppendLine("        }");
-            sb.AppendLine();
-            sb.AppendLine("        return chunk;");
-            sb.AppendLine("    }");
+            return;
         }
+
+        sb.AppendLine();
+        sb.AppendLine("    internal override IChunk? NewChunk(uint chunkId) => chunkId switch");
+        sb.AppendLine("    {");
+
+        foreach (var chunk in classInfo.Chunks)
+        {
+            sb.Append("        0x");
+            sb.Append(chunk.Value.Id.ToString("X8"));
+            sb.Append(" => new Chunk");
+            sb.Append(chunk.Value.Id.ToString("X8"));
+            sb.AppendLine("(),");
+        }
+
+        sb.AppendLine("        _ => base.NewChunk(chunkId),");
+        sb.AppendLine("    };");
     }
 }

@@ -467,7 +467,14 @@
         }
         else if (Id.HasValue && Tree?.Object is IList list)
         {
-            list[Id.Value] = value;
+            try
+            {
+                list[Id.Value] = value;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error while trying to set value of an enumerable element with index {index}", Id.Value);
+            }
         }
 
         Update(updateParent);

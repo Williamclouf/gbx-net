@@ -11,9 +11,9 @@ public partial class CGameGhost
 
             public Vec3 Position { get; set; }
             public Quat Rotation { get; set; }
-            public Vec3 Velocity { get; set; }
+            public virtual Vec3 Velocity { get; set; }
             public float VelocitySpeed => Velocity.GetMagnitude() * 3.6f;
-            public Vec3 AngularVelocity { get; set; }
+            public virtual Vec3 AngularVelocity { get; set; }
 
             internal Sample(TimeInt32 time, byte[] data)
             {
@@ -26,10 +26,8 @@ public partial class CGameGhost
                 return $"{Time}, {Data.Length} bytes";
             }
 
-            internal virtual void Read(MemoryStream ms, GbxReader r, int version)
-            {
-
-            }
+            internal virtual void Read(GbxReader r, int version) { }
+            internal virtual void Write(GbxWriter w, int version) { }
         }
     }
 }

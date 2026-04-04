@@ -129,39 +129,7 @@ public partial class CScriptTraitsMetadata
             }
 
             // CScriptTraitsGenericContainer::Archive (version = Version - 2)
-
-            // ArchiveWithTypeBuffer
-            var typeOrTraitCount = Version >= 3 ? r.ReadSmallLen() : r.ReadInt32();
-
-            if (Version < 5)
-            {
-                n.Traits = new Dictionary<string, ScriptTrait>(typeOrTraitCount);
-
-                for (var i = 0; i < typeOrTraitCount; i++)
-                {
-                    var traitName = Version >= 3 ? r.ReadSmallString() : r.ReadString();
-                    var type = ReadType(r);
-                    n.Traits.Add(traitName, ReadContents(r, type, noContent: false));
-                }
-
-                return;
-            }
-
-            var types = new IScriptType[typeOrTraitCount];
-            for (var i = 0; i < typeOrTraitCount; i++)
-            {
-                types[i] = ReadType(r);
-            }
-
-            var traitCount = r.ReadSmallLen();
-            n.Traits = new Dictionary<string, ScriptTrait>(traitCount);
-
-            for (var i = 0; i < traitCount; i++)
-            {
-                var traitName = r.ReadSmallString();
-                var typeIndex = r.ReadSmallLen();
-                n.Traits.Add(traitName, ReadContents(r, types[typeIndex], noContent: false));
-            }
+            n.Traits = ReadTraits(r, Version - 2);
         }
 
         public override void Write(CScriptTraitsMetadata n, GbxWriter w)
@@ -173,314 +141,363 @@ public partial class CScriptTraitsMetadata
                 throw new ChunkVersionNotSupportedException(Version);
             }
 
-            if (Version < 5)
+            WriteTraits(w, Version - 2, n.Traits);
+        }
+    }
+
+    // CScriptTraitsGenericContainer::Archive
+    internal static Dictionary<string, ScriptTrait> ReadTraits(GbxReader r, int version)
+    {
+        Dictionary<string, ScriptTrait> traits;
+
+        // ArchiveWithTypeBuffer
+        var typeOrTraitCount = version >= 1 ? r.ReadSmallLen() : r.ReadInt32();
+
+        if (version < 3)
+        {
+            traits = new Dictionary<string, ScriptTrait>(typeOrTraitCount);
+
+            for (var i = 0; i < typeOrTraitCount; i++)
             {
-                if (Version >= 3)
-                {
-                    w.WriteSmallLen(n.Traits?.Count ?? 0);
-                }
-                else
-                {
-                    w.Write(n.Traits?.Count ?? 0);
-                }
-
-                if (n.Traits is null) return;
-
-                foreach (var trait in n.Traits)
-                {
-                    if (Version >= 3)
-                    {
-                        w.WriteSmallString(trait.Key);
-                    }
-                    else
-                    {
-                        w.Write(trait.Key);
-                    }
-
-                    WriteType(w, trait.Value.Type);
-                    WriteContents(w, trait.Value);
-                }
-
-                return;
+                var traitName = version >= 1 ? r.ReadSmallString() : r.ReadString();
+                var type = ReadType(r, version);
+                traits.Add(traitName, ReadContents(r, type, noContent: false, version));
             }
 
-            var uniqueTypes = new Dictionary<IScriptType, int>();
-
-            if (n.Traits is not null)
-            {
-                foreach (var type in n.Traits.Select(x => x.Value.Type).Distinct())
-                {
-                    uniqueTypes.Add(type, uniqueTypes.Count);
-                }
-            }
-
-            w.WriteSmallLen(uniqueTypes.Count);
-
-            foreach (var type in uniqueTypes)
-            {
-                WriteType(w, type.Key);
-            }
-
-            w.WriteSmallLen(n.Traits?.Count ?? 0);
-
-            if (n.Traits is null) return;
-
-            foreach (var trait in n.Traits)
-            {
-                w.WriteSmallString(trait.Key);
-                w.WriteSmallLen(uniqueTypes[trait.Value.Type]);
-                WriteContents(w, trait.Value);
-            }
+            return traits;
         }
 
-        /// <summary>
-        /// CScriptTraitsGenericContainer::ChunkType
-        /// </summary>
-        private IScriptType ReadType(GbxReader r)
+        var types = new IScriptType[typeOrTraitCount];
+        for (var i = 0; i < typeOrTraitCount; i++)
         {
-            var type = (EScriptType)(Version >= 3 ? r.ReadByte() : r.ReadInt32());
-
-            switch (type)
-            {
-                case EScriptType.Array:
-                    var key = ReadType(r); // CScriptType::KeyType
-                    var value = ReadType(r); // CScriptType::ValueType
-                    return new ScriptArrayType(key, value);
-                case EScriptType.Struct:
-
-                    if (Version < 4) throw new StructsNotSupportedException();
-
-                    var memberCount = r.ReadByte(); // CScriptType::StructMemberCount
-                    var structName = r.ReadString();
-
-                    var members = new Dictionary<string, ScriptTrait>(memberCount);
-
-                    for (var i = 0; i < memberCount; i++)
-                    {
-                        var memberName = r.ReadString();
-                        var memberType = ReadType(r);
-
-                        members.Add(memberName, ReadContents(r, memberType, noContent: Version >= 6));
-                    }
-
-                    return new ScriptStructType(structName, members);
-            }
-
-            return new ScriptType(type);
+            types[i] = ReadType(r, version);
         }
 
-        private void WriteType(GbxWriter w, IScriptType type)
+        var traitCount = r.ReadSmallLen();
+        traits = new Dictionary<string, ScriptTrait>(traitCount);
+
+        for (var i = 0; i < traitCount; i++)
         {
-            if (Version >= 3)
-            {
-                w.Write((byte)type.Type);
-            }
-            else
-            {
-                w.Write((int)type.Type);
-            }
-
-            switch (type)
-            {
-                case ScriptArrayType arrayType:
-                    WriteType(w, arrayType.KeyType); // CScriptType::KeyType
-                    WriteType(w, arrayType.ValueType); // CScriptType::ValueType
-                    break;
-                case ScriptStructType structType:
-
-                    if (Version < 4) throw new StructsNotSupportedException();
-
-                    w.Write((byte)structType.Members.Count); // CScriptType::StructMemberCount
-                    w.Write(structType.Name);
-
-                    foreach (var member in structType.Members)
-                    {
-                        w.Write(member.Key);
-                        WriteType(w, member.Value.Type);
-
-                        if (Version < 6)
-                        {
-                            WriteContents(w, member.Value);
-                        }
-                    }
-
-                    break;
-            }
+            var traitName = r.ReadSmallString();
+            var typeIndex = r.ReadSmallLen();
+            traits.Add(traitName, ReadContents(r, types[typeIndex], noContent: false, version));
         }
 
-        /// <summary>
-        /// CScriptTraitsGenericContainer::ChunkContents
-        /// </summary>
-        /// <exception cref="NotSupportedException"></exception>
-        private ScriptTrait ReadContents(GbxReader r, IScriptType type, bool noContent) => type.Type switch
-        {
-            EScriptType.Boolean => new ScriptTrait<bool>(type, !noContent && r.ReadBoolean(asByte: Version >= 3)),
-            EScriptType.Integer => new ScriptTrait<int>(type, noContent ? default : r.ReadInt32()),
-            EScriptType.Real => new ScriptTrait<float>(type, noContent ? default : r.ReadSingle()),
-            EScriptType.Text => new ScriptTrait<string>(type, noContent ? "" : (Version >= 3 ? r.ReadSmallString() : r.ReadString())),
-            EScriptType.Array => ReadScriptArray(r, type, noContent),
-            EScriptType.Vec2 => new ScriptTrait<Vec2>(type, noContent ? default : r.ReadVec2()),
-            EScriptType.Vec3 => new ScriptTrait<Vec3>(type, noContent ? default : r.ReadVec3()),
-            EScriptType.Int3 => new ScriptTrait<Int3>(type, noContent ? default : r.ReadInt3()),
-            EScriptType.Int2 => new ScriptTrait<Int2>(type, noContent ? default : r.ReadInt2()),
-            EScriptType.Struct => ReadScriptStruct(r, type, noContent),
-            _ => throw new NotSupportedException($"{type} is not supported.")
-        };
+        return traits;
+    }
 
-        private void WriteContents(GbxWriter w, ScriptTrait trait)
+    /// <summary>
+    /// CScriptTraitsGenericContainer::ChunkContents
+    /// </summary>
+    /// <exception cref="NotSupportedException"></exception>
+    private static ScriptTrait ReadContents(GbxReader r, IScriptType type, bool noContent, int version) => type.Type switch
+    {
+        EScriptType.Boolean => new ScriptTrait<bool>(type, !noContent && r.ReadBoolean(asByte: version >= 1)),
+        EScriptType.Integer => new ScriptTrait<int>(type, noContent ? default : r.ReadInt32()),
+        EScriptType.Real => new ScriptTrait<float>(type, noContent ? default : r.ReadSingle()),
+        EScriptType.Text => new ScriptTrait<string>(type, noContent ? "" : (version >= 1 ? r.ReadSmallString() : r.ReadString())),
+        EScriptType.Array => ReadScriptArray(r, type, noContent, version),
+        EScriptType.Vec2 => new ScriptTrait<Vec2>(type, noContent ? default : r.ReadVec2()),
+        EScriptType.Vec3 => new ScriptTrait<Vec3>(type, noContent ? default : r.ReadVec3()),
+        EScriptType.Int3 => new ScriptTrait<Int3>(type, noContent ? default : r.ReadInt3()),
+        EScriptType.Int2 => new ScriptTrait<Int2>(type, noContent ? default : r.ReadInt2()),
+        EScriptType.Struct => ReadScriptStruct(r, type, noContent, version),
+        _ => throw new NotSupportedException($"{type} is not supported.")
+    }; 
+    
+    private static ScriptTrait ReadScriptArray(GbxReader r, IScriptType type, bool noContent, int version)
+    {
+        if (type is not ScriptArrayType arrayType)
         {
-            switch (trait)
-            {
-                case ScriptTrait<bool> boolTrait:
-                    w.Write(boolTrait.Value, asByte: Version >= 3);
-                    break;
-                case ScriptTrait<int> intTrait:
-                    w.Write(intTrait.Value);
-                    break;
-                case ScriptTrait<float> floatTrait:
-                    w.Write(floatTrait.Value);
-                    break;
-                case ScriptTrait<string> stringTrait:
-                    if (Version >= 3)
-                    {
-                        w.WriteSmallString(stringTrait.Value);
-                    }
-                    else
-                    {
-                        w.Write(stringTrait.Value);
-                    }
-                    break;
-                case ScriptArrayTrait arrayTrait:
-                    WriteScriptArray(w, arrayTrait);
-                    break;
-                case ScriptDictionaryTrait dictionaryTrait:
-                    WriteScriptDictionary(w, dictionaryTrait);
-                    break;
-                case ScriptTrait<Vec2> vec2Trait:
-                    w.Write(vec2Trait.Value);
-                    break;
-                case ScriptTrait<Vec3> vec3Trait:
-                    w.Write(vec3Trait.Value);
-                    break;
-                case ScriptTrait<Int3> int3Trait:
-                    w.Write(int3Trait.Value);
-                    break;
-                case ScriptTrait<Int2> int2Trait:
-                    w.Write(int2Trait.Value);
-                    break;
-                case ScriptStructTrait structTrait:
-                    WriteScriptStruct(w, structTrait);
-                    break;
-                default:
-                    throw new NotSupportedException($"{trait.Type.Type} is not supported.");
-            }
+            throw new Exception("EScriptType.Array not matching ScriptArrayType");
         }
 
-        private ScriptTrait ReadScriptArray(GbxReader r, IScriptType type, bool noContent)
+        var arrayFieldCount = noContent ? 0 : (version >= 1 ? r.ReadSmallLen() : r.ReadInt32());
+        var isRegularArray = arrayType.KeyType.Type == EScriptType.Void;
+
+        if (isRegularArray)
         {
-            if (type is not ScriptArrayType arrayType)
-            {
-                throw new Exception("EScriptType.Array not matching ScriptArrayType");
-            }
-
-            var arrayFieldCount = noContent ? 0 : (Version >= 3 ? r.ReadSmallLen() : r.ReadInt32());
-            var isRegularArray = arrayType.KeyType.Type == EScriptType.Void;
-
-            if (isRegularArray)
-            {
-                var array = new ScriptTrait[arrayFieldCount];
-
-                for (var i = 0; i < arrayFieldCount; i++)
-                {
-                    var valueContents = ReadContents(r, arrayType.ValueType, noContent);
-
-                    array[i] = valueContents;
-                }
-
-                return new ScriptArrayTrait(arrayType, array);
-            }
-
-            var dictionary = new Dictionary<ScriptTrait, ScriptTrait>(arrayFieldCount);
+            var array = new ScriptTrait[arrayFieldCount];
 
             for (var i = 0; i < arrayFieldCount; i++)
             {
-                var keyContents = ReadContents(r, arrayType.KeyType, noContent);
-                var valueContents = ReadContents(r, arrayType.ValueType, noContent);
+                var valueContents = ReadContents(r, arrayType.ValueType, noContent, version);
 
-                dictionary[keyContents] = valueContents;
+                array[i] = valueContents;
             }
 
-            return new ScriptDictionaryTrait(arrayType, dictionary);
+            return new ScriptArrayTrait(arrayType, array);
         }
 
-        private void WriteScriptArray(GbxWriter w, ScriptArrayTrait arrayTrait)
+        var dictionary = new Dictionary<ScriptTrait, ScriptTrait>(arrayFieldCount);
+
+        for (var i = 0; i < arrayFieldCount; i++)
         {
-            if (Version >= 3)
+            var keyContents = ReadContents(r, arrayType.KeyType, noContent, version);
+            var valueContents = ReadContents(r, arrayType.ValueType, noContent, version);
+
+            dictionary[keyContents] = valueContents;
+        }
+
+        return new ScriptDictionaryTrait(arrayType, dictionary);
+    }
+
+    /// <summary>
+    /// CScriptTraitsGenericContainer::ChunkType
+    /// </summary>
+    private static IScriptType ReadType(GbxReader r, int version)
+    {
+        var type = (EScriptType)(version >= 1 ? r.ReadByte() : r.ReadInt32());
+
+        switch (type)
+        {
+            case EScriptType.Array:
+                var key = ReadType(r, version); // CScriptType::KeyType
+                var value = ReadType(r, version); // CScriptType::ValueType
+                return new ScriptArrayType(key, value);
+            case EScriptType.Struct:
+
+                if (version < 2) throw new StructsNotSupportedException();
+
+                var memberCount = r.ReadByte(); // CScriptType::StructMemberCount
+                var structName = r.ReadString();
+
+                var members = new Dictionary<string, ScriptTrait>(memberCount);
+
+                for (var i = 0; i < memberCount; i++)
+                {
+                    var memberName = r.ReadString();
+                    var memberType = ReadType(r, version);
+
+                    members.Add(memberName, ReadContents(r, memberType, noContent: version >= 4, version));
+                }
+
+                return new ScriptStructType(structName, members);
+        }
+
+        return new ScriptType(type);
+    }
+
+    private static ScriptStructTrait ReadScriptStruct(GbxReader r, IScriptType type, bool noContent, int version)
+    {
+        if (version < 2)
+        {
+            throw new StructsNotSupportedException();
+        }
+
+        if (type is not ScriptStructType structType)
+        {
+            throw new Exception("EScriptType.Struct not matching ScriptStructType");
+        }
+
+        var dictionary = new Dictionary<string, ScriptTrait>(structType.Members.Count);
+
+        foreach (var member in structType.Members)
+        {
+            dictionary[member.Key] = ReadContents(r, member.Value.Type, noContent, version);
+        }
+
+        return new ScriptStructTrait(structType, dictionary);
+    }
+
+    // CScriptTraitsGenericContainer::Archive
+    internal static void WriteTraits(GbxWriter w, int version, IDictionary<string, ScriptTrait> traits)
+    {
+        if (version < 3)
+        {
+            if (version >= 1)
             {
-                w.WriteSmallLen(arrayTrait.Value.Count);
+                w.WriteSmallLen(traits?.Count ?? 0);
             }
             else
             {
-                w.Write(arrayTrait.Value.Count);
+                w.Write(traits?.Count ?? 0);
             }
 
-            foreach (var trait in arrayTrait.Value)
+            if (traits is null) return;
+
+            foreach (var trait in traits)
             {
-                WriteContents(w, trait);
+                if (version >= 1)
+                {
+                    w.WriteSmallString(trait.Key);
+                }
+                else
+                {
+                    w.Write(trait.Key);
+                }
+
+                WriteType(w, trait.Value.Type, version);
+                WriteContents(w, trait.Value, version);
+            }
+
+            return;
+        }
+
+        var uniqueTypes = new Dictionary<IScriptType, int>();
+
+        if (traits is not null)
+        {
+            foreach (var type in traits.Select(x => x.Value.Type).Distinct())
+            {
+                uniqueTypes.Add(type, uniqueTypes.Count);
             }
         }
 
-        private void WriteScriptDictionary(GbxWriter w, ScriptDictionaryTrait dictionaryTrait)
-        {
-            if (Version >= 3)
-            {
-                w.WriteSmallLen(dictionaryTrait.Value.Count);
-            }
-            else
-            {
-                w.Write(dictionaryTrait.Value.Count);
-            }
+        w.WriteSmallLen(uniqueTypes.Count);
 
-            foreach (var pair in dictionaryTrait.Value)
-            {
-                WriteContents(w, pair.Key);
-                WriteContents(w, pair.Value);
-            }
+        foreach (var type in uniqueTypes)
+        {
+            WriteType(w, type.Key, version);
         }
 
-        private ScriptStructTrait ReadScriptStruct(GbxReader r, IScriptType type, bool noContent)
+        w.WriteSmallLen(traits?.Count ?? 0);
+
+        if (traits is null) return;
+
+        foreach (var trait in traits)
         {
-            if (Version < 4)
-            {
-                throw new StructsNotSupportedException();
-            }
+            w.WriteSmallString(trait.Key);
+            w.WriteSmallLen(uniqueTypes[trait.Value.Type]);
+            WriteContents(w, trait.Value, version);
+        }
+    }
 
-            if (type is not ScriptStructType structType)
-            {
-                throw new Exception("EScriptType.Struct not matching ScriptStructType");
-            }
-
-            var dictionary = new Dictionary<string, ScriptTrait>(structType.Members.Count);
-
-            foreach (var member in structType.Members)
-            {
-                dictionary[member.Key] = ReadContents(r, member.Value.Type, noContent);
-            }
-
-            return new ScriptStructTrait(structType, dictionary);
+    private static void WriteType(GbxWriter w, IScriptType type, int version)
+    {
+        if (version >= 1)
+        {
+            w.Write((byte)type.Type);
+        }
+        else
+        {
+            w.Write((int)type.Type);
         }
 
-        private void WriteScriptStruct(GbxWriter w, ScriptStructTrait structTrait)
+        switch (type)
         {
-            if (Version < 4)
-            {
-                throw new StructsNotSupportedException();
-            }
+            case ScriptArrayType arrayType:
+                WriteType(w, arrayType.KeyType, version); // CScriptType::KeyType
+                WriteType(w, arrayType.ValueType, version); // CScriptType::ValueType
+                break;
+            case ScriptStructType structType:
 
-            foreach (var member in structTrait.Value)
-            {
-                WriteContents(w, member.Value);
-            }
+                if (version < 2) throw new StructsNotSupportedException();
+
+                w.Write((byte)structType.Members.Count); // CScriptType::StructMemberCount
+                w.Write(structType.Name);
+
+                foreach (var member in structType.Members)
+                {
+                    w.Write(member.Key);
+                    WriteType(w, member.Value.Type, version);
+
+                    if (version < 4)
+                    {
+                        WriteContents(w, member.Value, version);
+                    }
+                }
+
+                break;
+        }
+    }
+
+    private static void WriteContents(GbxWriter w, ScriptTrait trait, int version)
+    {
+        switch (trait)
+        {
+            case ScriptTrait<bool> boolTrait:
+                w.Write(boolTrait.Value, asByte: version >= 1);
+                break;
+            case ScriptTrait<int> intTrait:
+                w.Write(intTrait.Value);
+                break;
+            case ScriptTrait<float> floatTrait:
+                w.Write(floatTrait.Value);
+                break;
+            case ScriptTrait<string> stringTrait:
+                if (version >= 1)
+                {
+                    w.WriteSmallString(stringTrait.Value);
+                }
+                else
+                {
+                    w.Write(stringTrait.Value);
+                }
+                break;
+            case ScriptArrayTrait arrayTrait:
+                WriteScriptArray(w, arrayTrait, version);
+                break;
+            case ScriptDictionaryTrait dictionaryTrait:
+                WriteScriptDictionary(w, dictionaryTrait, version);
+                break;
+            case ScriptTrait<Vec2> vec2Trait:
+                w.Write(vec2Trait.Value);
+                break;
+            case ScriptTrait<Vec3> vec3Trait:
+                w.Write(vec3Trait.Value);
+                break;
+            case ScriptTrait<Int3> int3Trait:
+                w.Write(int3Trait.Value);
+                break;
+            case ScriptTrait<Int2> int2Trait:
+                w.Write(int2Trait.Value);
+                break;
+            case ScriptStructTrait structTrait:
+                WriteScriptStruct(w, structTrait, version);
+                break;
+            default:
+                throw new NotSupportedException($"{trait.Type.Type} is not supported.");
+        }
+    }
+
+
+
+    private static void WriteScriptArray(GbxWriter w, ScriptArrayTrait arrayTrait, int version)
+    {
+        if (version >= 1)
+        {
+            w.WriteSmallLen(arrayTrait.Value.Count);
+        }
+        else
+        {
+            w.Write(arrayTrait.Value.Count);
+        }
+
+        foreach (var trait in arrayTrait.Value)
+        {
+            WriteContents(w, trait, version);
+        }
+    }
+
+    private static void WriteScriptDictionary(GbxWriter w, ScriptDictionaryTrait dictionaryTrait, int version)
+    {
+        if (version >= 1)
+        {
+            w.WriteSmallLen(dictionaryTrait.Value.Count);
+        }
+        else
+        {
+            w.Write(dictionaryTrait.Value.Count);
+        }
+
+        foreach (var pair in dictionaryTrait.Value)
+        {
+            WriteContents(w, pair.Key, version);
+            WriteContents(w, pair.Value, version);
+        }
+    }
+
+    private static void WriteScriptStruct(GbxWriter w, ScriptStructTrait structTrait, int version)
+    {
+        if (version < 2)
+        {
+            throw new StructsNotSupportedException();
+        }
+
+        foreach (var member in structTrait.Value)
+        {
+            WriteContents(w, member.Value, version);
         }
     }
 }

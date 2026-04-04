@@ -4,7 +4,7 @@ namespace GBX.NET.Serialization;
 
 internal sealed class GbxBodyWriter(GbxBody body, GbxWriter writer)
 {
-    internal void WriteUncompressed(IClass node)
+    internal void WriteUncompressed(CMwNod node)
     {
         using var readerWriter = new GbxReaderWriter(writer);
         node.ReadWrite(readerWriter);

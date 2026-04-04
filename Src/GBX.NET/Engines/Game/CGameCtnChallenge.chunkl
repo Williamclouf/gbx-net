@@ -1,6 +1,6 @@
 CGameCtnChallenge 0x03043000 // A map.
 
-0x002 (header, struct: SHeaderTMDesc) [TM10.v3, TMPU.v4, TMS.v7, TMO.v7, TMSX.v10, TMNESWC.v10, TMU.v10, TMF.v11, MP3.v13, TMT.v13, MP4.v13, TM2020.v13] // map info
+0x002 (header, struct: SHeaderTMDesc) [TM10.v3, TMPU.v4, TMS.v7, TMO.v7, TMSX.v10, TMNESWC.v10, TMU.v10, TMF.v11, MP3.v13, TMT.v13, MP4.v13, TM2020.v13] // description
  versionb
  v2-
   ident MapInfo = empty
@@ -136,8 +136,8 @@ CGameCtnChallenge 0x03043000 // A map.
 
 0x020 // legacy legacy mediatracker
  CGameCtnMediaClip ClipIntro
- CMwNod
- CMwNod
+ CGameCtnMediaClip
+ CGameCtnMediaClip
  CGameCtnMediaClipGroup ClipGroupInGame
  CGameCtnMediaClipGroup ClipGroupEndRace
 
@@ -168,9 +168,7 @@ CGameCtnChallenge 0x03043000 // A map.
  if !HasCustomCamThumbnail
   return
  byte
- vec3 // Iso4 technically
- vec3 // camera calibration matrix?
- vec3
+ mat3 ThumbnailRotationMatrix
  vec3 ThumbnailPosition
  float ThumbnailFov
  float ThumbnailNearClipPlane
@@ -197,12 +195,13 @@ CGameCtnChallenge 0x03043000 // A map.
  float ThumbnailFarClipPlane = -1
  string Comments
 
-0x034 (skippable) [MP3, TMT, MP4, TM2020]
- data
+0x034 (skippable) [MP3, TMT, MP4, TM2020] // ChallengeDecals
+ data ChallengeDecals
 
 0x036 (skippable, base: 0x02D) [MP3, TMT, MP4, TM2020] // realtime thumbnail + comments
 
-0x038 (skippable, ignore) [MP3, TMT, MP4, TM2020]
+0x038 (skippable) [MP3, TMT, MP4, TM2020] // ChallengeCardEventIds
+ SChallengeCardEventIds[] ChallengeCardEventIds
 
 0x03A (skippable, ignore)
 
@@ -357,6 +356,14 @@ CGameCtnChallenge 0x03043000 // A map.
  version
  byte<PaletteColor> Palette
 
+0x3F001000 (skippable)
+
+0x3F001001 (skippable)
+
+0x3F001002 (skippable, base: 0x3F001001)
+
+0x3F001003 (skippable, base: 0x3F001001)
+
 archive BotPath
  int Clan
  list<vec3> Path
@@ -371,43 +378,10 @@ archive SBakedClipsAdditionalData
  ident Clip4
  int3 Coord
 
-archive LightmapFrame
- data Data
- v3+
-  data Data2
-  v6+
-   data Data3
-   
-archive ProbeGridBoxOld
+archive SChallengeCardEventIds
  int
- int
- int
- int
- int
- int
- int
- int
- int
- float
- float
- float
-
-archive ProbeGridBox
- int
- int
- int
- int
- int
- int
- int
- int
- int
- float
- float
- float
- float
- float
- float
+ id
+ ident[]
 
 enum MapKind // The map's intended use.
  EndMarker

@@ -24,6 +24,7 @@ public partial class CPlugSurface
         public float? U03;
         public ushort[]? U04;
         public int? U05;
+        public string[]? U06;
 
         public override void ReadWrite(CPlugSurface n, GbxReaderWriter rw)
         {
@@ -46,24 +47,38 @@ public partial class CPlugSurface
 
             rw.ArrayReadableWritable<SurfMaterial>(ref n.materials); // ArchiveMaterials
 
-            if (Version >= 4 && n.materials?.Length > 0)
+            if ((Version == 3 && (n.materials == null || n.materials.Length == 0)) || Version > 3)
             {
                 rw.Int32(ref U05);
             }
 
-            if ((Version == 3 && (n.materials is null || n.materials.Length == 0)) || Version >= 4)
-            {
-                rw.Array<ushort>(ref U02);
-            }
-
             if (Version < 3)
             {
-                rw.Data(ref U01); // length matches materials count
+                rw.Data(ref U01);
+            }
+            else
+            {
+                if (rw.Writer is not null && n.materials is not null)
+                {
+                    var materialIds = new ushort[n.materials.Length];
+                    for (var i = 0; i < n.materials.Length; i++)
+                    {
+                        materialIds[i] = (ushort)((int?)n.materials[i].SurfaceId ?? 0);
+                    }
+                    U02 = materialIds;
+                }
+
+                rw.Array<ushort>(ref U02);
             }
 
             if (Version >= 1)
             {
                 rw.NodeRef<CPlugSkel>(ref n.skel);
+            }
+
+            if (Version >= 5)
+            {
+                rw.ArrayId(ref U06);
             }
         }
     }
@@ -101,7 +116,7 @@ public partial class CPlugSurface
 
         if (version >= 2)
         {
-            surf.U01 = r.ReadVec3();
+            surf.GameplayMainDir = r.ReadVec3();
         }
 
         return surf;
@@ -123,7 +138,7 @@ public partial class CPlugSurface
 
         if (version >= 2)
         {
-            w.Write(surf.U01.GetValueOrDefault());
+            w.Write(surf.GameplayMainDir.GetValueOrDefault());
         }
     }
 
@@ -153,25 +168,25 @@ public partial class CPlugSurface
     public interface ISurf : IReadable, IWritable
     {
         public short SurfaceIndex { get; set; }
-        public Vec3? U01 { get; set; }
+        public Vec3? GameplayMainDir { get; set; }
     }
 
     [ArchiveGenerationOptions(StructureKind = StructureKind.SeparateReadAndWrite)]
     public sealed partial class Sphere : ISurf
     {
-        public Vec3? U01 { get; set; }
+        public Vec3? GameplayMainDir { get; set; }
     }
 
     [ArchiveGenerationOptions(StructureKind = StructureKind.SeparateReadAndWrite)]
     public sealed partial class Ellipsoid : ISurf
     {
-        public Vec3? U01 { get; set; }
+        public Vec3? GameplayMainDir { get; set; }
     }
 
     [ArchiveGenerationOptions(StructureKind = StructureKind.SeparateReadAndWrite)]
     public sealed partial class Box : ISurf
     {
-        public Vec3? U01 { get; set; }
+        public Vec3? GameplayMainDir { get; set; }
     }
 
     public sealed partial class Mesh : ISurf, IVersionable
@@ -183,7 +198,7 @@ public partial class CPlugSurface
         public OctreeCell[]? OctreeCells { get; set; }
         public AABBTreeCell[]? AABBTreeCells { get; set; }
         public Triangle[]? Triangles { get; set; }
-        public Vec3? U01 { get; set; }
+        public Vec3? GameplayMainDir { get; set; }
 
         short ISurf.SurfaceIndex { get; set; }
 
@@ -264,7 +279,7 @@ public partial class CPlugSurface
         public ISurf[] Surfs { get; set; } = [];
         public Iso4[] SurfLocs { get; set; } = [];
         public short[] SurfJoints { get; set; } = [];
-        public Vec3? U01 { get; set; }
+        public Vec3? GameplayMainDir { get; set; }
 
         short ISurf.SurfaceIndex { get; set; }
 

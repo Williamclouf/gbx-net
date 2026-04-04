@@ -1,3 +1,13 @@
 CGameHighScore 0x03047000
 
 0x002
+ int
+ int
+ int
+ string
+ string
+ string
+
+0x004 (skippable)
+ string
+ string

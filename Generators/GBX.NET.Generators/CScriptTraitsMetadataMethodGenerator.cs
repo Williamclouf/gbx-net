@@ -1,23 +1,14 @@
-﻿using GBX.NET.Generators.Extensions;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Text;
 
-namespace GBX.NET.Generators.Engines.Script;
+namespace GBX.NET.Generators;
 
 [Generator]
 public class CScriptTraitsMetadataMethodGenerator : IIncrementalGenerator
 {
-    public bool Debug => false;
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        if (Debug && !Debugger.IsAttached)
-        {
-            Debugger.Launch();
-        }
-
         var metadata = context.CompilationProvider
             .Select(static (compilation, token) =>
             {

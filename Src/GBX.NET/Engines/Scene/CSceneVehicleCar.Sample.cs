@@ -2,117 +2,352 @@
 
 public partial class CSceneVehicleCar
 {
-    public sealed class Sample : CGameGhost.Data.Sample
+    public sealed class Sample : CGameGhost.Data.Sample, ISampleRawData
     {
-        public float SpeedForward { get; set; }
-        public float SpeedSideward { get; set; }
-        public float RPM { get; set; }
-        public float FLWheelRotation { get; set; }
-        public float FRWheelRotation { get; set; }
-        public float RRWheelRotation { get; set; }
-        public float RLWheelRotation { get; set; }
-        public float Steer { get; set; }
-        public float Gas { get; set; }
-        public float Brake { get; set; }
-        public float U09_U10_1 => Gas + Brake; // clamped between 0-1
+        private uint velocity;
+        private uint angularVelocity;
+        private ushort speedForward;
+        private ushort speedSideward;
+        private ushort rpm;
+        private ushort flWheelRotation;
+        private ushort frWheelRotation;
+        private ushort rrWheelRotation;
+        private ushort rlWheelRotation;
+        private byte steer;
+        private byte gas;
+        private byte brake;
+        private byte u11;
+        private byte u13;
+        private byte u14;
+        private byte turboStrength;
+        private byte steerFront;
+        private byte flDampenLen;
+        private byte frDampenLen;
+        private byte rrDampenLen;
+        private byte rlDampenLen;
+        private byte? dirtBlend;
+        private byte? u33;
+        private byte? u34;
+        private byte? u35;
+        private byte? u36;
+        private byte? u37;
+        private byte? u38;
+        private byte? u40;
+        private (Vec3, Quat, byte)[]? u35_1;
+
+        uint ISampleRawData.Velocity { get => velocity; set => velocity = value; }
+        uint ISampleRawData.AngularVelocity { get => angularVelocity; set => angularVelocity = value; }
+        ushort ISampleRawData.SpeedForward { get => speedForward; set => speedForward = value; }
+        ushort ISampleRawData.SpeedSideward { get => speedSideward; set => speedSideward = value; }
+        ushort ISampleRawData.RPM { get => rpm; set => rpm = value; }
+        ushort ISampleRawData.FLWheelRotation { get => flWheelRotation; set => flWheelRotation = value; }
+        ushort ISampleRawData.FRWheelRotation { get => frWheelRotation; set => frWheelRotation = value; }
+        ushort ISampleRawData.RRWheelRotation { get => rrWheelRotation; set => rrWheelRotation = value; }
+        ushort ISampleRawData.RLWheelRotation { get => rlWheelRotation; set => rlWheelRotation = value; }
+        byte ISampleRawData.Steer { get => steer; set => steer = value; }
+        byte ISampleRawData.Gas { get => gas; set => gas = value; }
+        byte ISampleRawData.Brake { get => brake; set => brake = value; }
+        byte ISampleRawData.U11 { get => u11; set => u11 = value; }
+        byte ISampleRawData.U13 { get => u13; set => u13 = value; }
+        byte ISampleRawData.U14 { get => u14; set => u14 = value; }
+        byte ISampleRawData.TurboStrength { get => turboStrength; set => turboStrength = value; }
+        byte ISampleRawData.SteerFront { get => steerFront; set => steerFront = value; }
+        byte ISampleRawData.FLDampenLen { get => flDampenLen; set => flDampenLen = value; }
+        byte ISampleRawData.FRDampenLen { get => frDampenLen; set => frDampenLen = value; }
+        byte ISampleRawData.RRDampenLen { get => rrDampenLen; set => rrDampenLen = value; }
+        byte ISampleRawData.RLDampenLen { get => rlDampenLen; set => rlDampenLen = value; }
+        byte? ISampleRawData.DirtBlend { get => dirtBlend; set => dirtBlend = value; }
+        byte? ISampleRawData.U33 { get => u33; set => u33 = value; }
+        byte? ISampleRawData.U34 { get => u34; set => u34 = value; }
+        byte? ISampleRawData.U35 { get => u35; set => u35 = value; }
+        byte? ISampleRawData.U36 { get => u36; set => u36 = value; }
+        byte? ISampleRawData.U37 { get => u37; set => u37 = value; }
+        byte? ISampleRawData.U38 { get => u38; set => u38 = value; }
+        byte? ISampleRawData.U40 { get => u40; set => u40 = value; }
+
+        public override Vec3 Velocity
+        {
+            get => ToVec3_4(velocity);
+            set => velocity = FromVec3_4(value);
+        }
+
+        public override Vec3 AngularVelocity
+        {
+            get => ToVec3_4(angularVelocity);
+            set => angularVelocity = FromVec3_4(value);
+        }
+
+        public float SpeedForward
+        {
+            get => (speedForward / 65535f * 11000 - 1000) * 3.6f;
+            set => speedForward = (ushort)AdditionalMath.Clamp(Math.Round(((value / 3.6f) + 1000) / 11000f * 65535f), 0, 65535);
+        }
+
+        public float SpeedSideward
+        {
+            get => speedSideward / 65535f * 2000 - 1000;
+            set => speedSideward = (ushort)AdditionalMath.Clamp(Math.Round((value + 1000) / 2000f * 65535f), 0, 65535);
+        }
+
+        public float RPM
+        {
+            get => rpm / 65535f * 30000;
+            set => rpm = (ushort)AdditionalMath.Clamp(Math.Round(value / 30000f * 65535f), 0, 65535);
+        }
+
+        public float FLWheelRotation
+        {
+            get => flWheelRotation / 65535f * 1608.495f;
+            set => flWheelRotation = (ushort)AdditionalMath.Clamp(Math.Round(value / 1608.495f * 65535f), 0, 65535);
+        }
+
+        public float FRWheelRotation
+        {
+            get => frWheelRotation / 65535f * 1608.495f;
+            set => frWheelRotation = (ushort)AdditionalMath.Clamp(Math.Round(value / 1608.495f * 65535f), 0, 65535);
+        }
+
+        public float RRWheelRotation
+        {
+            get => rrWheelRotation / 65535f * 1608.495f;
+            set => rrWheelRotation = (ushort)AdditionalMath.Clamp(Math.Round(value / 1608.495f * 65535f), 0, 65535);
+        }
+
+        public float RLWheelRotation
+        {
+            get => rlWheelRotation / 65535f * 1608.495f;
+            set => rlWheelRotation = (ushort)AdditionalMath.Clamp(Math.Round(value / 1608.495f * 65535f), 0, 65535);
+        }
+
+        public float Steer
+        {
+            get => steer / 255f * 2 - 1;
+            set => steer = (byte)AdditionalMath.Clamp(Math.Round((value + 1f) / 2f * 255f), 0, 255);
+        }
+
+        public float Gas
+        {
+            get => gas / 255f;
+            set => gas = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public float Brake
+        {
+            get => brake / 255f;
+            set => brake = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+#if NET5_0_OR_GREATER
+        public float U09_U10_1 => Math.Clamp(Gas + Brake, 0f, 1f);
+#else
+        public float U09_U10_1 => (float)AdditionalMath.Clamp(Gas + Brake, 0f, 1f);
+#endif
         public bool U09_U10_2 => Gas < Brake;
-        public float U11 { get; set; }
+
+        public float U11
+        {
+            get => u11 / 255f;
+            set => u11 = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
         public byte U12 { get; set; }
-        public float U13 { get; set; }
-        public float U14 { get; set; }
-        public float TurboStrength { get; set; }
-        public float SteerFront { get; set; }
-        public float FLDampenLen { get; set; }
+
+        public float U13
+        {
+            get => u13 / 255f * 2 - 1;
+            set => u13 = (byte)AdditionalMath.Clamp(Math.Round((value + 1f) / 2f * 255f), 0, 255);
+        }
+
+        public float U14
+        {
+            get => u14 / 255f * 2 - 1;
+            set => u14 = (byte)AdditionalMath.Clamp(Math.Round((value + 1f) / 2f * 255f), 0, 255);
+        }
+
+        public float TurboStrength
+        {
+            get => turboStrength / 255f;
+            set => turboStrength = (byte)AdditionalMath.Clamp(Math.Round(value * 255f), 0, 255);
+        }
+
+        public float SteerFront
+        {
+#if NET6_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+            get => steerFront / 255f * MathF.PI * 2 - MathF.PI;
+            set => steerFront = (byte)AdditionalMath.Clamp(Math.Round((value + MathF.PI) / (MathF.PI * 2) * 255f), 0, 255);
+#else
+            get => steerFront / 255f * (float)Math.PI * 2 - (float)Math.PI;
+            set => steerFront = (byte)AdditionalMath.Clamp(Math.Round((value + Math.PI) / (Math.PI * 2) * 255f), 0, 255);
+#endif
+        }
+
+        public float FLDampenLen
+        {
+            get => flDampenLen / 255f * 4 - 2;
+            set => flDampenLen = (byte)AdditionalMath.Clamp(Math.Round((value + 2f) / 4f * 255f), 0, 255);
+        }
         public CPlugSurface.MaterialId FLGroundContactMaterial { get; set; }
-        public float FRDampenLen { get; set; }
+
+        public float FRDampenLen
+        {
+            get => frDampenLen / 255f * 4 - 2;
+            set => frDampenLen = (byte)AdditionalMath.Clamp(Math.Round((value + 2f) / 4f * 255f), 0, 255);
+        }
         public CPlugSurface.MaterialId FRGroundContactMaterial { get; set; }
-        public float RRDampenLen { get; set; }
+
+        public float RRDampenLen
+        {
+            get => rrDampenLen / 255f * 4 - 2;
+            set => rrDampenLen = (byte)AdditionalMath.Clamp(Math.Round((value + 2f) / 4f * 255f), 0, 255);
+        }
         public CPlugSurface.MaterialId RRGroundContactMaterial { get; set; }
-        public float RLDampenLen { get; set; }
+
+        public float RLDampenLen
+        {
+            get => rlDampenLen / 255f * 4 - 2;
+            set => rlDampenLen = (byte)AdditionalMath.Clamp(Math.Round((value + 2f) / 4f * 255f), 0, 255);
+        }
         public CPlugSurface.MaterialId RLGroundContactMaterial { get; set; }
+
         public byte U25 { get; set; }
         public byte U25_1 => (byte)(U25 & 7);
-
-        /// <summary>
-        /// Horn counter that loops around after reaching number 3.
-        /// </summary>
         public byte Horn => (byte)((U25 >> 3) & 3);
-
         public byte U25_3 => (byte)((U25 >> 5) & 3);
         public bool U25_4 => (U25 >> 7) != 0;
+
         public byte U26 { get; set; }
         public bool FLIsSliding
         {
             get => (U26 & 0x40) != 0;
-            set
-            {
-                if (value) U26 |= 0x40;
-                else U26 &= 0xBF; // 0b10111111
-            }
+            set { if (value) U26 |= 0x40; else U26 &= 0xBF; }
         }
-
         public bool FLOnGround => (U26 & 0x80) != 0;
+
         public byte U27 { get; set; }
         public bool FRIsSliding
         {
             get => (U27 & 0x01) != 0;
-            set
-            {
-                if (value) U27 |= 0x01;
-                else U27 &= 0xFE; // 0b11111110
-            }
+            set { if (value) U27 |= 0x01; else U27 &= 0xFE; }
         }
-
         public bool FROnGround => (U27 & 0x02) != 0;
+
         public bool RRIsSliding
         {
             get => (U27 & 0x04) != 0;
-            set
-            {
-                if (value) U27 |= 0x04;
-                else U27 &= 0xFB; // 0b11111011
-            }
+            set { if (value) U27 |= 0x04; else U27 &= 0xFB; }
         }
-
         public bool RROnGround => (U27 & 0x08) != 0;
+
         public bool RLIsSliding
         {
             get => (U27 & 0x10) != 0;
-            set
-            {
-                if (value) U27 |= 0x10;
-                else U27 &= 0xEF; // 0b11101111
-            }
+            set { if (value) U27 |= 0x10; else U27 &= 0xEF; }
         }
-
         public bool RLOnGround => (U27 & 0x20) != 0;
         public bool U27_7 => (U27 & 0x40) != 0;
         public bool U27_8 => (U27 & 0x80) != 0;
-        public float? DirtBlend { get; set; }
-        public Vec4? U33 { get; set; }
-        public Vec4? U34 { get; set; }
-        public float? U35 { get; set; }
-        public (Vec3, Quat, byte)[]? U35_1 { get; set; }
-        public bool? U36_1 { get; set; }
-        public bool? U36_2 { get; set; }
-        public bool? U36_3 { get; set; }
-        public bool? U36_4 { get; set; }
-        public bool? U36_5 { get; set; }
-        public float? U37_1 { get; set; }
-        public bool? U37_2 { get; set; }
-        public int? U37_3 { get; set; }
-        public float? U38 { get; set; }
+
+        public float? DirtBlend
+        {
+            get => dirtBlend.HasValue ? dirtBlend.Value / 255f : null;
+            set => dirtBlend = value.HasValue ? (byte)AdditionalMath.Clamp(Math.Round(value.Value * 255f), 0, 255) : null;
+        }
+
+        public Vec4? U33
+        {
+            get => u33.HasValue ? new Vec4((u33.Value & 3) / 3f, ((u33.Value >> 2) & 3) / 3f, ((u33.Value >> 4) & 3) / 3f, ((u33.Value >> 6) & 3) / 3f) : null;
+            set => UpdateVec4Flag(ref u33, value);
+        }
+
+        public Vec4? U34
+        {
+            get => u34.HasValue ? new Vec4((u34.Value & 3) / 3f, ((u34.Value >> 2) & 3) / 3f, ((u34.Value >> 4) & 3) / 3f, ((u34.Value >> 6) & 3) / 3f) : null;
+            set => UpdateVec4Flag(ref u34, value);
+        }
+
+        public float? U35
+        {
+            get => u35.HasValue ? (u35.Value & 3) / 3f : null;
+            set
+            {
+                if (!value.HasValue)
+                {
+                    if (u35.HasValue) u35 = (byte)(u35.Value & ~3);
+                }
+                else
+                {
+                    u35 = (byte)((u35.GetValueOrDefault() & ~3) | (byte)AdditionalMath.Clamp(Math.Round(value.Value * 3f), 0, 3));
+                }
+            }
+        }
+
+        public (Vec3, Quat, byte)[]? U35_1
+        {
+            get => u35_1;
+            set
+            {
+                u35_1 = value;
+                if (value != null)
+                {
+                    var count = (byte)AdditionalMath.Clamp(value.Length, 0, 7);
+                    u35 = (byte)((u35.GetValueOrDefault() & ~(7 << 2)) | (count << 2));
+                }
+            }
+        }
+
+        public bool? U36_1 { get => BitHelper.GetBit(u36, 0); set => u36 = BitHelper.SetBit(u36, 0, value); }
+        public bool? U36_2 { get => BitHelper.GetBit(u36, 1); set => u36 = BitHelper.SetBit(u36, 1, value); }
+        public bool? U36_3 { get => BitHelper.GetBit(u36, 2); set => u36 = BitHelper.SetBit(u36, 2, value); }
+        public bool? U36_4 { get => BitHelper.GetBit(u36, 3); set => u36 = BitHelper.SetBit(u36, 3, value); }
+        public bool? U36_5 { get => BitHelper.GetBit(u36, 4); set => u36 = BitHelper.SetBit(u36, 4, value); }
+        public float? U37_1
+        {
+            get => u37.HasValue ? (u37.Value & 3) / 3f : null;
+            set
+            {
+                if (!value.HasValue) { if (u37.HasValue) u37 = (byte)(u37.Value & ~3); }
+                else u37 = (byte)((u37.GetValueOrDefault() & ~3) | (byte)AdditionalMath.Clamp(Math.Round(value.Value * 3f), 0, 3));
+            }
+        }
+
+        public bool? U37_2 { get => BitHelper.GetBit(u37, 3); set => u37 = BitHelper.SetBit(u37, 3, value); }
+
+        public int? U37_3
+        {
+            get => u37.HasValue ? u37.Value >> 4 : null;
+            set
+            {
+                if (!value.HasValue) { if (u37.HasValue) u37 = (byte)(u37.Value & 0x0F); }
+                else u37 = (byte)((u37.GetValueOrDefault() & 0x0F) | ((value.Value & 0x0F) << 4));
+            }
+        }
+
+        public float? U38
+        {
+            get => u38.HasValue ? u38.Value / 255f * 5 : null;
+            set => u38 = value.HasValue ? (byte)AdditionalMath.Clamp(Math.Round(value.Value / 5f * 255f), 0, 255) : null;
+        }
+
         public byte? U39 { get; set; }
-        public float? U40 { get; set; }
+
+        public float? U40
+        {
+            get => u40.HasValue ? u40.Value / 255f : null;
+            set => u40 = value.HasValue ? (byte)AdditionalMath.Clamp(Math.Round(value.Value * 255f), 0, 255) : null;
+        }
 
         internal Sample(TimeInt32 time, byte[] data) : base(time, data)
         {
         }
 
-        internal override void Read(MemoryStream ms, GbxReader r, int version)
+        internal override void Read(GbxReader r, int version)
         {
-            // CHmsDynaReplayItem::RestoreDynaItemState
+            if (version < 7)
+            {
+                throw new VersionNotSupportedException(version);
+            }
 
+            // CHmsDynaReplayItem::RestoreDynaItemState
 
             // HmsStateVersion == 0 (EHmsDynaItemSaveStateVersion_TmNetworkAfter260205)
             // Position 9-byte Vec3
@@ -160,63 +395,48 @@ public partial class CSceneVehicleCar
                 return;
             }
 
-            Velocity = r.ReadVec3_4();
-            AngularVelocity = r.ReadVec3_4();
+            velocity = r.ReadUInt32();
+            angularVelocity = r.ReadUInt32();
 
             // CSceneVehicleVis_RestoreStaticState
-
-            if (version < 7)
-            {
-                throw new VersionNotSupportedException(version);
-            }
-
-            if (version == 13)
-            {
-                throw new Exception("Two bytes here");
-            }
-
             if (version >= 7)
             {
-                SpeedForward = (r.ReadUInt16() / 65535f * 11000 - 1000) * 3.6f;
-                SpeedSideward = r.ReadUInt16() / 65535f * 2000 - 1000;
-                RPM = r.ReadUInt16() / 65535f * 30000;
-                FLWheelRotation = r.ReadUInt16() / 65535f * 1608.495f;
-                FRWheelRotation = r.ReadUInt16() / 65535f * 1608.495f;
-                RRWheelRotation = r.ReadUInt16() / 65535f * 1608.495f;
-                RLWheelRotation = r.ReadUInt16() / 65535f * 1608.495f;
-                Steer = r.ReadByte() / 255f * 2 - 1;
-                Gas = r.ReadByte() / 255f;
-                Brake = r.ReadByte() / 255f;
+                speedForward = r.ReadUInt16();
+                speedSideward = r.ReadUInt16();
+                rpm = r.ReadUInt16();
+                flWheelRotation = r.ReadUInt16();
+                frWheelRotation = r.ReadUInt16();
+                rrWheelRotation = r.ReadUInt16();
+                rlWheelRotation = r.ReadUInt16();
+                steer = r.ReadByte();
+                gas = r.ReadByte();
+                brake = r.ReadByte();
 
-                U11 = r.ReadByte() / 255f;
+                u11 = r.ReadByte();
 
                 if (version >= 8)
                 {
                     U12 = r.ReadByte(); // it should be always 0 but sometimes it isnt
                 }
 
-                U13 = r.ReadByte() / 255f * 2 - 1;
-                U14 = r.ReadByte() / 255f * 2 - 1;
-                TurboStrength = r.ReadByte() / 255f;
-#if NET6_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-                SteerFront = r.ReadByte() / 255f * MathF.PI * 2 - MathF.PI;
-#else
-                SteerFront = r.ReadByte() / 255f * (float)Math.PI * 2 - (float)Math.PI;
-#endif
+                u13 = r.ReadByte();
+                u14 = r.ReadByte();
+                turboStrength = r.ReadByte();
+                steerFront = r.ReadByte();
 
-                FLDampenLen = r.ReadByte() / 255f * 4 - 2;
+                flDampenLen = r.ReadByte();
                 FLGroundContactMaterial = (CPlugSurface.MaterialId)r.ReadByte();
                 // + condition "in water"
 
-                FRDampenLen = r.ReadByte() / 255f * 4 - 2;
+                frDampenLen = r.ReadByte();
                 FRGroundContactMaterial = (CPlugSurface.MaterialId)r.ReadByte();
                 // + condition "in water"
 
-                RRDampenLen = r.ReadByte() / 255f * 4 - 2; // RRDampenLenByte?
+                rrDampenLen = r.ReadByte();
                 RRGroundContactMaterial = (CPlugSurface.MaterialId)r.ReadByte();
                 // + condition "in water"
 
-                RLDampenLen = r.ReadByte() / 255f * 4 - 2; // RLDampenLenByte?
+                rlDampenLen = r.ReadByte();
                 RLGroundContactMaterial = (CPlugSurface.MaterialId)r.ReadByte();
                 // + condition "in water"
 
@@ -228,7 +448,7 @@ public partial class CSceneVehicleCar
 
                     if (version >= 9)
                     {
-                        DirtBlend = r.ReadByte() / 255f;
+                        dirtBlend = r.ReadByte();
 
                         if (version >= 10)
                         {
@@ -240,57 +460,42 @@ public partial class CSceneVehicleCar
                             }
 
                             // damage amount
-
-                            var u33 = r.ReadByte();
-                            U33 = new Vec4((u33 & 3) / 3f, ((u33 >> 2) & 3) / 3f, ((u33 >> 4) & 3) / 3f, ((u33 >> 6) & 3) / 3f);
-
-                            var u34 = r.ReadByte();
-                            U34 = new Vec4((u34 & 3) / 3f, ((u34 >> 2) & 3) / 3f, ((u34 >> 4) & 3) / 3f, ((u34 >> 6) & 3) / 3f);
-
-                            var u35 = r.ReadByte();
-                            U35 = (u35 & 3) / 3f;
+                            u33 = r.ReadByte();
+                            u34 = r.ReadByte();
+                            u35 = r.ReadByte();
 
                             if (version >= 11)
                             {
                                 if (version >= 14)
                                 {
-                                    var u36 = r.ReadByte();
-                                    U36_1 = Convert.ToBoolean(u36 & 1);
-                                    U36_2 = Convert.ToBoolean(u36 >> 1 & 1);
-                                    U36_3 = Convert.ToBoolean(u36 >> 2 & 1);
-                                    U36_4 = Convert.ToBoolean(u36 >> 3 & 1);
-                                    U36_5 = Convert.ToBoolean(u36 >> 4 & 1);
-
-                                    var u37 = r.ReadByte();
-                                    U37_1 = (u37 & 3) / 3f;
-                                    U37_2 = Convert.ToBoolean(u37 >> 3 & 1);
-                                    U37_3 = u37 >> 4;
+                                    u36 = r.ReadByte();
+                                    u37 = r.ReadByte();
 
                                     if (version >= 15)
                                     {
-                                        U38 = r.ReadByte() / 255f * 5;
+                                        u38 = r.ReadByte();
 
                                         if (version >= 16)
                                         {
                                             U39 = r.ReadByte();
-                                            U40 = r.ReadByte() / 255f;
+                                            u40 = r.ReadByte();
                                         }
                                     }
                                 }
 
                                 // count is broken in specific cases like the last sample of a ghost
-                                var count = u35 >> 2 & 7;
+                                var count = u35.GetValueOrDefault() >> 2 & 7;
 
                                 if (version == 11 && count > 4)
                                 {
                                     count = 4;
                                 }
 
-                                U35_1 = new (Vec3, Quat, byte)[count];
+                                u35_1 = new (Vec3, Quat, byte)[count];
 
                                 for (var i = 0; i < count; i++)
                                 {
-                                    U35_1[i] = (r.ReadVec3(), r.ReadQuat6(), r.ReadByte());
+                                    u35_1[i] = (r.ReadVec3(), r.ReadQuat6(), r.ReadByte());
                                 }
                             }
                         }
@@ -298,10 +503,244 @@ public partial class CSceneVehicleCar
                 }
             }
 
-            if (ms.Position != ms.Length)
+            if (r.BaseStream.Position != r.BaseStream.Length)
             {
                 throw new Exception("Not all bytes were read");
             }
+        }
+
+        internal override void Write(GbxWriter w, int version)
+        {
+            if (version < 7)
+            {
+                throw new VersionNotSupportedException(version);
+            }
+
+            if (version == 13)
+            {
+                w.WriteVec3_9(Position);
+                w.WriteQuat6(Rotation);
+
+                ushort netData = 0;
+
+                if (Brake >= 0.5f) netData |= 1 << 1;
+
+                // FLIsSliding handles standard sliding bit 
+                if (FLIsSliding) netData |= 1 << 2;
+
+                var min = 100f;
+                var max = 11000f;
+                var ratio = min / max;
+#if NET6_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+                var powRatio = MathF.Pow(ratio, 3.0f);
+                var rpmValue = Math.Clamp(RPM, min, max) / max;
+#else
+                var powRatio = Math.Pow(ratio, 3.0f);
+                var rpmValue = AdditionalMath.Clamp(RPM, min, max) / max;
+#endif
+
+#if NET6_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+                var normalizedValue = (MathF.Pow(rpmValue, 1f / 0.3f) - powRatio) / (1.0f - powRatio);
+#else
+                var normalizedValue = (Math.Pow(rpmValue, 1f/0.3f) - powRatio) / (1.0f - powRatio);
+#endif
+                var rpmBits = (ushort)AdditionalMath.Clamp(Math.Round(normalizedValue * 127f), 0, 127);
+                netData |= (ushort)(rpmBits << 9);
+
+                w.Write(netData);
+                return;
+            }
+
+            w.Write(Position);
+            w.WriteQuat6(Rotation);
+
+            w.Write(velocity);
+            w.Write(angularVelocity);
+
+            if (version >= 7)
+            {
+                w.Write(speedForward);
+                w.Write(speedSideward);
+                w.Write(rpm);
+                w.Write(flWheelRotation);
+                w.Write(frWheelRotation);
+                w.Write(rrWheelRotation);
+                w.Write(rlWheelRotation);
+                w.Write(steer);
+                w.Write(gas);
+                w.Write(brake);
+                w.Write(u11);
+
+                if (version >= 8)
+                {
+                    w.Write(U12);
+                }
+
+                w.Write(u13);
+                w.Write(u14);
+                w.Write(turboStrength);
+                w.Write(steerFront);
+                w.Write(flDampenLen);
+                w.Write((byte)FLGroundContactMaterial);
+                w.Write(frDampenLen);
+                w.Write((byte)FRGroundContactMaterial);
+                w.Write(rrDampenLen);
+                w.Write((byte)RRGroundContactMaterial);
+                w.Write(rlDampenLen);
+                w.Write((byte)RLGroundContactMaterial);
+
+                if (version >= 8)
+                {
+                    w.Write(U25);
+                    w.Write(U26);
+                    w.Write(U27);
+
+                    if (version >= 9)
+                    {
+                        w.Write(dirtBlend.GetValueOrDefault());
+
+                        if (version >= 10)
+                        {
+                            w.Write(0u); // unavailableVal2
+                            w.Write(u33.GetValueOrDefault());
+                            w.Write(u34.GetValueOrDefault());
+                            w.Write(u35.GetValueOrDefault());
+
+                            if (version >= 11)
+                            {
+                                if (version >= 14)
+                                {
+                                    w.Write(u36.GetValueOrDefault());
+                                    w.Write(u37.GetValueOrDefault());
+
+                                    if (version >= 15)
+                                    {
+                                        w.Write(u38.GetValueOrDefault());
+
+                                        if (version >= 16)
+                                        {
+                                            w.Write(U39.GetValueOrDefault());
+                                            w.Write(u40.GetValueOrDefault());
+                                        }
+                                    }
+                                }
+
+                                var count = u35.GetValueOrDefault() >> 2 & 7;
+                                if (version == 11 && count > 4) count = 4;
+
+                                if (u35_1 != null)
+                                {
+                                    for (var i = 0; i < count && i < u35_1.Length; i++)
+                                    {
+                                        w.Write(u35_1[i].Item1);
+                                        w.WriteQuat6(u35_1[i].Item2);
+                                        w.Write(u35_1[i].Item3);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void UpdateVec4Flag(ref byte? flagByte, Vec4? value)
+        {
+            if (!value.HasValue) flagByte = null;
+            else
+            {
+                byte b = 0;
+                b |= (byte)((int)AdditionalMath.Clamp(Math.Round(value.Value.X * 3f), 0, 3));
+                b |= (byte)((int)AdditionalMath.Clamp(Math.Round(value.Value.Y * 3f), 0, 3) << 2);
+                b |= (byte)((int)AdditionalMath.Clamp(Math.Round(value.Value.Z * 3f), 0, 3) << 4);
+                b |= (byte)((int)AdditionalMath.Clamp(Math.Round(value.Value.W * 3f), 0, 3) << 6);
+                flagByte = b;
+            }
+        }
+
+        private static Vec3 ToVec3_4(uint packed)
+        {
+            // Extract the parts using bitwise masking and shifting
+            var mag16 = (short)(packed & 0xFFFF);
+            var headingByte = (sbyte)((packed >> 16) & 0xFF);
+            var pitchByte = (sbyte)((packed >> 24) & 0xFF);
+
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+            var mag = mag16 == short.MinValue
+                ? 0f
+                : MathF.Exp(mag16 / 1000f);
+
+            var axisHeading = headingByte * MathF.PI / sbyte.MaxValue;
+            var axisPitch = pitchByte * (MathF.PI / 2f) / sbyte.MaxValue;
+
+            return new Vec3(
+                MathF.Cos(axisHeading) * MathF.Cos(axisPitch) * mag,
+                MathF.Sin(axisHeading) * MathF.Cos(axisPitch) * mag,
+                MathF.Sin(axisPitch) * mag
+            );
+#else
+            var mag = mag16 == short.MinValue
+                ? 0f
+                : (float)Math.Exp(mag16 / 1000.0);
+
+            var axisHeading = headingByte * Math.PI / sbyte.MaxValue;
+            var axisPitch = pitchByte * (Math.PI / 2.0) / sbyte.MaxValue;
+
+            return new Vec3(
+                (float)(Math.Cos(axisHeading) * Math.Cos(axisPitch)) * mag, 
+                (float)(Math.Sin(axisHeading) * Math.Cos(axisPitch)) * mag, 
+                (float)Math.Sin(axisPitch) * mag
+            );
+#endif
+        }
+
+        private static uint FromVec3_4(Vec3 vec)
+        {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+            var mag = MathF.Sqrt(vec.X * vec.X + vec.Y * vec.Y + vec.Z * vec.Z);
+#else
+            var mag = (float)Math.Sqrt(vec.X * vec.X + vec.Y * vec.Y + vec.Z * vec.Z);
+#endif
+
+            short mag16;
+            sbyte headingByte = 0;
+            sbyte pitchByte = 0;
+
+            if (mag < 1e-6f) // Handle zero/near-zero magnitude
+            {
+                mag16 = short.MinValue;
+            }
+            else
+            {
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+                // Inverse of Exp is Log
+                var logMag = MathF.Log(mag) * 1000f;
+                mag16 = (short)Math.Clamp(MathF.Round(logMag), short.MinValue + 1, short.MaxValue);
+
+                // Inverse trigonometric functions to find angles
+                var axisPitch = MathF.Asin(vec.Z / mag);
+                var axisHeading = MathF.Atan2(vec.Y, vec.X);
+
+                pitchByte = (sbyte)Math.Clamp(MathF.Round(axisPitch * sbyte.MaxValue / (MathF.PI / 2f)), sbyte.MinValue, sbyte.MaxValue);
+                headingByte = (sbyte)Math.Clamp(MathF.Round(axisHeading * sbyte.MaxValue / MathF.PI), sbyte.MinValue, sbyte.MaxValue);
+#else
+                var logMag = Math.Log(mag) * 1000.0;
+                mag16 = (short)Math.Max(short.MinValue + 1, Math.Min(short.MaxValue, Math.Round(logMag)));
+
+                var axisPitch = Math.Asin(vec.Z / mag);
+                var axisHeading = Math.Atan2(vec.Y, vec.X);
+
+                pitchByte = (sbyte)Math.Max(sbyte.MinValue, Math.Min(sbyte.MaxValue, Math.Round(axisPitch * sbyte.MaxValue / (Math.PI / 2.0))));
+                headingByte = (sbyte)Math.Max(sbyte.MinValue, Math.Min(sbyte.MaxValue, Math.Round(axisHeading * sbyte.MaxValue / Math.PI)));
+#endif
+            }
+
+            // Re-pack into a 32-bit unsigned integer
+            uint packed = (ushort)mag16;
+            packed |= (uint)unchecked((byte)headingByte) << 16;
+            packed |= (uint)unchecked((byte)pitchByte) << 24;
+
+            return packed;
         }
     }
 }

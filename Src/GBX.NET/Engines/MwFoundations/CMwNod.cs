@@ -13,315 +13,13 @@ namespace GBX.NET.Engines.MwFoundations;
 [Class(0x01001000)]
 public partial class CMwNod : IClass
 {
+    internal const int MaxSkippableChunkSize = 0x10000000; // ~268MB
+
     private const uint SKIP = 0x534B4950;
     private const uint FACADE = 0xFACADE01;
 
-    private IChunkSet? chunks;
-    public IChunkSet Chunks => chunks ??= new ChunkSet();
-
-#if NET8_0_OR_GREATER
-    static void IClass.Read<T>(T node, GbxReaderWriter rw)
-    {
-        var r = rw.Reader ?? throw new Exception("Reader is required but not available.");
-
-        r.TryInitializeDecryption(node);
-
-        var prevChunkId = default(uint?);
-
-        while (true)
-        {
-            var rawChunkId = r.ReadHexUInt32();
-
-            if (rawChunkId == FACADE)
-            {
-                r.Logger?.LogDebug("- FACADE -");
-                return;
-            }
-            
-            _ = TryRemapChunkId(r, rawChunkId, out var chunkId);
-
-            var chunk = node.CreateChunk(chunkId);
-
-            var stopwatch = default(Stopwatch);
-
-            // Unknown or skippable chunk
-            if (chunk is null or ISkippableChunk)
-            {
-                // Text format skippable chunk
-                if (chunk is null && r.Format == GbxFormat.Text)
-                {
-                    var skippableBuffer = Encoding.ASCII.GetString(r.ReadBytes(12));
-
-                    if (skippableBuffer != "1397442896\r\n")
-                    {
-                        if (chunk is not null)
-                        {
-                            return;
-                        }
-
-                        throw new ChunkReadException(chunkId, prevChunkId, known: false);
-                    }
-                }
-                // Binary format skippable chunk
-                else if (r.ReadUInt32() != SKIP)
-                {
-                    if (chunk is not null)
-                    {
-                        return;
-                    }
-
-                    throw new ChunkReadException(chunkId, prevChunkId, known: false);
-                }
-
-                var chunkSize = r.ReadInt32();
-
-                if (r.Logger is not null)
-                {
-                    if (chunkId == rawChunkId)
-                    {
-                        r.Logger.LogDebug("0x{ChunkId:X8} ({SkippableType}, size: {Size})", chunkId, chunk is null ? "unknown skippable" : "skippable", chunkSize);
-                    }
-                    else
-                    {
-                        r.Logger.LogDebug("0x{ChunkId:X8} ({SkippableType}, size: {Size}, raw: 0x{RawChunkId:X8})", chunkId, chunk is null ? "unknown skippable" : "skippable", chunkSize, rawChunkId);
-                    }
-
-                    if (r.Logger.IsEnabled(LogLevel.Trace))
-                    {
-                        stopwatch = Stopwatch.StartNew();
-                    }
-                }
-
-                if (r.Settings.SkipChunkIds?.Contains(chunkId) == true)
-                {
-                    r.SkipData(chunkSize);
-                }
-                else
-                {
-                    switch (chunk)
-                    {
-                        case IReadableWritableChunk<T> readableWritableT:
-
-                            if (readableWritableT.Ignore)
-                            {
-                                // TODO: possibility to skip (not read into memory)
-                                ((ISkippableChunk)readableWritableT).Data = r.ReadBytes(chunkSize);
-                                break;
-                            }
-
-                            if (r.Settings.SafeSkippableChunks)
-                            {
-                                var data = r.ReadBytes(chunkSize);
-                                using var ms = new MemoryStream(data);
-                                using var rSafe = new GbxReader(ms, r.Settings);
-                                rSafe.LoadFrom(r);
-                                using var rwSafe = new GbxReaderWriter(rSafe);
-
-                                try
-                                {
-                                    readableWritableT.ReadWrite(node, rwSafe);
-                                }
-                                catch (Exception ex)
-                                {
-                                    r.Logger?.LogError(ex, "Skippable chunk data failed to read. Some properties may have been read. Buffer will be stored and used instead.");
-                                    ((ISkippableChunk)readableWritableT).Data = data;
-                                }
-
-                                r.LoadFrom(rSafe);
-
-                                break;
-                            }
-
-                            readableWritableT.ReadWrite(node, rw);
-                            // TODO: validate chunk size
-
-                            break;
-                        case IReadableChunk<T> readableT:
-
-                            if (readableT.Ignore)
-                            {
-                                // TODO: possibility to skip (not read into memory)
-                                ((ISkippableChunk)readableT).Data = r.ReadBytes(chunkSize);
-                                break;
-                            }
-
-                            if (r.Settings.SafeSkippableChunks)
-                            {
-                                var data = r.ReadBytes(chunkSize);
-                                using var ms = new MemoryStream(data);
-                                using var rSafe = new GbxReader(ms, r.Settings);
-                                rSafe.LoadFrom(r);
-
-                                try
-                                {
-                                    readableT.Read(node, rSafe);
-                                }
-                                catch (Exception ex)
-                                {
-                                    r.Logger?.LogError(ex, "Skippable chunk data failed to read. Some properties may have been read. Buffer will be stored and used instead.");
-                                    ((ISkippableChunk)readableT).Data = data;
-                                }
-
-                                r.LoadFrom(rSafe);
-
-                                break;
-                            }
-
-                            readableT.Read(node, r);
-                            // TODO: validate chunk size
-
-                            break;
-                        case IReadableWritableChunk readableWritable:
-
-                            if (readableWritable.Ignore)
-                            {
-                                // TODO: possibility to skip (not read into memory)
-                                ((ISkippableChunk)readableWritable).Data = r.ReadBytes(chunkSize);
-                                break;
-                            }
-
-                            if (r.Settings.SafeSkippableChunks)
-                            {
-                                var data = r.ReadBytes(chunkSize);
-                                using var ms = new MemoryStream(data);
-                                using var rSafe = new GbxReader(ms, r.Settings);
-                                rSafe.LoadFrom(r);
-                                using var rwSafe = new GbxReaderWriter(rSafe);
-
-                                try
-                                {
-                                    readableWritable.ReadWrite(node, rwSafe);
-                                }
-                                catch (Exception ex)
-                                {
-                                    r.Logger?.LogError(ex, "Skippable chunk data failed to read. Some properties may have been read. Buffer will be stored and used instead.");
-                                    ((ISkippableChunk)readableWritable).Data = data;
-                                }
-
-                                r.LoadFrom(rSafe);
-
-                                break;
-                            }
-
-                            readableWritable.ReadWrite(node, rw);
-                            // TODO: validate chunk size
-
-                            break;
-                        case IReadableChunk readable:
-
-                            if (readable.Ignore)
-                            {
-                                // TODO: possibility to skip (not read into memory)
-                                ((ISkippableChunk)readable).Data = r.ReadBytes(chunkSize);
-                                break;
-                            }
-
-                            if (r.Settings.SafeSkippableChunks)
-                            {
-                                var data = r.ReadBytes(chunkSize);
-                                using var ms = new MemoryStream(data);
-                                using var rSafe = new GbxReader(ms, r.Settings);
-                                rSafe.LoadFrom(r);
-
-                                try
-                                {
-                                    readable.Read(node, rSafe);
-                                }
-                                catch (Exception ex)
-                                {
-                                    r.Logger?.LogError(ex, "Skippable chunk data failed to read. Some properties may have been read. Buffer will be stored and used instead.");
-                                    ((ISkippableChunk)readable).Data = data;
-                                }
-
-                                r.LoadFrom(rSafe);
-
-                                break;
-                            }
-
-                            readable.Read(node, r);
-                            // TODO: validate chunk size
-
-                            break;
-                        case ISkippableChunk skippable: // Known skippable but does not include reading/writing logic
-                                                        // TODO: possibility to skip (not read into memory)
-                            skippable.Data = r.ReadBytes(chunkSize);
-                            break;
-                        default: // Unknown skippable
-
-                            // TODO: possibility to skip (not read into memory), maybe create typed skippable chunk in the future?
-                            var skippableChunk = new SkippableChunk(chunkId)
-                            {
-                                Data = r.ReadBytes(chunkSize)
-                            };
-
-                            node.Chunks.Add(skippableChunk); // as its an unknown chunk, its not implicitly added by CreateChunk
-
-                            break;
-                    }
-                }
-
-                if (r.Logger?.IsEnabled(LogLevel.Trace) == true && stopwatch is not null)
-                {
-                    stopwatch.Stop();
-                    r.Logger.LogTrace("0x{ChunkId:X8} DONE ({Elapsed}ms)", chunkId, stopwatch.Elapsed.TotalMilliseconds);
-                }
-
-                prevChunkId = chunkId;
-
-                continue;
-            }
-
-            // Unskippable chunk
-            if (r.Logger is not null)
-            {
-                if (chunkId == rawChunkId)
-                {
-                    r.Logger.LogDebug("0x{ChunkId:X8}", chunkId);
-                }
-                else
-                {
-                    r.Logger.LogDebug("0x{ChunkId:X8} (raw: 0x{RawChunkId:X8})", chunkId, rawChunkId);
-                }
-
-                if (r.Logger.IsEnabled(LogLevel.Trace))
-                {
-                    stopwatch = Stopwatch.StartNew();
-                }
-            }
-
-            if (chunk.Ignore)
-            {
-                throw new ChunkReadException(chunkId, prevChunkId, known: true);
-            }
-
-            switch (chunk)
-            {
-                case IReadableWritableChunk<T> readableWritableT:
-                    readableWritableT.ReadWrite(node, rw);
-                    break;
-                case IReadableChunk<T> readableT:
-                    readableT.Read(node, r);
-                    break;
-                case IReadableWritableChunk readableWritable:
-                    readableWritable.ReadWrite(node, rw);
-                    break;
-                case IReadableChunk readable:
-                    readable.Read(node, r);
-                    break;
-                default:
-                    throw new ChunkReadException(chunkId, prevChunkId, known: true);
-            }
-
-            if (r.Logger?.IsEnabled(LogLevel.Trace) == true && stopwatch is not null)
-            {
-                stopwatch.Stop();
-                r.Logger.LogTrace("0x{ChunkId:X8} DONE ({Elapsed}ms)", chunkId, stopwatch.Elapsed.TotalMilliseconds);
-            }
-
-            prevChunkId = chunkId;
-        }
-    }
-#endif
+    private ChunkSet? chunks;
+    public IChunkSet Chunks => chunks ??= new ChunkSet(this);
 
     internal virtual void Read(GbxReaderWriter rw)
     {
@@ -330,6 +28,7 @@ public partial class CMwNod : IClass
         r.TryInitializeDecryption(this);
 
         var prevChunkId = default(uint?);
+        var maxSkippableChunkSize = r.Settings.MaxSkippableChunkSize ?? MaxSkippableChunkSize;
 
         while (true)
         {
@@ -341,9 +40,12 @@ public partial class CMwNod : IClass
                 return;
             }
 
+            chunks ??= new ChunkSet(this);
+
             _ = TryRemapChunkId(r, rawChunkId, out var chunkId);
 
-            var chunk = CreateChunk(chunkId);
+            var chunk = NewChunk(chunkId) ?? ClassManager.NewChunk(chunkId);
+            chunks.AddInternal(chunk);
 
             var stopwatch = default(Stopwatch);
 
@@ -370,6 +72,13 @@ public partial class CMwNod : IClass
                 {
                     if (chunk is not null)
                     {
+                        if (chunk is CGameCtnChallenge.Chunk03043055 unlimiterChunk)
+                        {
+                            unlimiterChunk.TMUnlimiterChunk = new();
+                            r.BaseStream.Position -= 4;
+                            goto TMUnlimiter055;
+                        }
+
                         return;
                     }
 
@@ -382,17 +91,41 @@ public partial class CMwNod : IClass
                 {
                     if (chunkId == rawChunkId)
                     {
-                        r.Logger.LogDebug("0x{ChunkId:X8} ({SkippableType}, size: {Size})", chunkId, chunk is null ? "unknown skippable" : "skippable", chunkSize);
+                        if (chunk is null)
+                        {
+                            r.Logger.LogWarning("0x{ChunkId:X8} (unknown skippable, size: {Size})", chunkId, chunkSize);
+                        }
+                        else
+                        {
+                            r.Logger.LogDebug("0x{ChunkId:X8} (skippable, size: {Size})", chunkId, chunkSize);
+                        }
                     }
                     else
                     {
-                        r.Logger.LogDebug("0x{ChunkId:X8} ({SkippableType}, size: {Size}, raw: 0x{RawChunkId:X8})", chunkId, chunk is null ? "unknown skippable" : "skippable", chunkSize, rawChunkId);
+                        if (chunk is null)
+                        {
+                            r.Logger.LogWarning("0x{ChunkId:X8} (unknown skippable, size: {Size}, raw: 0x{RawChunkId:X8})", chunkId, chunkSize, rawChunkId);
+                        }
+                        else
+                        {
+                            r.Logger.LogDebug("0x{ChunkId:X8} (skippable, size: {Size}, raw: 0x{RawChunkId:X8})", chunkId, chunkSize, rawChunkId);
+                        }
                     }
 
                     if (r.Logger.IsEnabled(LogLevel.Trace))
                     {
                         stopwatch = Stopwatch.StartNew();
                     }
+                }
+
+                if (chunkSize < 0)
+                {
+                    throw new Exception($"Chunk size cannot be negative ({chunkSize})");
+                }
+
+                if (chunkSize > maxSkippableChunkSize)
+                {
+                    throw new LengthLimitException(chunkSize);
                 }
 
                 if (r.Settings.SkipChunkIds?.Contains(chunkId) == true)
@@ -435,8 +168,20 @@ public partial class CMwNod : IClass
                                 break;
                             }
 
-                            readableWritable.ReadWrite(this, rw);
-                            // TODO: validate chunk size
+                            using (var boundedStream = new BoundedStream(r.BaseStream, chunkSize))
+                            using (var rChunk = new GbxReader(boundedStream, r.Settings))
+                            using (var rwChunk = new GbxReaderWriter(rChunk))
+                            {
+                                rChunk.LoadFrom(r);
+                                readableWritable.ReadWrite(this, rwChunk);
+
+                                if (boundedStream.Remaining > 0)
+                                {
+                                    throw new Exception($"Not all data was read from skippable chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId & 0xFFFFF000) ?? "unknown class name"}). {boundedStream.Remaining} bytes remaining.");
+                                }
+
+                                r.LoadFrom(rChunk);
+                            }
 
                             break;
 
@@ -471,8 +216,19 @@ public partial class CMwNod : IClass
                                 break;
                             }
 
-                            readable.Read(this, r);
-                            // TODO: validate chunk size
+                            using (var boundedStream = new BoundedStream(r.BaseStream, chunkSize))
+                            using (var rChunk = new GbxReader(boundedStream, r.Settings))
+                            {
+                                rChunk.LoadFrom(r);
+                                readable.Read(this, rChunk);
+
+                                if (boundedStream.Remaining > 0)
+                                {
+                                    throw new Exception($"Not all data was read from skippable chunk 0x{chunkId:X8} ({ClassManager.GetName(chunkId & 0xFFFFF000) ?? "unknown class name"}). {boundedStream.Remaining} bytes remaining.");
+                                }
+
+                                r.LoadFrom(rChunk);
+                            }
 
                             break;
 
@@ -488,7 +244,7 @@ public partial class CMwNod : IClass
                                 Data = r.ReadBytes(chunkSize)
                             };
 
-                            Chunks.Add(skippableChunk); // as its an unknown chunk, its not implicitly added by CreateChunk
+                            chunks.AddInternal(skippableChunk);
 
                             break;
                     }
@@ -504,6 +260,8 @@ public partial class CMwNod : IClass
 
                 continue;
             }
+
+            TMUnlimiter055:
 
             // Unskippable chunk
             if (r.Logger is not null)
@@ -561,7 +319,7 @@ public partial class CMwNod : IClass
                 continue;
             }
 
-            WriteChunkId(w, chunk.Id);
+            w.WriteChunkId(chunk.Id);
 
             var chunkW = w;
             var chunkRw = rw;
@@ -570,6 +328,12 @@ public partial class CMwNod : IClass
 
             if (chunk is ISkippableChunk skippable)
             {
+                if (skippable is CGameCtnChallenge.Chunk03043055 { TMUnlimiterChunk: not null } unlimiterChunk)
+                {
+                    unlimiterChunk.ReadWrite(this, chunkRw);
+                    continue;
+                }
+
                 w.WriteHexUInt32(SKIP);
 
                 if (skippable.Data is not null)
@@ -594,7 +358,7 @@ public partial class CMwNod : IClass
                     writable.Write(this, chunkW);
                     break;
                 default:
-                    throw new Exception($"Chunk (ID 0x{chunk.Id:X8}, {ClassManager.GetName(chunk.Id & 0xFFFFF000)}) cannot be processed");
+                    throw new Exception($"Chunk (ID 0x{chunk.Id:X8}, {ClassManager.GetName(chunk.Id & 0xFFFFF000) ?? "unknown class name"}) cannot be processed");
             }
 
             // Memory stream is not null only if chunk is skippable and not ignored
@@ -622,27 +386,6 @@ public partial class CMwNod : IClass
         {
             Write(rw);
         }
-    }
-
-    public virtual IHeaderChunk? CreateHeaderChunk(uint chunkId)
-    {
-        return null;
-    }
-
-    public virtual IChunk? CreateChunk(uint chunkId)
-    {
-        var chunk = chunkId switch
-        {
-            0x01001000 => new Chunk01001000(),
-            _ => null
-        };
-
-        if (chunk is not null)
-        {
-            Chunks.Add(chunk);
-        }
-
-        return chunk;
     }
 
 #if NET8_0_OR_GREATER
@@ -755,9 +498,39 @@ public partial class CMwNod : IClass
         ToGbx().Save(fileName, settings);
     }
 
+    internal virtual IChunk? NewChunk(uint chunkId)
+    {
+        if (chunkId == 0x01001000)
+        {
+            return new Chunk01001000();
+        }
+
+        return null;
+    }
+
+    internal virtual IHeaderChunk? NewHeaderChunk(uint chunkId)
+    {
+        return null;
+    }
+
     public T CreateChunk<T>() where T : IChunk, new()
     {
         return Chunks.Create<T>();
+    }
+
+    public T? GetChunk<T>() where T : IChunk
+    {
+        return Chunks.Get<T>();
+    }
+
+    public bool RemoveChunk<T>() where T : IChunk
+    {
+        return Chunks.Remove<T>();
+    }
+
+    public bool ContainsChunk<T>() where T : IChunk
+    {
+        return Chunks.Contains<T>();
     }
 
     private static bool TryRemapChunkId(GbxReader reader, uint chunkId, out uint remappedChunkId)
@@ -784,23 +557,5 @@ public partial class CMwNod : IClass
         }
 
         return true;
-    }
-
-    private static void WriteChunkId(GbxWriter writer, uint chunkId)
-    {
-        if (writer.ClassIdRemapMode == ClassIdRemapMode.Latest)
-        {
-            writer.WriteHexUInt32(chunkId);
-            return;
-        }
-
-        if (writer.ClassIdRemapMode == ClassIdRemapMode.Id2008 && (chunkId & 0xFFFFF000) == 0x2E001000)
-        {
-            writer.WriteHexUInt32(0x0301A000 | (chunkId & 0xFFF));
-            return;
-        }
-
-        var unwrappedChunkId = ClassManager.Unwrap(chunkId);
-        writer.WriteHexUInt32(unwrappedChunkId);
     }
 }
