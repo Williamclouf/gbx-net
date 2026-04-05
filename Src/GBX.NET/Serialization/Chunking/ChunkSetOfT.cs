@@ -6,7 +6,7 @@ namespace GBX.NET.Serialization.Chunking;
 /// <summary>
 /// A set of chunks.
 /// </summary>
-public interface IChunkSet<TKind> : ICollection<TKind>, IEnumerable<TKind>, ICollection, IEnumerable where TKind : IChunk
+public interface IChunkSet<TKind> : ICollection<TKind>, IEnumerable<TKind>, IEnumerable where TKind : IChunk
 {
     IComparer<TKind> Comparer { get; }
 
@@ -89,7 +89,7 @@ public interface IChunkSet<TKind> : ICollection<TKind>, IEnumerable<TKind>, ICol
     bool Contains<T>() where T : TKind;
 }
 
-internal class ChunkSet<TKind>(CMwNod? node) : IChunkSet<TKind> where TKind : IChunk
+internal class ChunkSet<TKind>(CMwNod? node) : IChunkSet<TKind>, ICollection where TKind : IChunk
 {
     private readonly CMwNod? node = node;
     private readonly List<TKind> chunks = [];
