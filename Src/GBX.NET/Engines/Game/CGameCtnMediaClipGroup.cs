@@ -78,5 +78,11 @@ public partial class CGameCtnMediaClipGroup
     }
 
     [ArchiveGenerationOptions(StructureKind = StructureKind.SeparateReadAndWrite)]
-    public partial class Trigger;
+    public partial class Trigger
+    {
+        public override string ToString()
+        {
+            return $"Trigger: {Coords.Count} coords";
+        }
+    }
 }
