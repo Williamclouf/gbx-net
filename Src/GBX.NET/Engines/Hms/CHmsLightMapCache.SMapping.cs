@@ -389,7 +389,12 @@ public partial class CHmsLightMapCache
 
             // for write, it picks one of the decompressed arrays for count
             // during write, there should be a constraint that all decompressed arrays must have the same length
-            count = rw.Int32(zlibData2Decompressed1?.Length ?? 0);
+            if (rw.Writer is not null)
+            {
+                count = ZlibData1Decompressed?.Length ?? 0;
+            }
+
+            rw.Int32(ref count);
 
             if (version >= 1)
             {
