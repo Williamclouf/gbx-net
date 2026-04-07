@@ -1323,7 +1323,9 @@ public partial class CGameCtnChallenge :
 
             if (Version < 6)
             {
-                if (n.ContainsChunk<Chunk3F001001>() || n.ContainsChunk<Chunk3F001002>() || n.ContainsChunk<Chunk3F001003>())
+                Chunk3F001001 tmUnlimiterChunk = n.GetChunk<Chunk3F001001>() ?? n.GetChunk<Chunk3F001002>() ?? n.GetChunk<Chunk3F001003>();
+
+                if (tmUnlimiterChunk?.Version > 0)
                 {
                     w.WriteListWritable(n.TMUnlimiterData?.FakeBlocks, version: Version);
                     return;
