@@ -1323,7 +1323,7 @@ public partial class CGameCtnChallenge :
 
             if (Version < 6)
             {
-                Chunk3F001001 tmUnlimiterChunk = n.GetChunk<Chunk3F001001>() ?? n.GetChunk<Chunk3F001002>() ?? n.GetChunk<Chunk3F001003>();
+                var tmUnlimiterChunk = n.GetChunk<Chunk3F001001>() ?? (Chunk3F001001?)n.GetChunk<Chunk3F001002>() ?? (Chunk3F001001?)n.GetChunk<Chunk3F001003>();
 
                 if (tmUnlimiterChunk?.Version > 0)
                 {
