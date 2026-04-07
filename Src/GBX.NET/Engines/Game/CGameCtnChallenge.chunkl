@@ -109,7 +109,7 @@ CGameCtnChallenge 0x03043000 // A map.
  int // code says DoBool, likely IsPlatform (Mode == 1), but maps yield something like 1698004
 
 0x017 (skippable) [TMS, TMO, TMSX, TMNESWC, TMU, TMF] // checkpoints
- int3[] Checkpoints
+ list<int3> Checkpoints
 
 0x018 (skippable) [TMS, TMO, TMSX, TMNESWC, TMU, TMF, MP3, TMT, MP4, TM2020] // laps
  bool IsLapRace
