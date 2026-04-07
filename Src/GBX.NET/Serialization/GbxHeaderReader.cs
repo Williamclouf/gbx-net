@@ -57,7 +57,7 @@ internal sealed class GbxHeaderReader(GbxReader reader)
 
         if (header.NumNodes > 1_000_000)
         {
-            throw new InvalidDataException($"Number of nodes {header.NumNodes} is over 1 million, which is likely invalid.");
+            throw new InvalidDataException($"Number of nodes {header.NumNodes} is over 1 million, which is likely invalid. Maybe OpenPlanetHookExtractMode is on?");
         }
 
         return header;
