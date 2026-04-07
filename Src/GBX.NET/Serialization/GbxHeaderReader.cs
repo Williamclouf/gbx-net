@@ -55,11 +55,6 @@ internal sealed class GbxHeaderReader(GbxReader reader)
             logger?.LogWarning("Number of nodes {NumNodes} exceeds 32767, which may cause the game to ignore the Gbx.", header.NumNodes);
         }
 
-        if (header.NumNodes > 1_000_000)
-        {
-            throw new InvalidDataException($"Number of nodes {header.NumNodes} is over 1 million, which is likely invalid. Maybe OpenPlanetHookExtractMode is on?");
-        }
-
         return header;
     }
 

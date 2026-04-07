@@ -20,6 +20,16 @@ internal sealed class GbxRefTableReader(GbxReader reader, GbxHeader header, stri
             return null;
         }
 
+        if (numExternalNodes < 0)
+        {
+            throw new InvalidDataException($"Number of external nodes is negative ({header.NumNodes}).");
+        }
+
+        if (numExternalNodes > 1_000_000)
+        {
+            throw new InvalidDataException($"Number of external nodes is way too many ({header.NumNodes}). Maybe OpenPlanetHookExtractMode is on?");
+        }
+
         using var _ = logger?.BeginScope("RefTable");
 
         var refTable = new GbxRefTable
