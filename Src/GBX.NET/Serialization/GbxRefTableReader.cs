@@ -22,12 +22,12 @@ internal sealed class GbxRefTableReader(GbxReader reader, GbxHeader header, stri
 
         if (numExternalNodes < 0)
         {
-            throw new InvalidDataException($"Number of external nodes is negative ({header.NumNodes}).");
+            throw new InvalidDataException($"Number of external nodes is negative ({numExternalNodes}).");
         }
 
         if (numExternalNodes > 1_000_000)
         {
-            throw new InvalidDataException($"Number of external nodes is way too many ({header.NumNodes}). Maybe OpenPlanetHookExtractMode is on?");
+            throw new InvalidDataException($"Number of external nodes is way too many ({numExternalNodes}). Maybe OpenPlanetHookExtractMode is on?");
         }
 
         using var _ = logger?.BeginScope("RefTable");
