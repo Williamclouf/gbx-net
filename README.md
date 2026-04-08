@@ -379,14 +379,11 @@ using GBX.NET.ZLib;
 Gbx.ZLib = new ZLib();
 ```
 
-> [!NOTE]
-> Zlib-compressed data is **currently read-only for ghost samples and record data**, lightmap data is the only zlib data that can be modified with GBX.NET. Write support for ghost samples and record data is planned for 2.4.
-
-The data is often stored in properties of type `CompressedData` which are byte arrays with additional uncompressed data size for validation. If there's a property with this type (`CGameCtnChallenge.LightmapCacheData` for example), zlib data will be stored there no matter if the zlib implementation is included, so read/write consistency is guaranteed.
+The data is often stored in properties of type `ZlibData` which are byte arrays with an additional uncompressed size number for validation. If there's a property with this type (`CGameCtnChallenge.LightmapCacheData` for example), zlib data will be stored there no matter if the zlib implementation is included, so read/write consistency is guaranteed.
 
 > The current reason why the zlib implementation is split similarly to LZO (even when zlib license is perfectly fine) is that there aren't any good official solutions by Microsoft that would work for .NET Standard 2 (new `ZlibStream` is promising but .NET 6+ only, still not tested enough if reliable), and third party solutions are also of a questionable quality. But this topic is continously under attention and the zlib implementation is slowly improving.
 
-GBX.NET.PAK uses a different zlib solution due to very specific patterns to follow during decryption + decompression in .pak data.
+GBX.NET.PAK uses a different zlib solution (via NativeSharpZlib) due to very specific patterns to follow during decryption + decompression in .pak data.
 
 ## Explicit vs. Implicit parse
 
