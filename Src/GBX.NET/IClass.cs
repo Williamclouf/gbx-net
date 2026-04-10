@@ -11,6 +11,7 @@ public interface IClass
     /// <summary>
     /// ID of the class.
     /// </summary>
+    [Hexadecimal]
     static abstract uint Id { get; }
 #endif
 

@@ -27,6 +27,7 @@ public sealed class HeaderChunk(uint id) : IHeaderChunk
     /// <summary>
     /// ID of the header chunk.
     /// </summary>
+    [Hexadecimal]
     public uint Id => id;
 
     /// <inheritdoc />

@@ -14,6 +14,7 @@ public partial class CGameGhost
         public TimeInt32 SamplePeriod { get; set; }
 
         public List<Sample> Samples { get; set; } = [];
+        [Hexadecimal]
         public uint SavedMobilClassId { get; set; }
         public bool IsFixedTimeStep { get; set; }
 

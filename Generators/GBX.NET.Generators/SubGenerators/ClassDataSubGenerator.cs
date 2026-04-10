@@ -378,7 +378,7 @@ internal class ClassDataSubGenerator
             return;
         }
 
-        sb.Append("    public static new uint Id => 0x");
+        sb.Append("    [Hexadecimal] public static new uint Id => 0x");
         sb.Append(id.ToString("X8"));
         sb.AppendLine(";");
     }
