@@ -61,6 +61,12 @@ public partial class CGameCtnChallenge :
         }
     }
 
+    private string? authorNickname;
+    [SupportsFormatting]
+    [AppliedWithChunk<HeaderChunk03043008>]
+    [AppliedWithChunk<Chunk03043042>]
+    public string? AuthorNickname { get => authorNickname; set => authorNickname = value; }
+
     /// <summary>
     /// Time of the bronze medal. If <see cref="ChallengeParameters"/> is available, it uses the value from there instead.
     /// </summary>
@@ -459,6 +465,7 @@ public partial class CGameCtnChallenge :
     public float ThumbnailFarClipPlane { get => thumbnailFarClipPlane; set => thumbnailFarClipPlane = value; }
 
     private string? comments;
+    [SupportsFormatting]
     [AppliedWithChunk<Chunk03043028>]
     [AppliedWithChunk<Chunk0304302D>]
     [AppliedWithChunk<Chunk03043036>]
