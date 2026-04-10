@@ -233,6 +233,13 @@ public partial class CGameCtnChallenge :
     [AppliedWithChunk<Chunk0304301F>]
     public Id? Collection => mapInfo?.Collection;
 
+    private Ident decoration = Ident.Empty;
+    [AppliedWithChunk<HeaderChunk03043003>]
+    [AppliedWithChunk<Chunk0304300F>]
+    [AppliedWithChunk<Chunk03043013>]
+    [AppliedWithChunk<Chunk0304301F>]
+    public Ident Decoration { get => decoration; set => decoration = value; }
+
     private List<CGameCtnBlock>? blocks;
     [AppliedWithChunk<Chunk0304300F>]
     [AppliedWithChunk<Chunk03043013>]
