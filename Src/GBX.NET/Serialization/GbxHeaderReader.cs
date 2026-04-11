@@ -45,6 +45,16 @@ internal sealed class GbxHeaderReader(GbxReader reader)
         header.NumNodes = reader.ReadInt32();
         logger?.LogDebug("Number of nodes: {NumNodes}", header.NumNodes);
 
+        if (header.NumNodes < 0)
+        {
+            throw new InvalidDataException($"Number of nodes {header.NumNodes} is negative.");
+        }
+
+        if (header.NumNodes > short.MaxValue)
+        {
+            logger?.LogWarning("Number of nodes {NumNodes} exceeds 32767, which may cause the game to ignore the Gbx.", header.NumNodes);
+        }
+
         return header;
     }
 

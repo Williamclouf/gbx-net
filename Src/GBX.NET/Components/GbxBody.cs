@@ -38,9 +38,9 @@ public sealed partial class GbxBody
 
         var sb = new StringBuilder();
         sb.Append("GbxBody (compressed - ");
-        sb.Append(CompressedSize.Value.ToString("N0"));
+        sb.Append(ByteHelper.ToByteSize(CompressedSize.Value));
         sb.Append('/');
-        sb.Append(UncompressedSize.ToString("N0"));
+        sb.Append(ByteHelper.ToByteSize(UncompressedSize));
         sb.Append(" bytes");
 
         if (CompressionRatio.HasValue)

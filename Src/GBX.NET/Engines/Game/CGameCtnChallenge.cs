@@ -61,6 +61,12 @@ public partial class CGameCtnChallenge :
         }
     }
 
+    private string? authorNickname;
+    [SupportsFormatting]
+    [AppliedWithChunk<HeaderChunk03043008>]
+    [AppliedWithChunk<Chunk03043042>]
+    public string? AuthorNickname { get => authorNickname; set => authorNickname = value; }
+
     /// <summary>
     /// Time of the bronze medal. If <see cref="ChallengeParameters"/> is available, it uses the value from there instead.
     /// </summary>
@@ -226,6 +232,13 @@ public partial class CGameCtnChallenge :
     [AppliedWithChunk<Chunk03043013>]
     [AppliedWithChunk<Chunk0304301F>]
     public Id? Collection => mapInfo?.Collection;
+
+    private Ident decoration = Ident.Empty;
+    [AppliedWithChunk<HeaderChunk03043003>]
+    [AppliedWithChunk<Chunk0304300F>]
+    [AppliedWithChunk<Chunk03043013>]
+    [AppliedWithChunk<Chunk0304301F>]
+    public Ident Decoration { get => decoration; set => decoration = value; }
 
     private List<CGameCtnBlock>? blocks;
     [AppliedWithChunk<Chunk0304300F>]
@@ -459,6 +472,7 @@ public partial class CGameCtnChallenge :
     public float ThumbnailFarClipPlane { get => thumbnailFarClipPlane; set => thumbnailFarClipPlane = value; }
 
     private string? comments;
+    [SupportsFormatting]
     [AppliedWithChunk<Chunk03043028>]
     [AppliedWithChunk<Chunk0304302D>]
     [AppliedWithChunk<Chunk03043036>]
@@ -1323,7 +1337,9 @@ public partial class CGameCtnChallenge :
 
             if (Version < 6)
             {
-                if (n.ContainsChunk<Chunk3F001001>() || n.ContainsChunk<Chunk3F001002>() || n.ContainsChunk<Chunk3F001003>())
+                var tmUnlimiterChunk = n.GetChunk<Chunk3F001001>() ?? (Chunk3F001001?)n.GetChunk<Chunk3F001002>() ?? (Chunk3F001001?)n.GetChunk<Chunk3F001003>();
+
+                if (tmUnlimiterChunk?.Version > 0)
                 {
                     w.WriteListWritable(n.TMUnlimiterData?.FakeBlocks, version: Version);
                     return;

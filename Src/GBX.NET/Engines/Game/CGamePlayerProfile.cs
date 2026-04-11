@@ -5,7 +5,13 @@ namespace GBX.NET.Engines.Game;
 public partial class CGamePlayerProfile
 {
     private string? description;
+    [SupportsFormatting]
     public string? Description { get => description; set => description = value; }
+
+    private string? nickName;
+    [SupportsFormatting]
+    [AppliedWithChunk<Chunk0308C05B>]
+    public string? NickName { get => nickName; set => nickName = value; }
 
     private UInt128 cryptedPassword;
     public UInt128 CryptedPassword { get => cryptedPassword; set => cryptedPassword = value; }

@@ -4,6 +4,7 @@ namespace GBX.NET.Serialization.Chunking;
 
 public sealed class SkippableChunk(uint id) : ISkippableChunk
 {
+    [Hexadecimal]
     public uint Id => id;
 
     /// <inheritdoc />

@@ -89,7 +89,7 @@ public interface IChunkSet<TKind> : ICollection<TKind>, IEnumerable<TKind>, IEnu
     bool Contains<T>() where T : TKind;
 }
 
-internal class ChunkSet<TKind>(CMwNod? node) : IChunkSet<TKind> where TKind : IChunk
+internal class ChunkSet<TKind>(CMwNod? node) : IChunkSet<TKind>, ICollection where TKind : IChunk
 {
     private readonly CMwNod? node = node;
     private readonly List<TKind> chunks = [];
@@ -103,9 +103,14 @@ internal class ChunkSet<TKind>(CMwNod? node) : IChunkSet<TKind> where TKind : IC
 #else
     private readonly object _lock = new();
 #endif
+    private object? _syncRoot;
 
     public int Count => chunks.Count;
     public bool IsReadOnly => false;
+
+    bool ICollection.IsSynchronized => false;
+
+    object ICollection.SyncRoot => _syncRoot ??= new object();
 
     protected virtual TKind New(uint chunkId, bool preferHeaderChunks)
     {
@@ -184,8 +189,9 @@ internal class ChunkSet<TKind>(CMwNod? node) : IChunkSet<TKind> where TKind : IC
 
     public bool TryCreate(uint chunkId, bool preferHeaderChunks, out TKind chunk)
     {
-        if (chunksById.TryGetValue(chunkId, out chunk))
+        if (chunksById.TryGetValue(chunkId, out var chunkById) && chunkById is not null) 
         {
+            chunk = chunkById;
             return false;
         }
 
@@ -317,5 +323,10 @@ internal class ChunkSet<TKind>(CMwNod? node) : IChunkSet<TKind> where TKind : IC
     IEnumerator IEnumerable.GetEnumerator()
     {
         return GetEnumerator();
+    }
+
+    void ICollection.CopyTo(Array array, int index)
+    {
+        chunks.CopyTo((TKind[])array, index);
     }
 }

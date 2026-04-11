@@ -13,6 +13,7 @@ public interface IChunk
     /// <summary>
     /// ID of the chunk.
     /// </summary>
+    [Hexadecimal]
     uint Id { get; }
 
     bool Ignore { get; }
@@ -30,6 +31,7 @@ public interface IChunk
 public abstract class Chunk : IReadableWritableChunk
 {
     /// <inheritdoc />
+    [Hexadecimal]
     public abstract uint Id { get; }
 
     public virtual bool Ignore => false;
