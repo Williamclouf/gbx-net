@@ -1,0 +1,62 @@
+name: Build Tools for Windows
+
+on:
+  push:
+    branches: ["master", "dev"]
+    paths: ["Tools/**"]
+  workflow_dispatch:
+    inputs:
+      projects:
+        description: "Comma-separated csproj files to publish"
+        required: true
+        default: "ObjExporter.csproj,GbxToJson.csproj"
+
+env:
+  DEFAULT_PROJECTS: "ObjExporter.csproj,GbxToJson.csproj"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install .NET Workloads
+        run: dotnet workload restore
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Publish Tools as Windows self-contained single-file EXEs
+        env:
+          PUBLISH_PROJECTS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.projects || env.DEFAULT_PROJECTS }}
+        shell: pwsh
+        run: |
+          $outRoot = Join-Path $env:GITHUB_WORKSPACE "artifacts"
+          New-Item -Path $outRoot -ItemType Directory -Force | Out-Null
+          $targetProjects = $env:PUBLISH_PROJECTS -split ','
+          Get-ChildItem -Path "Tools" -Recurse -Filter "*.csproj" | Where-Object { $_.Name -in $targetProjects } | ForEach-Object {
+            $proj = $_.FullName
+            $projDirName = Split-Path $_.DirectoryName -Leaf
+            $outDir = Join-Path $outRoot $projDirName
+            Write-Host "=== Publishing: $projName ==="
+            $content = Get-Content $proj -Raw
+            if ($content -match '<ProjectSdk\s+[^>]*BlazorWebAssembly' -or $content -match 'BlazorWebAssemblyLoadLauncher') {
+              Write-Host "Detected: Blazor WebAssembly project"
+              dotnet publish $proj -c Release -o $outDir
+            } else {
+              Write-Host "Publishing $proj -> $outDir"
+              dotnet publish $proj -c Release -r win-x64 --self-contained true -o $outDir
+            }
+          }
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tools-windows-exes
+          path: artifacts/**/*
