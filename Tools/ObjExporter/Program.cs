@@ -1,4 +1,5 @@
 ﻿using GBX.NET;
+using GBX.NET.Engines.Game;
 using GBX.NET.Engines.GameData;
 using GBX.NET.Engines.Plug;
 using GBX.NET.LZO;
@@ -68,4 +69,9 @@ switch (node)
             throw new Exception("Item has no mesh that would be supported.");
         }
         break;
+    case CGameCtnChallenge challenge:
+        challenge.ExportToObj(objFileName, mergeVerticesDigitThreshold);
+        break;
+    default:
+        throw new Exception($"File type '{node.GetType().Name}' is not supported for OBJ export.");
 }
